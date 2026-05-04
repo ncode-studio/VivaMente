@@ -3,13 +3,10 @@
  *
  * Genera il trial ibrido MP: stream di parole semantico + finestre temporali.
  *
- * Task ongoing: parole estratte da una coppia semantica scorrono a ISI fisso.
- *   L'utente tocca il bottone "✓ {etichetta}" sui target (paroleGo).
- * Task prospettico: finestre temporali schedulate ogni intervalS secondi.
- *   L'utente tocca "Ricordami" entro la finestra di tolleranza.
- *
- * Le coppie semantiche sono definite qui (no cross-import da go-nogo-semantico)
- * per mantenere le famiglie self-contained.
+ * Regola: nessuna parola si ripete nella sessione. La generazione avviene
+ * senza rimpiazzo: le parole go e nogo sono mescolate separatamente, poi
+ * interleaved casualmente. I pool hanno ≥28 parole per coprire il caso
+ * peggiore (lv 6-7: ceil(150000/2800) = 54 stimoli → ~27 go + 27 nogo).
  */
 
 import type { MPHybridLevelConfig, DistanzaCategorie } from "./levels";
@@ -25,19 +22,15 @@ export interface CoppiaSemantica {
 // ── Tipi esportati ────────────────────────────────────────────────────────────
 
 export type StimoloMP = {
-  /** ID posizionale 0-based. */
   id:    number;
   parola: string;
-  /** true = parola target (paroleGo) da tappare. */
   isGo:  boolean;
 };
 
 export type TrialMPHybrid = {
   coppia:          CoppiaSemantica;
   sequenza:        StimoloMP[];
-  /** Istanti target (ms da inizio Fase 2): [interval×1, ..., interval×nWindows]. */
   intervalliMs:    number[];
-  /** Tolleranza ± in ms entro cui il tap "Ricordami" è accettato. */
   toleranceMs:     number;
   durationMs:      number;
   nWindows:        number;
@@ -53,59 +46,56 @@ export type RispostaMP = {
   distrattoriFalsiTap:      number;
 };
 
-// ── Costanti ──────────────────────────────────────────────────────────────────
-
-/** Quota di stimoli Go nello stream (50% target / 50% non-target). */
 export const QUOTA_GO = 0.5;
 
-// ── Coppie semantiche per distanza ────────────────────────────────────────────
+// ── Coppie semantiche — pool ≥28 parole per lato ─────────────────────────────
 
 const COPPIE_DISTANTE: readonly CoppiaSemantica[] = [
   {
     etichetta: "Animali",
-    paroleGo:  ["cane", "gatto", "leone", "aquila", "rana", "orso", "tigre", "lupo", "cervo", "volpe", "topo", "coniglio", "capra", "pecora", "mucca"],
-    paroleNogo:["sedia", "tavolo", "lampada", "porta", "finestra", "cuscino", "tappeto", "specchio", "scaffale", "armadio", "forbici", "martello", "chiave", "bottone", "moneta"],
+    paroleGo:  ["cane", "gatto", "leone", "aquila", "rana", "orso", "tigre", "lupo", "cervo", "volpe", "topo", "coniglio", "capra", "pecora", "mucca", "cavallo", "elefante", "scimmia", "delfino", "pinguino", "zebra", "gufo", "cigno", "tartaruga", "serpente", "lepre", "riccio", "falco"],
+    paroleNogo:["sedia", "tavolo", "lampada", "porta", "finestra", "cuscino", "tappeto", "specchio", "scaffale", "armadio", "forbici", "martello", "chiave", "orologio", "borsa", "libro", "penna", "vaso", "tazza", "piatto", "forchetta", "cucchiaio", "pentola", "padella", "bicchiere", "coperta", "candela", "ombrello"],
   },
   {
     etichetta: "Cibi",
-    paroleGo:  ["pane", "pasta", "riso", "carne", "pesce", "uovo", "mela", "pera", "pollo", "insalata", "carota", "formaggio", "latte", "burro", "pizza"],
-    paroleNogo:["treno", "aereo", "nave", "moto", "bus", "camion", "bici", "taxi", "tram", "elicottero", "metro", "furgone", "carro", "scooter", "yacht"],
+    paroleGo:  ["pane", "pasta", "riso", "carne", "pesce", "uovo", "mela", "pera", "pollo", "insalata", "carota", "formaggio", "latte", "burro", "pizza", "patata", "fagioli", "tonno", "salmone", "zucchero", "olio", "sale", "prosciutto", "mozzarella", "ricotta", "polenta", "biscotto", "gelato"],
+    paroleNogo:["treno", "aereo", "nave", "moto", "bus", "camion", "bici", "taxi", "tram", "elicottero", "metro", "furgone", "scooter", "yacht", "jeep", "monopattino", "motoscafo", "canoa", "kayak", "autocarro", "pullman", "gondola", "carrozza", "fuoristrada", "ciclomotore", "tandem", "razzo", "sottomarino"],
   },
   {
     etichetta: "Sport",
-    paroleGo:  ["calcio", "tennis", "nuoto", "corsa", "ciclismo", "boxe", "golf", "sci", "rugby", "pallavolo", "basket", "judo", "karate", "vela", "tiro"],
-    paroleNogo:["medico", "avvocato", "pilota", "cuoco", "insegnante", "ingegnere", "muratore", "chimico", "fisico", "dentista", "infermiere", "notaio", "farmacista", "architetto", "magistrato"],
+    paroleGo:  ["calcio", "tennis", "nuoto", "corsa", "ciclismo", "boxe", "golf", "sci", "rugby", "pallavolo", "basket", "judo", "karate", "vela", "tiro", "ginnastica", "atletica", "equitazione", "surf", "scherma", "pattinaggio", "arrampicata", "triathlon", "sollevamento", "lotta", "taekwondo", "canottaggio", "biathlon"],
+    paroleNogo:["medico", "avvocato", "pilota", "cuoco", "insegnante", "ingegnere", "muratore", "chimico", "fisico", "dentista", "infermiere", "notaio", "farmacista", "architetto", "magistrato", "psicologo", "geografo", "biologo", "agronomo", "veterinario", "pompiere", "poliziotto", "vigile", "giudice", "diplomatico", "astronomo", "geologo", "filosofo"],
   },
 ];
 
 const COPPIE_MODERATA: readonly CoppiaSemantica[] = [
   {
     etichetta: "Animali domestici",
-    paroleGo:  ["cane", "gatto", "coniglio", "criceto", "pappagallo", "tartaruga", "cavia", "canarino", "cincillà", "furretto"],
-    paroleNogo:["leone", "tigre", "orso", "lupo", "volpe", "giaguaro", "leopardo", "rinoceronte", "gorilla", "zebra"],
+    paroleGo:  ["cane", "gatto", "coniglio", "criceto", "pappagallo", "tartaruga", "cavia", "canarino", "cincillà", "furretto", "iguana", "labrador", "cocker", "barboncino", "siamese", "persiano", "beagle", "carlino", "bulldog", "chihuahua", "husky", "golden", "setter", "boxer", "volpino", "maltese", "pastore", "bassotto"],
+    paroleNogo:["leone", "tigre", "orso", "lupo", "volpe", "giaguaro", "leopardo", "rinoceronte", "gorilla", "zebra", "bisonte", "alce", "lince", "ghepardo", "iene", "mangusta", "coyote", "bufalo", "gnu", "tapiro", "opossum", "lemure", "puma", "gibbone", "babbuino", "facocero", "orice", "wombat"],
   },
   {
     etichetta: "Frutti",
-    paroleGo:  ["mela", "pera", "uva", "kiwi", "mango", "fragola", "pesca", "prugna", "ciliegia", "fico", "banana", "arancia", "limone", "melone", "albicocca"],
-    paroleNogo:["carota", "zucchina", "melanzana", "pomodoro", "sedano", "cipolla", "aglio", "broccoli", "cavolo", "spinaci", "lattuga", "rucola", "finocchio", "porro", "ravanello"],
+    paroleGo:  ["mela", "pera", "uva", "kiwi", "mango", "fragola", "pesca", "prugna", "ciliegia", "fico", "banana", "arancia", "limone", "melone", "albicocca", "papaya", "cocco", "ribes", "mora", "lampone", "ananas", "cocomero", "mandarino", "pompelmo", "dattero", "avocado", "melograno", "clementina"],
+    paroleNogo:["carota", "zucchina", "melanzana", "pomodoro", "sedano", "cipolla", "aglio", "broccoli", "cavolo", "spinaci", "lattuga", "rucola", "finocchio", "porro", "ravanello", "barbabietola", "carciofo", "asparago", "zucca", "peperone", "cetriolo", "cavolfiore", "piselli", "fave", "bieta", "cicoria", "verza", "topinambur"],
   },
   {
     etichetta: "Mobili",
-    paroleGo:  ["sedia", "tavolo", "letto", "armadio", "divano", "libreria", "comodino", "scrivania", "poltrona", "cassettiera", "panca", "consolle", "vetrina", "sgabello", "dondolo"],
-    paroleNogo:["frigorifero", "lavatrice", "forno", "lavastoviglie", "microonde", "televisore", "aspirapolvere", "asciugatrice", "bollitore", "tostapane", "frullatore", "condizionatore", "stufa", "ventilatore", "ferro"],
+    paroleGo:  ["sedia", "tavolo", "letto", "armadio", "divano", "libreria", "comodino", "scrivania", "poltrona", "cassettiera", "panca", "consolle", "vetrina", "sgabello", "dondolo", "credenza", "canterano", "buffet", "specchiera", "toeletta", "guardaroba", "mensola", "cassapanca", "tavolino", "divanetto", "poggiapiedi", "appendiabiti", "scaffale"],
+    paroleNogo:["frigorifero", "lavatrice", "forno", "lavastoviglie", "microonde", "televisore", "aspirapolvere", "asciugatrice", "bollitore", "tostapane", "frullatore", "condizionatore", "stufa", "ventilatore", "ferro", "phon", "freezer", "robot", "impastatrice", "centrifuga", "gelatiera", "vaporiera", "affettatrice", "piastra", "deumidificatore", "radiatore", "purificatore", "igienizzatore"],
   },
 ];
 
 const COPPIE_VICINA: readonly CoppiaSemantica[] = [
   {
     etichetta: "Sport individuali",
-    paroleGo:  ["nuoto", "tennis", "golf", "boxe", "judo", "karate", "sci", "atletica", "ginnastica", "ciclismo", "equitazione", "scherma", "tiro", "surf", "triathlon"],
-    paroleNogo:["calcio", "basket", "pallavolo", "rugby", "hockey", "baseball", "polo", "pallanuoto", "handball", "cricket", "curling", "softball", "lacrosse", "remo", "waterpolo"],
+    paroleGo:  ["nuoto", "tennis", "golf", "boxe", "judo", "karate", "sci", "atletica", "ginnastica", "ciclismo", "equitazione", "scherma", "tiro", "surf", "triathlon", "canottaggio", "sollevamento", "lotta", "taekwondo", "pattinaggio", "arrampicata", "biathlon", "maratona", "pentathlon", "fioretto", "bob", "trampolino", "volteggio"],
+    paroleNogo:["calcio", "basket", "pallavolo", "rugby", "hockey", "baseball", "polo", "pallanuoto", "handball", "cricket", "curling", "softball", "lacrosse", "waterpolo", "dodgeball", "netball", "frisbee", "tamburello", "futsal", "floorball", "pelota", "bocce", "cheerleading", "kabaddi", "korfball", "petanque", "shinty", "sepak"],
   },
   {
     etichetta: "Professioni sanitarie",
-    paroleGo:  ["medico", "infermiere", "dentista", "farmacista", "psicologo", "chirurgo", "veterinario", "fisioterapista", "radiologo", "pediatra"],
-    paroleNogo:["ingegnere", "architetto", "muratore", "elettricista", "idraulico", "falegname", "meccanico", "saldatore", "geometra", "tecnico"],
+    paroleGo:  ["medico", "infermiere", "dentista", "farmacista", "psicologo", "chirurgo", "veterinario", "fisioterapista", "radiologo", "pediatra", "cardiologo", "ginecologo", "ortopedico", "anestesista", "oculista", "dermatologo", "reumatologo", "ematologo", "oncologo", "nefrologo", "urologo", "neurologo", "endocrinologo", "immunologo", "patologo", "allergologo", "gastroenterologo", "pneumologo"],
+    paroleNogo:["ingegnere", "architetto", "muratore", "elettricista", "idraulico", "falegname", "meccanico", "saldatore", "geometra", "tecnico", "programmatore", "costruttore", "carrozziere", "tornitore", "fresatore", "gruista", "ponteggiatore", "cablatore", "installatore", "operatore", "manutentore", "riparatore", "assemblatore", "collaudatore", "progettista", "disegnatore", "pianificatore", "calibratore"],
   },
 ];
 
@@ -131,30 +121,44 @@ function shuffled<T>(arr: readonly T[], rng: () => number): T[] {
 // ── generaTrialMPHybrid ───────────────────────────────────────────────────────
 
 /**
- * Genera il trial ibrido: sequenza di parole + finestre temporali.
+ * Genera il trial ibrido senza ripetizione di parole.
  *
- * @param level  Configurazione livello da getMPHybridLevel.
- * @param rng    RNG iniettabile (Math.random in produzione, deterministica nei test).
+ * Algoritmo:
+ *   1. Calcola nGo e nNogo dal numero totale di stimoli richiesti.
+ *   2. Pesca esattamente nGo parole dal pool go (senza rimpiazzo) e nNogo
+ *      dal pool nogo (senza rimpiazzo).
+ *   3. Interleave i due insiemi casualmente → sequenza finale.
+ *
+ * Se un pool è più piccolo del necessario (non dovrebbe accadere con pool ≥28
+ * e i parametri attuali), usa quante parole disponibili e la sessione risulta
+ * leggermente più breve.
  */
 export function generaTrialMPHybrid(
   level: MPHybridLevelConfig,
   rng: () => number,
 ): TrialMPHybrid {
-  const coppia = pickCoppia(level.distanzaCategorie, rng);
+  const coppia  = pickCoppia(level.distanzaCategorie, rng);
   const nStimoli = Math.ceil(level.durationMs / level.distractorISIMs);
 
-  const goPool   = shuffled(coppia.paroleGo, rng);
+  const goPool   = shuffled(coppia.paroleGo,   rng);
   const nogoPool = shuffled(coppia.paroleNogo, rng);
 
-  const sequenza: StimoloMP[] = [];
-  let goIdx = 0, nogoIdx = 0;
-  for (let i = 0; i < nStimoli; i++) {
-    const isGo = rng() < QUOTA_GO;
-    const parola = isGo
-      ? goPool[goIdx++ % goPool.length]
-      : nogoPool[nogoIdx++ % nogoPool.length];
-    sequenza.push({ id: i, parola, isGo });
-  }
+  const nGo   = Math.min(Math.round(nStimoli * QUOTA_GO), goPool.length);
+  const nNogo = Math.min(nStimoli - nGo, nogoPool.length);
+
+  const items = shuffled(
+    [
+      ...goPool.slice(0, nGo).map((p) => ({ parola: p, isGo: true  as const })),
+      ...nogoPool.slice(0, nNogo).map((p) => ({ parola: p, isGo: false as const })),
+    ],
+    rng,
+  );
+
+  const sequenza: StimoloMP[] = items.map((item, i) => ({
+    id: i,
+    parola: item.parola,
+    isGo:   item.isGo,
+  }));
 
   const intervalMs   = level.intervalS * 1000;
   const intervalliMs = Array.from({ length: level.nWindows }, (_, i) => intervalMs * (i + 1));

@@ -78,11 +78,6 @@ function FaseIstruzione({
   stimolo:    TrialMPHybrid;
   onConferma: () => void;
 }) {
-  useEffect(() => {
-    const id = setTimeout(onConferma, 5000);
-    return () => clearTimeout(id);
-  }, [onConferma]);
-
   const intervalSec = Math.round(stimolo.intervalliMs[0] / 1000);
 
   return (

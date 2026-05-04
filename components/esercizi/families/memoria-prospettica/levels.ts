@@ -82,18 +82,18 @@ export const TIME_BUFFER_FINALE_MS = 15_000;
  *   lv 7→8: intervallo 45s→60s + categorie moderata→vicina
  */
 export const MP_HYBRID_LEVELS: readonly MPHybridLevelConfig[] = [
-  { livello:  1, intervalS: 30, toleranceS: 20, nWindows: 3, distractorISIMs: 2500, distanzaCategorie: "distante", durationMs: 105_000 },
-  { livello:  2, intervalS: 30, toleranceS: 15, nWindows: 3, distractorISIMs: 2300, distanzaCategorie: "distante", durationMs: 105_000 },
-  { livello:  3, intervalS: 30, toleranceS: 10, nWindows: 4, distractorISIMs: 2300, distanzaCategorie: "distante", durationMs: 135_000 },
-  { livello:  4, intervalS: 30, toleranceS: 10, nWindows: 4, distractorISIMs: 2000, distanzaCategorie: "distante", durationMs: 135_000 },
+  { livello:  1, intervalS: 30, toleranceS: 20, nWindows: 3, distractorISIMs: 3500, distanzaCategorie: "distante", durationMs: 105_000 },
+  { livello:  2, intervalS: 30, toleranceS: 15, nWindows: 3, distractorISIMs: 3300, distanzaCategorie: "distante", durationMs: 105_000 },
+  { livello:  3, intervalS: 30, toleranceS: 10, nWindows: 4, distractorISIMs: 3300, distanzaCategorie: "distante", durationMs: 135_000 },
+  { livello:  4, intervalS: 30, toleranceS: 10, nWindows: 4, distractorISIMs: 3000, distanzaCategorie: "distante", durationMs: 135_000 },
   // ── Lv 5: intervallo 30s → 45s + distante → moderata (warning) ──
-  { livello:  5, intervalS: 45, toleranceS: 10, nWindows: 3, distractorISIMs: 2000, distanzaCategorie: "moderata", durationMs: 150_000 },
-  { livello:  6, intervalS: 45, toleranceS: 10, nWindows: 3, distractorISIMs: 1800, distanzaCategorie: "moderata", durationMs: 150_000 },
-  { livello:  7, intervalS: 45, toleranceS:  5, nWindows: 3, distractorISIMs: 1800, distanzaCategorie: "moderata", durationMs: 150_000 },
+  { livello:  5, intervalS: 45, toleranceS: 10, nWindows: 3, distractorISIMs: 3000, distanzaCategorie: "moderata", durationMs: 150_000 },
+  { livello:  6, intervalS: 45, toleranceS: 10, nWindows: 3, distractorISIMs: 2800, distanzaCategorie: "moderata", durationMs: 150_000 },
+  { livello:  7, intervalS: 45, toleranceS:  5, nWindows: 3, distractorISIMs: 2800, distanzaCategorie: "moderata", durationMs: 150_000 },
   // ── Lv 8: intervallo 45s → 60s + moderata → vicina (warning) ──
-  { livello:  8, intervalS: 60, toleranceS:  5, nWindows: 2, distractorISIMs: 1600, distanzaCategorie: "vicina",   durationMs: 135_000 },
-  { livello:  9, intervalS: 60, toleranceS:  5, nWindows: 2, distractorISIMs: 1600, distanzaCategorie: "vicina",   durationMs: 135_000 },
-  { livello: 10, intervalS: 60, toleranceS:  5, nWindows: 2, distractorISIMs: 1500, distanzaCategorie: "vicina",   durationMs: 135_000 },
+  { livello:  8, intervalS: 60, toleranceS:  5, nWindows: 2, distractorISIMs: 2600, distanzaCategorie: "vicina",   durationMs: 135_000 },
+  { livello:  9, intervalS: 60, toleranceS:  5, nWindows: 2, distractorISIMs: 2600, distanzaCategorie: "vicina",   durationMs: 135_000 },
+  { livello: 10, intervalS: 60, toleranceS:  5, nWindows: 2, distractorISIMs: 2500, distanzaCategorie: "vicina",   durationMs: 135_000 },
 ] as const;
 
 // ── Lookup livello con clamp ──────────────────────────────────────────────────

@@ -103,11 +103,7 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     getSessionDurationMs: () => ODD_ONE_OUT_TIMER_MS,
   },
 
-  // ── Famiglia 10: Memoria Prospettica — 2 varianti (Modello B — single trial) ──
-  memoria_prospettica_event_based: {
-    Engine: MemoriaProspetticaTaskEngine,
-    getSessionDurationMs: () => null,
-  },
+  // ── Famiglia 10: Memoria Prospettica Ibrida (Modello B — single trial) ──────
   memoria_prospettica_time_based: {
     Engine: MemoriaProspetticaTaskEngine,
     getSessionDurationMs: () => null,
