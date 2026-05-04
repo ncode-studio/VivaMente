@@ -70,9 +70,6 @@ const COPPIA_VR:  CoppiaColore = { go: "verde", nogo: "rosso"    }; // alta
 const COPPIA_BA:  CoppiaColore = { go: "blu",   nogo: "arancio"  }; // alta
 const COPPIA_VG:  CoppiaColore = { go: "verde", nogo: "giallo"   }; // media
 const COPPIA_BV:  CoppiaColore = { go: "blu",   nogo: "viola"    }; // media
-const COPPIA_VT:  CoppiaColore = { go: "verde", nogo: "turchese" }; // bassa
-const COPPIA_BAZ: CoppiaColore = { go: "blu",   nogo: "azzurro"  }; // bassa
-
 // ── Configurazione livello ────────────────────────────────────────────────────
 //
 // Campo `sequenceLength` rimosso (vedi head comment): con Modello A timer 60s
@@ -128,29 +125,19 @@ export function getGoNogoMechanicWarning(
  * Lo `sequenceLength` GDD non è più utilizzato (timer fisso 60s).
  */
 export const GO_NOGO_LEVELS: readonly GoNogoLevelConfig[] = [
-  { livello: 1,  tLimMs: 1500, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA]  },
-  { livello: 2,  tLimMs: 1400, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA]  },
-  { livello: 3,  tLimMs: 1300, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA]  },
-  { livello: 4,  tLimMs: 1300, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA]  },
-  { livello: 5,  tLimMs: 1200, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA]  },
-  { livello: 6,  tLimMs: 1200, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV]  },
-  { livello: 7,  tLimMs: 1100, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV]  },
-  { livello: 8,  tLimMs: 1100, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV]  },
-  { livello: 9,  tLimMs: 1000, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV]  },
-  { livello: 10, tLimMs: 1000, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV]  },
-  { livello: 11, tLimMs:  950, saliency: "bassa", coppieAmmesse: [COPPIA_VT, COPPIA_BAZ] },
-  { livello: 12, tLimMs:  950, saliency: "bassa", coppieAmmesse: [COPPIA_VT, COPPIA_BAZ] },
-  { livello: 13, tLimMs:  900, saliency: "bassa", coppieAmmesse: [COPPIA_VT, COPPIA_BAZ] },
+  { livello: 1,  tLimMs: 1500, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA] },
+  { livello: 2,  tLimMs: 1400, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA] },
+  { livello: 3,  tLimMs: 1300, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA] },
+  { livello: 4,  tLimMs: 1300, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA] },
+  { livello: 5,  tLimMs: 1200, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA] },
+  { livello: 6,  tLimMs: 1200, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV] },
+  { livello: 7,  tLimMs: 1100, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV] },
+  { livello: 8,  tLimMs: 1100, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV] },
+  { livello: 9,  tLimMs: 1000, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV] },
+  { livello: 10, tLimMs: 1000, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV] },
 ] as const;
 
-/**
- * Lookup diretto per livello (1-based). Clamp a [1, 13] per evitare crash
- * su livelli non ancora implementati (lv 14-20 = congiunzione, TODO).
- *
- * Lv 14+ → ritorna config lv 13 (regola singola, salianza bassa). L'utente
- * gioca con parametri lv 13 finché la congiunzione GDD non sarà disponibile.
- */
 export function getGoNogoLevel(livello: number): GoNogoLevelConfig {
-  const clamped = Math.min(13, Math.max(1, livello));
+  const clamped = Math.min(10, Math.max(1, livello));
   return GO_NOGO_LEVELS[clamped - 1];
 }

@@ -84,26 +84,30 @@ export function GoNogoSemanticoTaskEngine({
     ? {
         pagine: [
           {
-            titolo: `Tocca solo: ${coppia.etichetta}`,
-            testo:  `Comparirà una parola alla volta. Tocca "Tocca" solo se la parola è ${coppia.etichetta.toLowerCase()}. Se non lo è, aspetta.`,
+            titolo: `Il gruppo di oggi: ${coppia.etichetta}`,
+            testo:  `Vedrai apparire una parola alla volta. Premi il pulsante "✓ ${coppia.etichetta}" SOLO se la parola appartiene al gruppo ${coppia.etichetta.toUpperCase()}. Se non appartiene, non fare nulla e aspetta la parola successiva.`,
             demo: (
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-3">
                 <span className="text-4xl font-bold text-gray-900">
                   {coppia.paroleGo[0]}
                 </span>
-                <span className="text-sm text-green-600 font-semibold">✓ Tocca!</span>
+                <span className="text-sm text-green-600 font-semibold">
+                  ✓ Appartiene a {coppia.etichetta} — premi il pulsante!
+                </span>
               </div>
             ),
           },
           {
-            titolo: "Non toccare gli altri",
-            testo:  `Se la parola NON è ${coppia.etichetta.toLowerCase()}, NON toccare nulla. Aspetta la parola successiva.`,
+            titolo: "Non appartiene? Non toccare nulla",
+            testo:  `Se la parola NON appartiene al gruppo ${coppia.etichetta.toUpperCase()}, tieni le mani ferme. Non premere nessun pulsante. Aspetta la parola successiva.`,
             demo: (
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-3">
                 <span className="text-4xl font-bold text-gray-900">
                   {coppia.paroleNogo[0]}
                 </span>
-                <span className="text-sm text-red-500 font-semibold">✗ Non toccare</span>
+                <span className="text-sm text-red-500 font-semibold">
+                  ✗ Non appartiene a {coppia.etichetta} — non toccare!
+                </span>
               </div>
             ),
           },
@@ -185,7 +189,7 @@ export function GoNogoSemanticoTaskEngine({
             Tocca solo: <strong>{coppia.etichetta}</strong>
           </span>
         </div>
-        <GoNogoSemanticoStimulus {...props} disabilitato={false} />
+        <GoNogoSemanticoStimulus {...props} disabilitato={false} etichetta={coppia.etichetta} />
       </div>
     ),
     [coppia.etichetta],

@@ -94,34 +94,19 @@ export function getFlankerMechanicWarning(
 // ── Tabella livelli (fonte: docs/gdd/families/flanker-task.md §Tabella livelli) ──
 
 export const FLANKER_LEVELS: readonly FlankerLevelConfig[] = [
-  { livello: 1,  tLimMs: 3000, incongruentRatio: 0.20, nFlankers: 2, sessionDurationMs: 90_000  },
-  { livello: 2,  tLimMs: 2800, incongruentRatio: 0.20, nFlankers: 2, sessionDurationMs: 90_000  },
-  { livello: 3,  tLimMs: 2600, incongruentRatio: 0.25, nFlankers: 2, sessionDurationMs: 90_000  },
-  { livello: 4,  tLimMs: 2400, incongruentRatio: 0.25, nFlankers: 2, sessionDurationMs: 90_000  },
-  { livello: 5,  tLimMs: 2200, incongruentRatio: 0.30, nFlankers: 2, sessionDurationMs: 90_000  },
-  { livello: 6,  tLimMs: 2000, incongruentRatio: 0.30, nFlankers: 4, sessionDurationMs: 90_000  },
-  { livello: 7,  tLimMs: 1900, incongruentRatio: 0.35, nFlankers: 4, sessionDurationMs: 90_000  },
-  { livello: 8,  tLimMs: 1800, incongruentRatio: 0.35, nFlankers: 4, sessionDurationMs: 90_000  },
-  { livello: 9,  tLimMs: 1700, incongruentRatio: 0.40, nFlankers: 4, sessionDurationMs: 90_000  },
-  { livello: 10, tLimMs: 1600, incongruentRatio: 0.40, nFlankers: 4, sessionDurationMs: 90_000  },
-  { livello: 11, tLimMs: 1500, incongruentRatio: 0.45, nFlankers: 4, sessionDurationMs: 120_000 },
-  { livello: 12, tLimMs: 1400, incongruentRatio: 0.45, nFlankers: 4, sessionDurationMs: 120_000 },
-  { livello: 13, tLimMs: 1300, incongruentRatio: 0.50, nFlankers: 4, sessionDurationMs: 120_000 },
-  { livello: 14, tLimMs: 1200, incongruentRatio: 0.50, nFlankers: 4, sessionDurationMs: 120_000 },
-  { livello: 15, tLimMs: 1100, incongruentRatio: 0.55, nFlankers: 4, sessionDurationMs: 120_000 },
-  { livello: 16, tLimMs: 1000, incongruentRatio: 0.55, nFlankers: 6, sessionDurationMs: 120_000 },
-  { livello: 17, tLimMs:  950, incongruentRatio: 0.60, nFlankers: 6, sessionDurationMs: 120_000 },
-  { livello: 18, tLimMs:  900, incongruentRatio: 0.60, nFlankers: 6, sessionDurationMs: 120_000 },
-  { livello: 19, tLimMs:  850, incongruentRatio: 0.65, nFlankers: 6, sessionDurationMs: 120_000 },
-  { livello: 20, tLimMs:  800, incongruentRatio: 0.70, nFlankers: 6, sessionDurationMs: 120_000 },
+  { livello: 1,  tLimMs: 3000, incongruentRatio: 0.20, nFlankers: 2, sessionDurationMs: 90_000 },
+  { livello: 2,  tLimMs: 2800, incongruentRatio: 0.20, nFlankers: 2, sessionDurationMs: 90_000 },
+  { livello: 3,  tLimMs: 2600, incongruentRatio: 0.25, nFlankers: 2, sessionDurationMs: 90_000 },
+  { livello: 4,  tLimMs: 2400, incongruentRatio: 0.25, nFlankers: 2, sessionDurationMs: 90_000 },
+  { livello: 5,  tLimMs: 2200, incongruentRatio: 0.30, nFlankers: 2, sessionDurationMs: 90_000 },
+  { livello: 6,  tLimMs: 2000, incongruentRatio: 0.30, nFlankers: 4, sessionDurationMs: 90_000 },
+  { livello: 7,  tLimMs: 1900, incongruentRatio: 0.35, nFlankers: 4, sessionDurationMs: 90_000 },
+  { livello: 8,  tLimMs: 1800, incongruentRatio: 0.35, nFlankers: 4, sessionDurationMs: 90_000 },
+  { livello: 9,  tLimMs: 1700, incongruentRatio: 0.40, nFlankers: 4, sessionDurationMs: 90_000 },
+  { livello: 10, tLimMs: 1600, incongruentRatio: 0.40, nFlankers: 4, sessionDurationMs: 90_000 },
 ] as const;
 
-/**
- * Lookup diretto per livello (1-based). Preferire questo a FLANKER_LEVELS[livello - 1].
- * @throws se livello è fuori da 1–20 (invariante garantito dalla logica adattiva).
- */
 export function getFlankerLevel(livello: number): FlankerLevelConfig {
-  const cfg = FLANKER_LEVELS[livello - 1];
-  if (!cfg) throw new RangeError(`Flanker: livello ${livello} fuori range 1–20`);
-  return cfg;
+  const clamped = Math.min(10, Math.max(1, livello));
+  return FLANKER_LEVELS[clamped - 1];
 }

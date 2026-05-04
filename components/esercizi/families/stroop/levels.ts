@@ -95,34 +95,19 @@ export function getStroopMechanicWarning(
 // ── Tabella livelli (fonte: docs/gdd/families/stroop.md §Tabella livelli) ──────
 
 export const STROOP_LEVELS: readonly StroopLevelConfig[] = [
-  { livello: 1,  tLimMs: 4000, incongruentRatio: 0.20, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE,   sessionDurationMs: 90_000  },
-  { livello: 2,  tLimMs: 3800, incongruentRatio: 0.20, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE,   sessionDurationMs: 90_000  },
-  { livello: 3,  tLimMs: 3600, incongruentRatio: 0.25, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE,   sessionDurationMs: 90_000  },
-  { livello: 4,  tLimMs: 3400, incongruentRatio: 0.25, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE,   sessionDurationMs: 90_000  },
-  { livello: 5,  tLimMs: 3200, incongruentRatio: 0.30, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE,   sessionDurationMs: 90_000  },
-  { livello: 6,  tLimMs: 3000, incongruentRatio: 0.30, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE,   sessionDurationMs: 90_000  },
-  { livello: 7,  tLimMs: 2800, incongruentRatio: 0.35, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE,   sessionDurationMs: 90_000  },
-  { livello: 8,  tLimMs: 2600, incongruentRatio: 0.35, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE,   sessionDurationMs: 90_000  },
-  { livello: 9,  tLimMs: 2400, incongruentRatio: 0.40, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE,   sessionDurationMs: 90_000  },
-  { livello: 10, tLimMs: 2200, incongruentRatio: 0.40, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE,   sessionDurationMs: 90_000  },
-  { livello: 11, tLimMs: 2000, incongruentRatio: 0.45, nOptions: 3, nColors: 4, coloriAttivi: COLORI_BASE,   sessionDurationMs: 120_000 },
-  { livello: 12, tLimMs: 1900, incongruentRatio: 0.45, nOptions: 3, nColors: 4, coloriAttivi: COLORI_BASE,   sessionDurationMs: 120_000 },
-  { livello: 13, tLimMs: 1800, incongruentRatio: 0.50, nOptions: 3, nColors: 6, coloriAttivi: COLORI_ESTESI, sessionDurationMs: 120_000 },
-  { livello: 14, tLimMs: 1700, incongruentRatio: 0.50, nOptions: 3, nColors: 6, coloriAttivi: COLORI_ESTESI, sessionDurationMs: 120_000 },
-  { livello: 15, tLimMs: 1600, incongruentRatio: 0.55, nOptions: 3, nColors: 6, coloriAttivi: COLORI_ESTESI, sessionDurationMs: 120_000 },
-  { livello: 16, tLimMs: 1500, incongruentRatio: 0.55, nOptions: 3, nColors: 6, coloriAttivi: COLORI_ESTESI, sessionDurationMs: 120_000 },
-  { livello: 17, tLimMs: 1400, incongruentRatio: 0.60, nOptions: 3, nColors: 6, coloriAttivi: COLORI_ESTESI, sessionDurationMs: 120_000 },
-  { livello: 18, tLimMs: 1300, incongruentRatio: 0.60, nOptions: 3, nColors: 6, coloriAttivi: COLORI_ESTESI, sessionDurationMs: 120_000 },
-  { livello: 19, tLimMs: 1200, incongruentRatio: 0.65, nOptions: 3, nColors: 6, coloriAttivi: COLORI_ESTESI, sessionDurationMs: 120_000 },
-  { livello: 20, tLimMs: 1000, incongruentRatio: 0.70, nOptions: 3, nColors: 6, coloriAttivi: COLORI_ESTESI, sessionDurationMs: 120_000 },
+  { livello: 1,  tLimMs: 4000, incongruentRatio: 0.20, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
+  { livello: 2,  tLimMs: 3800, incongruentRatio: 0.20, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
+  { livello: 3,  tLimMs: 3600, incongruentRatio: 0.25, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
+  { livello: 4,  tLimMs: 3400, incongruentRatio: 0.25, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
+  { livello: 5,  tLimMs: 3200, incongruentRatio: 0.30, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
+  { livello: 6,  tLimMs: 3000, incongruentRatio: 0.30, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
+  { livello: 7,  tLimMs: 2800, incongruentRatio: 0.35, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
+  { livello: 8,  tLimMs: 2600, incongruentRatio: 0.35, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
+  { livello: 9,  tLimMs: 2400, incongruentRatio: 0.40, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
+  { livello: 10, tLimMs: 2200, incongruentRatio: 0.40, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
 ] as const;
 
-/**
- * Lookup diretto per livello (1-based). Preferire questo a STROOP_LEVELS[livello - 1].
- * @throws RangeError se livello è fuori da 1–20.
- */
 export function getStroopLevel(livello: number): StroopLevelConfig {
-  const cfg = STROOP_LEVELS[livello - 1];
-  if (!cfg) throw new RangeError(`Stroop: livello ${livello} fuori range 1–20`);
-  return cfg;
+  const clamped = Math.min(10, Math.max(1, livello));
+  return STROOP_LEVELS[clamped - 1];
 }

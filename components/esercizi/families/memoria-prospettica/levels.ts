@@ -129,17 +129,6 @@ export const EVENT_LEVELS: readonly MPLevelEvent[] = [
   { livello:  8, tipo: "event", nWindows: 4, distractorISIMs: 1800, cueSalience: "media", durationMs: 240_000 },
   { livello:  9, tipo: "event", nWindows: 5, distractorISIMs: 1800, cueSalience: "media", durationMs: 300_000 },
   { livello: 10, tipo: "event", nWindows: 5, distractorISIMs: 1600, cueSalience: "media", durationMs: 300_000 },
-  { livello: 11, tipo: "event", nWindows: 5, distractorISIMs: 1600, cueSalience: "media", durationMs: 300_000 },
-  { livello: 12, tipo: "event", nWindows: 5, distractorISIMs: 1500, cueSalience: "media", durationMs: 360_000 },
-  // ── Lv 13: cambio meccanica → cueSalience bassa (warning) ──
-  { livello: 13, tipo: "event", nWindows: 5, distractorISIMs: 1500, cueSalience: "bassa", durationMs: 360_000 },
-  { livello: 14, tipo: "event", nWindows: 5, distractorISIMs: 1400, cueSalience: "bassa", durationMs: 360_000 },
-  { livello: 15, tipo: "event", nWindows: 6, distractorISIMs: 1400, cueSalience: "bassa", durationMs: 420_000 },
-  { livello: 16, tipo: "event", nWindows: 6, distractorISIMs: 1300, cueSalience: "bassa", durationMs: 420_000 },
-  { livello: 17, tipo: "event", nWindows: 6, distractorISIMs: 1300, cueSalience: "bassa", durationMs: 420_000 },
-  { livello: 18, tipo: "event", nWindows: 6, distractorISIMs: 1200, cueSalience: "bassa", durationMs: 480_000 },
-  { livello: 19, tipo: "event", nWindows: 6, distractorISIMs: 1200, cueSalience: "bassa", durationMs: 480_000 },
-  { livello: 20, tipo: "event", nWindows: 6, distractorISIMs: 1100, cueSalience: "bassa", durationMs: 480_000 },
 ] as const;
 
 // ── Tabella livelli time-based ────────────────────────────────────────────────
@@ -157,28 +146,17 @@ export const EVENT_LEVELS: readonly MPLevelEvent[] = [
  *   lv 20 → 120s, 4 fin, ±5,  assente → 120×4×1000 + 15_000 = 495_000
  */
 export const TIME_LEVELS: readonly MPLevelTime[] = [
-  { livello:  1, tipo: "time", nWindows: 3, distractorISIMs: 3000, intervalS:  30, toleranceS: 20, clockVisibility: "piena",   durationMs: 105_000 },
-  { livello:  2, tipo: "time", nWindows: 3, distractorISIMs: 2800, intervalS:  30, toleranceS: 20, clockVisibility: "piena",   durationMs: 105_000 },
-  { livello:  3, tipo: "time", nWindows: 3, distractorISIMs: 2500, intervalS:  30, toleranceS: 20, clockVisibility: "piena",   durationMs: 105_000 },
-  { livello:  4, tipo: "time", nWindows: 3, distractorISIMs: 2500, intervalS:  30, toleranceS: 20, clockVisibility: "piena",   durationMs: 105_000 },
-  { livello:  5, tipo: "time", nWindows: 3, distractorISIMs: 2200, intervalS:  60, toleranceS: 20, clockVisibility: "piena",   durationMs: 195_000 },
-  { livello:  6, tipo: "time", nWindows: 3, distractorISIMs: 2000, intervalS:  60, toleranceS: 20, clockVisibility: "piena",   durationMs: 195_000 },
+  { livello:  1, tipo: "time", nWindows: 3, distractorISIMs: 3000, intervalS: 30, toleranceS: 20, clockVisibility: "piena",   durationMs: 105_000 },
+  { livello:  2, tipo: "time", nWindows: 3, distractorISIMs: 2800, intervalS: 30, toleranceS: 20, clockVisibility: "piena",   durationMs: 105_000 },
+  { livello:  3, tipo: "time", nWindows: 3, distractorISIMs: 2500, intervalS: 30, toleranceS: 20, clockVisibility: "piena",   durationMs: 105_000 },
+  { livello:  4, tipo: "time", nWindows: 3, distractorISIMs: 2500, intervalS: 30, toleranceS: 20, clockVisibility: "piena",   durationMs: 105_000 },
+  { livello:  5, tipo: "time", nWindows: 3, distractorISIMs: 2200, intervalS: 60, toleranceS: 20, clockVisibility: "piena",   durationMs: 195_000 },
+  { livello:  6, tipo: "time", nWindows: 3, distractorISIMs: 2000, intervalS: 60, toleranceS: 20, clockVisibility: "piena",   durationMs: 195_000 },
   // ── Lv 7: cambio meccanica → clockVisibility ridotta (warning) ──
-  { livello:  7, tipo: "time", nWindows: 3, distractorISIMs: 2000, intervalS:  60, toleranceS: 20, clockVisibility: "ridotta", durationMs: 195_000 },
-  { livello:  8, tipo: "time", nWindows: 3, distractorISIMs: 1800, intervalS:  90, toleranceS: 10, clockVisibility: "ridotta", durationMs: 285_000 },
-  { livello:  9, tipo: "time", nWindows: 3, distractorISIMs: 1800, intervalS:  90, toleranceS: 10, clockVisibility: "ridotta", durationMs: 285_000 },
-  { livello: 10, tipo: "time", nWindows: 3, distractorISIMs: 1600, intervalS:  90, toleranceS: 10, clockVisibility: "ridotta", durationMs: 285_000 },
-  { livello: 11, tipo: "time", nWindows: 4, distractorISIMs: 1600, intervalS: 120, toleranceS: 10, clockVisibility: "ridotta", durationMs: 495_000 },
-  { livello: 12, tipo: "time", nWindows: 4, distractorISIMs: 1500, intervalS: 120, toleranceS: 10, clockVisibility: "ridotta", durationMs: 495_000 },
-  // ── Lv 13: cambio meccanica → clockVisibility assente (warning) ──
-  { livello: 13, tipo: "time", nWindows: 4, distractorISIMs: 1500, intervalS: 120, toleranceS: 10, clockVisibility: "assente", durationMs: 495_000 },
-  { livello: 14, tipo: "time", nWindows: 4, distractorISIMs: 1400, intervalS: 120, toleranceS:  5, clockVisibility: "assente", durationMs: 495_000 },
-  { livello: 15, tipo: "time", nWindows: 4, distractorISIMs: 1400, intervalS: 120, toleranceS:  5, clockVisibility: "assente", durationMs: 495_000 },
-  { livello: 16, tipo: "time", nWindows: 4, distractorISIMs: 1300, intervalS: 120, toleranceS:  5, clockVisibility: "assente", durationMs: 495_000 },
-  { livello: 17, tipo: "time", nWindows: 4, distractorISIMs: 1300, intervalS: 120, toleranceS:  5, clockVisibility: "assente", durationMs: 495_000 },
-  { livello: 18, tipo: "time", nWindows: 4, distractorISIMs: 1200, intervalS: 120, toleranceS:  5, clockVisibility: "assente", durationMs: 495_000 },
-  { livello: 19, tipo: "time", nWindows: 4, distractorISIMs: 1200, intervalS: 120, toleranceS:  5, clockVisibility: "assente", durationMs: 495_000 },
-  { livello: 20, tipo: "time", nWindows: 4, distractorISIMs: 1100, intervalS: 120, toleranceS:  5, clockVisibility: "assente", durationMs: 495_000 },
+  { livello:  7, tipo: "time", nWindows: 3, distractorISIMs: 2000, intervalS: 60, toleranceS: 20, clockVisibility: "ridotta", durationMs: 195_000 },
+  { livello:  8, tipo: "time", nWindows: 3, distractorISIMs: 1800, intervalS: 90, toleranceS: 10, clockVisibility: "ridotta", durationMs: 285_000 },
+  { livello:  9, tipo: "time", nWindows: 3, distractorISIMs: 1800, intervalS: 90, toleranceS: 10, clockVisibility: "ridotta", durationMs: 285_000 },
+  { livello: 10, tipo: "time", nWindows: 3, distractorISIMs: 1600, intervalS: 90, toleranceS: 10, clockVisibility: "ridotta", durationMs: 285_000 },
 ] as const;
 
 // ── Lookup livelli con clamp ──────────────────────────────────────────────────
@@ -188,16 +166,12 @@ export const TIME_LEVELS: readonly MPLevelTime[] = [
  * range [1, 20]. Pattern allineato a getOddOneOutLevel / getSartLevel.
  */
 export function getMPLevelEvent(livello: number): MPLevelEvent {
-  const clamped = Math.min(20, Math.max(1, livello));
+  const clamped = Math.min(10, Math.max(1, livello));
   return EVENT_LEVELS[clamped - 1];
 }
 
-/**
- * Ritorna la configurazione del livello time-based, clampando l'input al
- * range [1, 20].
- */
 export function getMPLevelTime(livello: number): MPLevelTime {
-  const clamped = Math.min(20, Math.max(1, livello));
+  const clamped = Math.min(10, Math.max(1, livello));
   return TIME_LEVELS[clamped - 1];
 }
 

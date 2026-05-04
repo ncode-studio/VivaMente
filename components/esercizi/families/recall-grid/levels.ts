@@ -130,31 +130,17 @@ export const SOGLIA_DEROGA_CATEGORIA  = 18;
  *   lv 20 → 6x6, 10 stim, 800ms exp, 5000ms delay, 20000ms tLim repr
  */
 export const RECALL_GRID_MBT_LEVELS: readonly RecallGridMBTLevelConfig[] = [
-  { livello:  1, tipo: "mbt", gridSize: "3x3", nStimuli:  2, exposureMs: 3000, delayMs: 1000, tLimReproMs:  null, trialsPerSession:  5, sessionDurationMs:  90000 },
-  { livello:  2, tipo: "mbt", gridSize: "3x3", nStimuli:  2, exposureMs: 3000, delayMs: 1500, tLimReproMs:  null, trialsPerSession:  5, sessionDurationMs:  90000 },
-  { livello:  3, tipo: "mbt", gridSize: "3x3", nStimuli:  3, exposureMs: 2500, delayMs: 1500, tLimReproMs:  null, trialsPerSession:  6, sessionDurationMs:  90000 },
-  { livello:  4, tipo: "mbt", gridSize: "3x3", nStimuli:  3, exposureMs: 2500, delayMs: 2000, tLimReproMs:  null, trialsPerSession:  6, sessionDurationMs:  90000 },
-  { livello:  5, tipo: "mbt", gridSize: "3x3", nStimuli:  4, exposureMs: 2000, delayMs: 2000, tLimReproMs:  null, trialsPerSession:  7, sessionDurationMs:  90000 },
+  { livello:  1, tipo: "mbt", gridSize: "3x3", nStimuli: 2, exposureMs: 3000, delayMs: 1000, tLimReproMs: null, trialsPerSession: 5, sessionDurationMs: 90000 },
+  { livello:  2, tipo: "mbt", gridSize: "3x3", nStimuli: 2, exposureMs: 3000, delayMs: 1500, tLimReproMs: null, trialsPerSession: 5, sessionDurationMs: 90000 },
+  { livello:  3, tipo: "mbt", gridSize: "3x3", nStimuli: 3, exposureMs: 2500, delayMs: 1500, tLimReproMs: null, trialsPerSession: 6, sessionDurationMs: 90000 },
+  { livello:  4, tipo: "mbt", gridSize: "3x3", nStimuli: 3, exposureMs: 2500, delayMs: 2000, tLimReproMs: null, trialsPerSession: 6, sessionDurationMs: 90000 },
+  { livello:  5, tipo: "mbt", gridSize: "3x3", nStimuli: 4, exposureMs: 2000, delayMs: 2000, tLimReproMs: null, trialsPerSession: 7, sessionDurationMs: 90000 },
   // ── Lv 6: cambio griglia 3×3 → 4×4 (warning) ──
-  { livello:  6, tipo: "mbt", gridSize: "4x4", nStimuli:  4, exposureMs: 2000, delayMs: 2000, tLimReproMs:  null, trialsPerSession:  7, sessionDurationMs:  90000 },
-  { livello:  7, tipo: "mbt", gridSize: "4x4", nStimuli:  4, exposureMs: 1900, delayMs: 2500, tLimReproMs:  null, trialsPerSession:  7, sessionDurationMs:  90000 },
-  { livello:  8, tipo: "mbt", gridSize: "4x4", nStimuli:  5, exposureMs: 1800, delayMs: 2500, tLimReproMs:  null, trialsPerSession:  8, sessionDurationMs:  90000 },
-  { livello:  9, tipo: "mbt", gridSize: "4x4", nStimuli:  5, exposureMs: 1800, delayMs: 3000, tLimReproMs:  null, trialsPerSession:  8, sessionDurationMs:  90000 },
-  { livello: 10, tipo: "mbt", gridSize: "4x4", nStimuli:  5, exposureMs: 1700, delayMs: 3000, tLimReproMs:  null, trialsPerSession:  8, sessionDurationMs:  90000 },
-  // ── Lv 11: timer pagina 90s → 120s (no warning, parametro ambient) ──
-  { livello: 11, tipo: "mbt", gridSize: "4x4", nStimuli:  6, exposureMs: 1600, delayMs: 3000, tLimReproMs:  null, trialsPerSession:  9, sessionDurationMs: 120000 },
-  { livello: 12, tipo: "mbt", gridSize: "4x4", nStimuli:  6, exposureMs: 1500, delayMs: 3500, tLimReproMs:  null, trialsPerSession:  9, sessionDurationMs: 120000 },
-  // ── Lv 13: cambio griglia 4×4 → 5×5 + cambio interazione drag→tap-to-place (warning) ──
-  { livello: 13, tipo: "mbt", gridSize: "5x5", nStimuli:  6, exposureMs: 1500, delayMs: 3500, tLimReproMs:  null, trialsPerSession:  9, sessionDurationMs: 120000 },
-  { livello: 14, tipo: "mbt", gridSize: "5x5", nStimuli:  7, exposureMs: 1400, delayMs: 3500, tLimReproMs:  null, trialsPerSession:  9, sessionDurationMs: 120000 },
-  { livello: 15, tipo: "mbt", gridSize: "5x5", nStimuli:  7, exposureMs: 1400, delayMs: 4000, tLimReproMs:  null, trialsPerSession:  9, sessionDurationMs: 120000 },
-  // ── Lv 16: introduzione T.Lim retrieval (30000ms, decrescente a lv 20) ──
-  { livello: 16, tipo: "mbt", gridSize: "5x5", nStimuli:  8, exposureMs: 1200, delayMs: 4000, tLimReproMs: 30000, trialsPerSession: 10, sessionDurationMs: 120000 },
-  { livello: 17, tipo: "mbt", gridSize: "5x5", nStimuli:  8, exposureMs: 1200, delayMs: 4000, tLimReproMs: 30000, trialsPerSession: 10, sessionDurationMs: 120000 },
-  { livello: 18, tipo: "mbt", gridSize: "5x5", nStimuli:  9, exposureMs: 1000, delayMs: 4500, tLimReproMs: 25000, trialsPerSession: 10, sessionDurationMs: 120000 },
-  // ── Lv 19: cambio griglia 5×5 → 6×6 + timer pagina 120s → 180s (warning) ──
-  { livello: 19, tipo: "mbt", gridSize: "6x6", nStimuli:  9, exposureMs: 1000, delayMs: 4500, tLimReproMs: 25000, trialsPerSession: 10, sessionDurationMs: 180000 },
-  { livello: 20, tipo: "mbt", gridSize: "6x6", nStimuli: 10, exposureMs:  800, delayMs: 5000, tLimReproMs: 20000, trialsPerSession: 10, sessionDurationMs: 180000 },
+  { livello:  6, tipo: "mbt", gridSize: "4x4", nStimuli: 4, exposureMs: 2000, delayMs: 2000, tLimReproMs: null, trialsPerSession: 7, sessionDurationMs: 90000 },
+  { livello:  7, tipo: "mbt", gridSize: "4x4", nStimuli: 4, exposureMs: 1900, delayMs: 2500, tLimReproMs: null, trialsPerSession: 7, sessionDurationMs: 90000 },
+  { livello:  8, tipo: "mbt", gridSize: "4x4", nStimuli: 5, exposureMs: 1800, delayMs: 2500, tLimReproMs: null, trialsPerSession: 8, sessionDurationMs: 90000 },
+  { livello:  9, tipo: "mbt", gridSize: "4x4", nStimuli: 5, exposureMs: 1800, delayMs: 3000, tLimReproMs: null, trialsPerSession: 8, sessionDurationMs: 90000 },
+  { livello: 10, tipo: "mbt", gridSize: "4x4", nStimuli: 5, exposureMs: 1700, delayMs: 3000, tLimReproMs: null, trialsPerSession: 8, sessionDurationMs: 90000 },
 ] as const;
 
 // ── Tabella livelli MLT ──────────────────────────────────────────────────────
@@ -190,43 +176,30 @@ export const RECALL_GRID_MBT_LEVELS: readonly RecallGridMBTLevelConfig[] = [
  *   lv 20 → 5x5, 7 stim, 1500ms exp, 180s delay, 20000ms tLim repr, 2 trial
  */
 export const RECALL_GRID_MLT_LEVELS: readonly RecallGridMLTLevelConfig[] = [
-  { livello:  1, tipo: "mlt", gridSize: "3x3", nStimuli: 2, exposureMs: 3500, delayS:  30, tLimReproMs:  null, trialsPerSession: 5 },
-  { livello:  2, tipo: "mlt", gridSize: "3x3", nStimuli: 2, exposureMs: 3500, delayS:  30, tLimReproMs:  null, trialsPerSession: 5 },
-  { livello:  3, tipo: "mlt", gridSize: "3x3", nStimuli: 3, exposureMs: 3000, delayS:  30, tLimReproMs:  null, trialsPerSession: 5 },
-  { livello:  4, tipo: "mlt", gridSize: "3x3", nStimuli: 3, exposureMs: 3000, delayS:  30, tLimReproMs:  null, trialsPerSession: 5 },
-  // ── Lv 5: delay 30s → 60s (warning, primo aumento sostanziale) ──
-  { livello:  5, tipo: "mlt", gridSize: "3x3", nStimuli: 3, exposureMs: 3000, delayS:  60, tLimReproMs:  null, trialsPerSession: 4 },
+  { livello:  1, tipo: "mlt", gridSize: "3x3", nStimuli: 2, exposureMs: 3500, delayS: 30, tLimReproMs: null, trialsPerSession: 5 },
+  { livello:  2, tipo: "mlt", gridSize: "3x3", nStimuli: 2, exposureMs: 3500, delayS: 30, tLimReproMs: null, trialsPerSession: 5 },
+  { livello:  3, tipo: "mlt", gridSize: "3x3", nStimuli: 3, exposureMs: 3000, delayS: 30, tLimReproMs: null, trialsPerSession: 5 },
+  { livello:  4, tipo: "mlt", gridSize: "3x3", nStimuli: 3, exposureMs: 3000, delayS: 30, tLimReproMs: null, trialsPerSession: 5 },
+  // ── Lv 5: delay 30s → 60s (warning) ──
+  { livello:  5, tipo: "mlt", gridSize: "3x3", nStimuli: 3, exposureMs: 3000, delayS: 60, tLimReproMs: null, trialsPerSession: 4 },
   // ── Lv 6: cambio griglia 3×3 → 4×4 ──
-  { livello:  6, tipo: "mlt", gridSize: "4x4", nStimuli: 3, exposureMs: 2800, delayS:  60, tLimReproMs:  null, trialsPerSession: 4 },
-  { livello:  7, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2800, delayS:  60, tLimReproMs:  null, trialsPerSession: 4 },
-  { livello:  8, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2500, delayS:  60, tLimReproMs:  null, trialsPerSession: 4 },
+  { livello:  6, tipo: "mlt", gridSize: "4x4", nStimuli: 3, exposureMs: 2800, delayS: 60, tLimReproMs: null, trialsPerSession: 4 },
+  { livello:  7, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2800, delayS: 60, tLimReproMs: null, trialsPerSession: 4 },
+  { livello:  8, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2500, delayS: 60, tLimReproMs: null, trialsPerSession: 4 },
   // ── Lv 9: delay 60s → 90s ──
-  { livello:  9, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2500, delayS:  90, tLimReproMs:  null, trialsPerSession: 3 },
-  { livello: 10, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2300, delayS:  90, tLimReproMs:  null, trialsPerSession: 3 },
-  { livello: 11, tipo: "mlt", gridSize: "4x4", nStimuli: 5, exposureMs: 2300, delayS:  90, tLimReproMs:  null, trialsPerSession: 3 },
-  { livello: 12, tipo: "mlt", gridSize: "4x4", nStimuli: 5, exposureMs: 2000, delayS:  90, tLimReproMs:  null, trialsPerSession: 3 },
-  // ── Lv 13: cambio griglia 4×4 → 5×5 + delay 90s → 120s (warning) ──
-  { livello: 13, tipo: "mlt", gridSize: "5x5", nStimuli: 5, exposureMs: 2000, delayS: 120, tLimReproMs:  null, trialsPerSession: 2 },
-  { livello: 14, tipo: "mlt", gridSize: "5x5", nStimuli: 5, exposureMs: 2000, delayS: 120, tLimReproMs:  null, trialsPerSession: 2 },
-  // ── Lv 15: introduzione T.Lim retrieval ──
-  { livello: 15, tipo: "mlt", gridSize: "5x5", nStimuli: 6, exposureMs: 1800, delayS: 120, tLimReproMs: 30000, trialsPerSession: 2 },
-  { livello: 16, tipo: "mlt", gridSize: "5x5", nStimuli: 6, exposureMs: 1800, delayS: 120, tLimReproMs: 25000, trialsPerSession: 2 },
-  // ── Lv 17: delay 120s → 180s ──
-  { livello: 17, tipo: "mlt", gridSize: "5x5", nStimuli: 6, exposureMs: 1600, delayS: 180, tLimReproMs: 25000, trialsPerSession: 2 },
-  { livello: 18, tipo: "mlt", gridSize: "5x5", nStimuli: 6, exposureMs: 1600, delayS: 180, tLimReproMs: 20000, trialsPerSession: 2 },
-  { livello: 19, tipo: "mlt", gridSize: "5x5", nStimuli: 7, exposureMs: 1500, delayS: 180, tLimReproMs: 20000, trialsPerSession: 2 },
-  { livello: 20, tipo: "mlt", gridSize: "5x5", nStimuli: 7, exposureMs: 1500, delayS: 180, tLimReproMs: 20000, trialsPerSession: 2 },
+  { livello:  9, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2500, delayS: 90, tLimReproMs: null, trialsPerSession: 3 },
+  { livello: 10, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2300, delayS: 90, tLimReproMs: null, trialsPerSession: 3 },
 ] as const;
 
 // ── Lookup livelli con clamp ─────────────────────────────────────────────────
 
 export function getRecallGridMBTLevel(livello: number): RecallGridMBTLevelConfig {
-  const clamped = Math.min(20, Math.max(1, livello));
+  const clamped = Math.min(10, Math.max(1, livello));
   return RECALL_GRID_MBT_LEVELS[clamped - 1];
 }
 
 export function getRecallGridMLTLevel(livello: number): RecallGridMLTLevelConfig {
-  const clamped = Math.min(20, Math.max(1, livello));
+  const clamped = Math.min(10, Math.max(1, livello));
   return RECALL_GRID_MLT_LEVELS[clamped - 1];
 }
 

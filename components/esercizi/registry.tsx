@@ -7,7 +7,6 @@ import { FlankerTaskEngine } from "./families/flanker-task/FlankerTaskEngine";
 import { getFlankerLevel } from "./families/flanker-task/levels";
 import { StroopTaskEngine } from "./families/stroop/StroopTaskEngine";
 import { getStroopLevel } from "./families/stroop/levels";
-import { SartTaskEngine } from "./families/sart/SartTaskEngine";
 import { OddOneOutTaskEngine } from "./families/odd-one-out/OddOneOutTaskEngine";
 import { ODD_ONE_OUT_TIMER_MS } from "./families/odd-one-out/_deroghe";
 import { MemoriaProspetticaTaskEngine } from "./families/memoria-prospettica/MemoriaProspetticaTaskEngine";
@@ -80,12 +79,6 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   go_nogo_semantico: {
     Engine: GoNogoSemanticoTaskEngine,
     getSessionDurationMs: () => GO_NOGO_SEMANTICO_TIMER_MS,
-  },
-
-  // ── Famiglia 11: SART numerico (Modello B — completamento blocchi) ─────────
-  sart_numerico: {
-    Engine: SartTaskEngine,
-    getSessionDurationMs: () => null,
   },
 
   // ── Famiglia 15: Stroop Task (Modello A — timer-based) ───────────────────

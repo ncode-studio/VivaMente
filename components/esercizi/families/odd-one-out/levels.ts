@@ -98,41 +98,21 @@ export type OddOneOutLevelConfig = {
  *   lv 20 → 12 stimoli, astratto,              5000,  10 trial, 120000ms
  */
 export const ODD_ONE_OUT_LEVELS: readonly OddOneOutLevelConfig[] = [
-  { livello:  1, nStimuli:  4, dimensione: "categoriale_alto",      tLimMs:  null, trialsPerSession:  6, sessionDurationMs:  90000 },
-  { livello:  2, nStimuli:  4, dimensione: "categoriale_alto",      tLimMs:  null, trialsPerSession:  6, sessionDurationMs:  90000 },
-  { livello:  3, nStimuli:  5, dimensione: "categoriale_alto",      tLimMs:  null, trialsPerSession:  6, sessionDurationMs:  90000 },
-  { livello:  4, nStimuli:  5, dimensione: "categoriale_alto",      tLimMs:  null, trialsPerSession:  7, sessionDurationMs:  90000 },
-  { livello:  5, nStimuli:  6, dimensione: "categoriale_alto",      tLimMs:  null, trialsPerSession:  7, sessionDurationMs:  90000 },
+  { livello:  1, nStimuli: 4, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 6, sessionDurationMs: 90000 },
+  { livello:  2, nStimuli: 4, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 6, sessionDurationMs: 90000 },
+  { livello:  3, nStimuli: 5, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 6, sessionDurationMs: 90000 },
+  { livello:  4, nStimuli: 5, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 7, sessionDurationMs: 90000 },
+  { livello:  5, nStimuli: 6, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 7, sessionDurationMs: 90000 },
   // ── Lv 6: cambio meccanica → categoriale medio (warning) ──
-  { livello:  6, nStimuli:  6, dimensione: "categoriale_medio",     tLimMs:  null, trialsPerSession:  7, sessionDurationMs:  90000 },
-  { livello:  7, nStimuli:  7, dimensione: "categoriale_medio",     tLimMs:  null, trialsPerSession:  8, sessionDurationMs:  90000 },
-  { livello:  8, nStimuli:  7, dimensione: "categoriale_medio",     tLimMs:  null, trialsPerSession:  8, sessionDurationMs:  90000 },
-  { livello:  9, nStimuli:  8, dimensione: "categoriale_medio",     tLimMs:  null, trialsPerSession:  8, sessionDurationMs:  90000 },
-  { livello: 10, nStimuli:  8, dimensione: "categoriale_medio",     tLimMs:  null, trialsPerSession:  9, sessionDurationMs:  90000 },
-  // ── Lv 11: cambio meccanica → semantico contestuale + timer 120s (warning) ──
-  { livello: 11, nStimuli:  9, dimensione: "semantico_contestuale", tLimMs:  null, trialsPerSession:  9, sessionDurationMs: 120000 },
-  { livello: 12, nStimuli:  9, dimensione: "semantico_contestuale", tLimMs:  null, trialsPerSession:  9, sessionDurationMs: 120000 },
-  // ── Lv 13: introduzione T.Lim per-trial (10000ms → 5000ms a lv 20) ──
-  { livello: 13, nStimuli: 10, dimensione: "semantico_contestuale", tLimMs: 10000, trialsPerSession:  9, sessionDurationMs: 120000 },
-  { livello: 14, nStimuli: 10, dimensione: "semantico_contestuale", tLimMs:  9000, trialsPerSession: 10, sessionDurationMs: 120000 },
-  { livello: 15, nStimuli: 11, dimensione: "semantico_contestuale", tLimMs:  8000, trialsPerSession: 10, sessionDurationMs: 120000 },
-  // ── Lv 16: cambio meccanica → astratto (warning) ──
-  { livello: 16, nStimuli: 11, dimensione: "astratto",              tLimMs:  7000, trialsPerSession: 10, sessionDurationMs: 120000 },
-  { livello: 17, nStimuli: 11, dimensione: "astratto",              tLimMs:  7000, trialsPerSession: 10, sessionDurationMs: 120000 },
-  { livello: 18, nStimuli: 12, dimensione: "astratto",              tLimMs:  6000, trialsPerSession: 10, sessionDurationMs: 120000 },
-  { livello: 19, nStimuli: 12, dimensione: "astratto",              tLimMs:  6000, trialsPerSession: 10, sessionDurationMs: 120000 },
-  { livello: 20, nStimuli: 12, dimensione: "astratto",              tLimMs:  5000, trialsPerSession: 10, sessionDurationMs: 120000 },
+  { livello:  6, nStimuli: 6, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 7, sessionDurationMs: 90000 },
+  { livello:  7, nStimuli: 7, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 8, sessionDurationMs: 90000 },
+  { livello:  8, nStimuli: 7, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 8, sessionDurationMs: 90000 },
+  { livello:  9, nStimuli: 8, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 8, sessionDurationMs: 90000 },
+  { livello: 10, nStimuli: 8, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 9, sessionDurationMs: 90000 },
 ] as const;
 
-// ── Lookup livello con clamp ──────────────────────────────────────────────────
-
-/**
- * Ritorna la configurazione del livello, clampando l'input al range [1, 20].
- * Pattern allineato a getSartLevel / getStroopLevel — robusto contro valori
- * fuori range provenienti dallo store o dal DB.
- */
 export function getOddOneOutLevel(livello: number): OddOneOutLevelConfig {
-  const clamped = Math.min(20, Math.max(1, livello));
+  const clamped = Math.min(10, Math.max(1, livello));
   return ODD_ONE_OUT_LEVELS[clamped - 1];
 }
 
