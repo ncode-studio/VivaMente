@@ -19,6 +19,8 @@ import { RecallGridMLTTaskEngine } from "./families/recall-grid/RecallGridMLTTas
 import { getRecallGridMBTLevel } from "./families/recall-grid/levels";
 import { LinguaggioDenominazioneTaskEngine } from "./families/linguaggio-denominazione/LinguaggioDenominazioneTaskEngine";
 import { SESSION_TIMER_MS as LD_TIMER_MS } from "./families/linguaggio-denominazione/levels";
+import { CulturaGeneraleTaskEngine } from "./families/conoscenza-generale/CulturaGeneraleTaskEngine";
+import { SESSION_TIMER_MS as CG_TIMER_MS } from "./families/conoscenza-generale/levels";
 
 // ── Wrapper inline per Recall Grid MBT (discrimina stimulusType) ─────────────
 
@@ -141,6 +143,12 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   sequence_tap_parole_backward: {
     Engine: SequenceTapTaskEngine,
     getSessionDurationMs: () => ST_TIMER_MS,
+  },
+
+  // ── Famiglia 24: Conoscenza Generale (Modello A — timer 90s) ────────────────
+  cultura_generale: {
+    Engine: CulturaGeneraleTaskEngine,
+    getSessionDurationMs: () => CG_TIMER_MS,
   },
 
   // ── Famiglia 20: Linguaggio e Denominazione (Modello A — timer 90s) ─────────
