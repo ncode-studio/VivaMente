@@ -10,6 +10,8 @@ import { getStroopLevel } from "./families/stroop/levels";
 import { OddOneOutTaskEngine } from "./families/odd-one-out/OddOneOutTaskEngine";
 import { ODD_ONE_OUT_TIMER_MS } from "./families/odd-one-out/_deroghe";
 import { MemoriaProspetticaTaskEngine } from "./families/memoria-prospettica/MemoriaProspetticaTaskEngine";
+import { SequenceTapTaskEngine } from "./families/sequence-tap/SequenceTapTaskEngine";
+import { SESSION_TIMER_MS as ST_TIMER_MS } from "./families/sequence-tap/levels";
 import { RecallGridMBTTaskEngine } from "./families/recall-grid/RecallGridMBTTaskEngine";
 import { RecallGridMLTTaskEngine } from "./families/recall-grid/RecallGridMLTTaskEngine";
 import { getRecallGridMBTLevel } from "./families/recall-grid/levels";
@@ -107,6 +109,24 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   memoria_prospettica_time_based: {
     Engine: MemoriaProspetticaTaskEngine,
     getSessionDurationMs: () => null,
+  },
+
+  // ── Famiglia 1: Sequence Tap — 4 varianti (Modello A — timer 90s) ───────────
+  sequence_tap_numeri_forward: {
+    Engine: SequenceTapTaskEngine,
+    getSessionDurationMs: () => ST_TIMER_MS,
+  },
+  sequence_tap_numeri_backward: {
+    Engine: SequenceTapTaskEngine,
+    getSessionDurationMs: () => ST_TIMER_MS,
+  },
+  sequence_tap_parole_forward: {
+    Engine: SequenceTapTaskEngine,
+    getSessionDurationMs: () => ST_TIMER_MS,
+  },
+  sequence_tap_parole_backward: {
+    Engine: SequenceTapTaskEngine,
+    getSessionDurationMs: () => ST_TIMER_MS,
   },
 
   // ── Da aggiungere progressivamente (una entry per id JSON del catalogo) ──
