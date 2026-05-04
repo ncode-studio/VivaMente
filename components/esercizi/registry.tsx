@@ -25,6 +25,8 @@ import { PasatLightTaskEngine } from "./families/pasat-light/PasatLightTaskEngin
 import { SESSION_TIMER_MS as PL_TIMER_MS } from "./families/pasat-light/levels";
 import { UpdatingWMTaskEngine } from "./families/updating-wm/UpdatingWMTaskEngine";
 import { SESSION_TIMER_MS as UWM_TIMER_MS } from "./families/updating-wm/levels";
+import { WordChainTaskEngine } from "./families/word-chain/WordChainTaskEngine";
+import { SESSION_TIMER_MS as WC_TIMER_MS } from "./families/word-chain/levels";
 
 // ── Wrapper inline per Recall Grid MBT (discrimina stimulusType) ─────────────
 
@@ -173,6 +175,12 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   updating_wm_numeri: {
     Engine: UpdatingWMTaskEngine,
     getSessionDurationMs: () => UWM_TIMER_MS,
+  },
+
+  // ── Word Chain (Modello A — timer 90s) ───────────────────────────────────────
+  word_chain_alfabetico: {
+    Engine: WordChainTaskEngine,
+    getSessionDurationMs: () => WC_TIMER_MS,
   },
 
   // ── Famiglia 20: Linguaggio e Denominazione (Modello A — timer 90s) ─────────
