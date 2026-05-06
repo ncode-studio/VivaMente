@@ -35,6 +35,7 @@ import {
   DEFAULT_ISI_MS,
 } from "@/lib/exercise-types";
 import { TutorialOverlay } from "@/components/esercizi/shared/TutorialOverlay";
+import { useTimerControl } from "@/components/esercizi/shared/TimerControlContext";
 
 // ── Costanti ──────────────────────────────────────────────────────────────────
 // FEEDBACK_DURATION_MS e DEFAULT_ISI_MS provengono da @/lib/exercise-types
@@ -169,6 +170,7 @@ export type Phase =
   | "presenting"
   | "feedback"
   | "isi"
+  | "bonus-incoming"
   | "session-end";
 
 /** Snapshot dello stato interno emesso da onStateChange ad ogni transizione.
@@ -221,6 +223,7 @@ type MachineAction<TStimulus> =
   | { type: "RESPONSE_EVALUATED"; corretto: boolean; nuoveMetriche: Record<string, number> }
   | { type: "FEEDBACK_DONE" }
   | { type: "ISI_DONE" }
+  | { type: "BONUS_INCOMING_DONE" }
   | { type: "TEMPO_SCADUTO" }
   /** Salta direttamente a session-end scartando lo stimolo appena generato.
    *  Usato in generating quando sessioneDaTerminare=true al resolve di generaStimolo
@@ -301,14 +304,12 @@ function trialFlowReducerImpl<TStimulus>(
         trialBonusTotali++;
         if (corretto) {
           trialBonusCorretti++;
-          // Accumula bonusStep fino a maxDelta — consente bonus a +2 al prossimo ciclo
           bonusStep = mp ? Math.min(mp.maxDelta, bonusStep + 1) : 0;
+          nextTrialIsBonus = true; // bonus corretto → subito un altro bonus a difficoltà maggiore
         } else {
-          // Bonus errato: reset completo di bonusStep
-          // see docs/gdd/shared/03-progression.md: "si torna ai trial valutativi al base"
           bonusStep = 0;
+          nextTrialIsBonus = false; // bonus errato → torna ai trial valutativi al base
         }
-        nextTrialIsBonus = false; // sempre torna a valutativo dopo un bonus
       } else {
         // Trial valutativo
         trialValutativiCompletati++;
@@ -351,8 +352,14 @@ function trialFlowReducerImpl<TStimulus>(
     case "FEEDBACK_DONE":
       return { ...state, phase: "isi" };
 
-    case "ISI_DONE":
-      // Decision point: prossimo trial o fine sessione
+    case "ISI_DONE": {
+      if (state.sessioneDaTerminare) return { ...state, phase: "session-end" };
+      // Primo trial bonus: mostra avviso 3s (solo al passaggio valutativi→bonus)
+      if (!state.isBonusTrial && state.nextTrialIsBonus) return { ...state, phase: "bonus-incoming" };
+      return { ...state, phase: "generating" };
+    }
+
+    case "BONUS_INCOMING_DONE":
       return { ...state, phase: state.sessioneDaTerminare ? "session-end" : "generating" };
 
     case "TEMPO_SCADUTO":
@@ -399,6 +406,8 @@ export function TrialFlow<TStimulus, TResponse>({
       "Questa è una situazione anomala: tutorial ha priorità e warning sarà scartato.",
     );
   }
+
+  const timerControl = useTimerControl();
 
   // ── Bug 2 fix: snapshot di tutorial/warning al mount ──────────────────────
   // Le prop tutorial/warning vengono lette solo al mount per determinare la fase iniziale
@@ -649,6 +658,21 @@ export function TrialFlow<TStimulus, TResponse>({
     return () => clearTimeout(timer);
   }, [state.phase]);
 
+  // ── Effect: fase BONUS-INCOMING ──────────────────────────────────────────
+
+  useEffect(() => {
+    if (state.phase !== "bonus-incoming") return;
+    timerControl?.pausa();
+    const timer = setTimeout(() => {
+      timerControl?.riprendi();
+      dispatch({ type: "BONUS_INCOMING_DONE" });
+    }, 3000);
+    return () => {
+      clearTimeout(timer);
+      timerControl?.riprendi();
+    };
+  }, [state.phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Effect: fase SESSION-END ──────────────────────────────────────────────
 
   useEffect(() => {
@@ -719,13 +743,25 @@ export function TrialFlow<TStimulus, TResponse>({
     return showSpinner ? <GeneratingSpinner /> : null;
   }
 
+  // Bonus-incoming: avviso 3s auto-dismiss, solo al primo bonus della sequenza
+  if (state.phase === "bonus-incoming") {
+    return <BonusIncomingOverlay />;
+  }
+
   // Presenting: lo stimolo è visibile, l'utente può rispondere
   if (state.phase === "presenting" && state.stimoloCorrente !== null) {
     return (
-      <RenderStimolo
-        stimolo={state.stimoloCorrente}
-        onRisposta={handleRisposta}
-      />
+      <div className="flex flex-col w-full">
+        {state.isBonusTrial && (
+          <div style={{ display: "flex", justifyContent: "center", padding: "0.4rem 0 0.2rem" }}>
+            <span style={{ fontSize: "1.2rem", color: "#F59E0B", lineHeight: 1 }}>★</span>
+          </div>
+        )}
+        <RenderStimolo
+          stimolo={state.stimoloCorrente}
+          onRisposta={handleRisposta}
+        />
+      </div>
     );
   }
 
@@ -801,6 +837,20 @@ function GeneratingSpinner() {
   return (
     <div className="flex items-center justify-center h-32">
       <div className="w-8 h-8 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin" />
+    </div>
+  );
+}
+
+function BonusIncomingOverlay() {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4"
+      style={{ backgroundColor: "rgba(254, 243, 199, 0.97)" }}
+    >
+      <span style={{ fontSize: "3rem", lineHeight: 1, color: "#F59E0B" }}>★</span>
+      <p style={{ fontSize: "1.3rem", fontWeight: 800, color: "#92400E", textAlign: "center" }}>
+        Bonus!
+      </p>
     </div>
   );
 }

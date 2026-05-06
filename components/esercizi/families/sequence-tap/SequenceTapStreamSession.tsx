@@ -8,6 +8,9 @@
  *   encoding — mostra gli stimoli uno alla volta (speedMs cadauno)
  *   recall   — griglia di risposta + buffer; T.Lim opzionale
  *   done     — risposta inviata (TrialFlow mostra feedback)
+ *
+ * parole_forward in recall: input testuale word-by-word (tastiera nativa).
+ * numeri_*: NumPad on-screen invariato.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -26,10 +29,13 @@ export function SequenceTapStreamSession({ stimolo, onRisposta }: Props) {
   const [fase,        setFase]        = useState<Fase>("encoding");
   const [encodingIdx, setEncodingIdx] = useState(0);
   const [buffer,      setBuffer]      = useState<string[]>([]);
+  const [wordIdx,     setWordIdx]     = useState(0);
+  const [inputValue,  setInputValue]  = useState("");
 
-  const bufferRef      = useRef<string[]>([]);
-  const submittedRef   = useRef(false);
-  const timersRef      = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const bufferRef    = useRef<string[]>([]);
+  const submittedRef = useRef(false);
+  const timersRef    = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const inputRef     = useRef<HTMLInputElement>(null);
 
   const submit = useCallback((tapped: string[]) => {
     if (submittedRef.current) return;
@@ -45,6 +51,8 @@ export function SequenceTapStreamSession({ stimolo, onRisposta }: Props) {
     setEncodingIdx(0);
     bufferRef.current = [];
     setBuffer([]);
+    setWordIdx(0);
+    setInputValue("");
     submittedRef.current = false;
     setFase("encoding");
 
@@ -53,12 +61,21 @@ export function SequenceTapStreamSession({ stimolo, onRisposta }: Props) {
       const id = setTimeout(() => setEncodingIdx(i), speedMs * i);
       timersRef.current.push(id);
     }
-    const id = setTimeout(() => setFase("recall"), speedMs * sequence.length);
+    const id = setTimeout(() => {
+      setFase("recall");
+    }, speedMs * sequence.length);
     timersRef.current.push(id);
 
     return () => timersRef.current.forEach(clearTimeout);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stimolo]);
+
+  // Focus automatico sull'input quando entriamo in recall (parole_forward)
+  useEffect(() => {
+    if (fase === "recall" && stimolo.mode === "parole_forward") {
+      setTimeout(() => inputRef.current?.focus(), 80);
+    }
+  }, [fase, stimolo.mode]);
 
   // T.Lim: parte quando inizia la fase recall
   useEffect(() => {
@@ -67,6 +84,7 @@ export function SequenceTapStreamSession({ stimolo, onRisposta }: Props) {
     return () => clearTimeout(id);
   }, [fase, stimolo.tLimMs, submit]);
 
+  // ── Recall numeri: tap su NumPad ─────────────────────────────────────────────
   const handleTap = useCallback((item: string) => {
     if (fase !== "recall") return;
     const next = [...bufferRef.current, item];
@@ -82,11 +100,29 @@ export function SequenceTapStreamSession({ stimolo, onRisposta }: Props) {
     setBuffer(next);
   }, [fase]);
 
+  // ── Recall parole: conferma singola parola ───────────────────────────────────
+  const handleConfermaParola = useCallback(() => {
+    if (fase !== "recall") return;
+    const word = inputValue.trim();
+    if (!word) return;
+    const next = [...bufferRef.current, word];
+    bufferRef.current = next;
+    setBuffer(next);
+    setInputValue("");
+    const nextIdx = wordIdx + 1;
+    setWordIdx(nextIdx);
+    if (next.length >= stimolo.sequence.length) {
+      submit(next);
+    } else {
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [fase, inputValue, wordIdx, stimolo.sequence.length, submit]);
+
   if (fase === "done") return null;
 
-  // ── Encoding ───────────────────────────────────────────────────────────────
+  // ── Encoding ─────────────────────────────────────────────────────────────────
   if (fase === "encoding") {
-    const item = stimolo.sequence[encodingIdx];
+    const item   = stimolo.sequence[encodingIdx];
     const isWord = stimolo.mode === "parole_forward";
     return (
       <div className="flex flex-col items-center gap-5 py-6 px-4">
@@ -103,38 +139,98 @@ export function SequenceTapStreamSession({ stimolo, onRisposta }: Props) {
         </div>
         <div
           className="flex items-center justify-center w-full"
-          style={{ minHeight: 180, backgroundColor: "#F9FAFB", borderRadius: "1.5rem", border: "1px solid #E5E7EB" }}
+          style={{
+            minHeight: 180,
+            backgroundColor: "#F9FAFB",
+            borderRadius: "1.5rem",
+            border: "1px solid #E5E7EB",
+          }}
           aria-live="polite"
           aria-label={`Stimolo: ${item}`}
         >
-          <span style={{ fontSize: isWord ? "2.2rem" : "4rem", fontWeight: 800, color: "#111827", letterSpacing: isWord ? "0.02em" : "0.1em" }}>
+          <span style={{
+            fontSize: isWord ? "2.2rem" : "4rem",
+            fontWeight: 800,
+            color: "#111827",
+            letterSpacing: isWord ? "0.02em" : "0.1em",
+          }}>
             {item}
           </span>
         </div>
-        <p className="text-sm text-gray-400">Memorizza la sequenza</p>
       </div>
     );
   }
 
-  // ── Recall ─────────────────────────────────────────────────────────────────
-  const isNumeri  = stimolo.mode !== "parole_forward";
-  const seqLen    = stimolo.sequence.length;
-  const isFull    = buffer.length >= seqLen;
+  // ── Recall parole_forward: input testuale word-by-word ───────────────────────
+  if (stimolo.mode === "parole_forward") {
+    const seqLen  = stimolo.sequence.length;
+    const isFull  = wordIdx >= seqLen;
+
+    return (
+      <div className="flex flex-col gap-4 px-4 py-4">
+
+        {/* Indicatore progresso + input */}
+        {!isFull && (
+          <>
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleConfermaParola(); }}
+              placeholder=""
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoComplete="off"
+              spellCheck={false}
+              style={{
+                width: "100%",
+                padding: "1rem",
+                fontSize: "1.3rem",
+                fontWeight: 600,
+                borderRadius: "0.85rem",
+                border: "2px solid #2563EB",
+                outline: "none",
+                color: "#111827",
+                backgroundColor: "#FFFFFF",
+                textAlign: "center",
+              }}
+            />
+            <button
+              onClick={handleConfermaParola}
+              disabled={!inputValue.trim()}
+              className="active:scale-95"
+              style={{
+                width: "100%",
+                padding: "0.9rem",
+                borderRadius: "0.9rem",
+                fontSize: "1rem",
+                fontWeight: 700,
+                backgroundColor: inputValue.trim() ? "#1E3A5F" : "#CBD5E1",
+                color: inputValue.trim() ? "#FFFFFF" : "#94A3B8",
+                border: "none",
+                cursor: inputValue.trim() ? "pointer" : "not-allowed",
+              }}
+            >
+              Conferma
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ── Recall numeri_forward / numeri_backward: NumPad ──────────────────────────
+  const isFull = buffer.length >= stimolo.sequence.length;
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4">
-
-      {/* Buffer risposte */}
       <div
         className="flex items-center justify-center gap-2 rounded-xl border px-4"
         style={{ minHeight: 64, backgroundColor: "#F9FAFB", borderColor: "#E5E7EB" }}
         aria-label="Risposte inserite"
       >
-        {buffer.length === 0 ? (
-          <span className="text-gray-400 text-sm">
-            {isNumeri ? "Tocca i numeri nell'ordine corretto" : "Tocca le parole nell'ordine corretto"}
-          </span>
-        ) : (
+        {buffer.length === 0 ? null : (
           <div className="flex flex-wrap gap-2 justify-center">
             {buffer.map((item, i) => (
               <span key={i} style={{ fontSize: "1.4rem", fontWeight: 700, color: "#111827" }}>
@@ -145,13 +241,8 @@ export function SequenceTapStreamSession({ stimolo, onRisposta }: Props) {
         )}
       </div>
 
-      {/* Griglia risposta */}
-      {isNumeri
-        ? <NumPad onTap={handleTap} disabled={isFull} />
-        : <ParoleGrid options={stimolo.responseOptions} onTap={handleTap} disabled={isFull} />
-      }
+      <NumPad onTap={handleTap} disabled={isFull} />
 
-      {/* Cancella ultimo */}
       <button
         onClick={handleDelete}
         disabled={buffer.length === 0}
@@ -203,41 +294,6 @@ function NumPad({ onTap, disabled }: { onTap: (d: string) => void; disabled: boo
             </button>
           ))}
         </div>
-      ))}
-    </div>
-  );
-}
-
-// ── ParoleGrid ────────────────────────────────────────────────────────────────
-
-function ParoleGrid({
-  options, onTap, disabled,
-}: { options: string[]; onTap: (w: string) => void; disabled: boolean }) {
-  return (
-    <div
-      className="grid gap-2"
-      style={{ gridTemplateColumns: options.length <= 3 ? "1fr" : "1fr 1fr" }}
-    >
-      {options.map((w) => (
-        <button
-          key={w}
-          onClick={() => !disabled && onTap(w)}
-          className="active:scale-95"
-          style={{
-            padding: "1rem 0.75rem",
-            borderRadius: "0.75rem",
-            border: "1px solid #D1D5DB",
-            backgroundColor: disabled ? "#F3F4F6" : "#FFFFFF",
-            fontSize: "1.1rem",
-            fontWeight: 600,
-            color: disabled ? "#9CA3AF" : "#111827",
-            cursor: disabled ? "not-allowed" : "pointer",
-            textAlign: "center",
-          }}
-          aria-label={`Parola ${w}`}
-        >
-          {w}
-        </button>
       ))}
     </div>
   );

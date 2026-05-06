@@ -33,10 +33,13 @@ import { AssociativeMemoryTaskEngine } from "./families/associative-memory/Assoc
 import { MemoriaListaTaskEngine } from "./families/memoria-lista/MemoriaListaTaskEngine";
 import { MemoriaComprensioneTestoTaskEngine } from "./families/memoria-comprensione-testo/MemoriaComprensioneTestoTaskEngine";
 import { MemoriaComprensioneTestoMLTTaskEngine } from "./families/memoria-comprensione-testo/MemoriaComprensioneTestoMLTTaskEngine";
+import { OrdineNarrativoTaskEngine } from "./families/memoria-comprensione-testo/OrdineNarrativoTaskEngine";
 import { PathTracingTaskEngine } from "./families/path-tracing/PathTracingTaskEngine";
 import { HaylingTaskEngine } from "./families/hayling-game/HaylingTaskEngine";
 import { SESSION_TIMER_MS as HAYLING_TIMER_MS } from "./families/hayling-game/levels";
 import { VerbalFluencyTaskEngine } from "./families/verbal-fluency/VerbalFluencyTaskEngine";
+import { CancellazioneVisivaTaskEngine } from "./families/cancellazione-visiva/CancellazioneVisivaTaskEngine";
+import { CV_SESSION_TIMER_MS } from "./families/cancellazione-visiva/levels";
 
 // ── Wrapper inline per Recall Grid MBT (discrimina stimulusType) ─────────────
 
@@ -82,11 +85,11 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   // ── Famiglia 2: Recall Grid — 3 varianti ──────────────────────────────────
   recall_grid_parole_mbt: {
     Engine: RecallGridParoleMBTEngine,
-    getSessionDurationMs: (livello) => getRecallGridMBTLevel(livello).sessionDurationMs,
+    getSessionDurationMs: () => null,  // Modello B — timer non usato
   },
   recall_grid_immagini_mbt: {
     Engine: RecallGridImmaginiMBTEngine,
-    getSessionDurationMs: (livello) => getRecallGridMBTLevel(livello).sessionDurationMs,
+    getSessionDurationMs: () => null,  // Modello B — timer non usato
   },
   recall_grid_immagini_mlt: {
     Engine: RecallGridMLTTaskEngine,
@@ -218,6 +221,10 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     Engine: MemoriaComprensioneTestoMLTTaskEngine,
     getSessionDurationMs: () => null,
   },
+  memoria_comprensione_ordine_narrativo: {
+    Engine: OrdineNarrativoTaskEngine,
+    getSessionDurationMs: () => null,
+  },
 
   // ── Famiglia 19: Verbal Fluency — 2 varianti (Modello B — 1 trial con timer interno) ─
   verbal_fluency_semantica: {
@@ -237,6 +244,12 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   hayling_b_only: {
     Engine: HaylingTaskEngine,
     getSessionDurationMs: () => HAYLING_TIMER_MS,
+  },
+
+  // ── Cancellazione Visiva (Modello A — timer 60s, extra GDD) ─────────────────
+  cancellazione_visiva: {
+    Engine: CancellazioneVisivaTaskEngine,
+    getSessionDurationMs: () => CV_SESSION_TIMER_MS,
   },
 
   // ── Famiglia 22: Path Tracing (Modello B con T.Lim per trial) ───────────────

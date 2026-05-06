@@ -1,5 +1,5 @@
 // Tutte le durate sono in millisecondi. Nessuna eccezione.
-// sessionDurationMs usa valori letterali 90_000 | 120_000.
+// sessionDurationMs usa il valore letterale 60_000.
 // poolMin e poolSize sono derivati nell'engine — mai replicati qui.
 
 import type { MicroProgressioneConfig } from "@/lib/exercise-types";
@@ -33,7 +33,7 @@ export const COLORE_CSS: Record<ColoreStroop, string> = {
 export interface StroopLevelConfig {
   livello: number;
   tLimMs: number;
-  sessionDurationMs: 90_000 | 120_000;
+  sessionDurationMs: 60_000;
   incongruentRatio: number;
   /** Numero di riquadri risposta: 2 (lv 1–10) oppure 3 (lv 11–20). */
   nOptions: 2 | 3;
@@ -95,16 +95,16 @@ export function getStroopMechanicWarning(
 // ── Tabella livelli (fonte: docs/gdd/families/stroop.md §Tabella livelli) ──────
 
 export const STROOP_LEVELS: readonly StroopLevelConfig[] = [
-  { livello: 1,  tLimMs: 4000, incongruentRatio: 0.20, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
-  { livello: 2,  tLimMs: 3800, incongruentRatio: 0.20, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
-  { livello: 3,  tLimMs: 3600, incongruentRatio: 0.25, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
-  { livello: 4,  tLimMs: 3400, incongruentRatio: 0.25, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
-  { livello: 5,  tLimMs: 3200, incongruentRatio: 0.30, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
-  { livello: 6,  tLimMs: 3000, incongruentRatio: 0.30, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
-  { livello: 7,  tLimMs: 2800, incongruentRatio: 0.35, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
-  { livello: 8,  tLimMs: 2600, incongruentRatio: 0.35, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
-  { livello: 9,  tLimMs: 2400, incongruentRatio: 0.40, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
-  { livello: 10, tLimMs: 2200, incongruentRatio: 0.40, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 90_000 },
+  { livello: 1,  tLimMs: 4000, incongruentRatio: 0.20, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 60_000 },
+  { livello: 2,  tLimMs: 3800, incongruentRatio: 0.20, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 60_000 },
+  { livello: 3,  tLimMs: 3600, incongruentRatio: 0.25, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 60_000 },
+  { livello: 4,  tLimMs: 3400, incongruentRatio: 0.25, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 60_000 },
+  { livello: 5,  tLimMs: 3200, incongruentRatio: 0.30, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 60_000 },
+  { livello: 6,  tLimMs: 3000, incongruentRatio: 0.30, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 60_000 },
+  { livello: 7,  tLimMs: 2800, incongruentRatio: 0.35, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 60_000 },
+  { livello: 8,  tLimMs: 2600, incongruentRatio: 0.35, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 60_000 },
+  { livello: 9,  tLimMs: 2400, incongruentRatio: 0.40, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 60_000 },
+  { livello: 10, tLimMs: 2200, incongruentRatio: 0.40, nOptions: 2, nColors: 4, coloriAttivi: COLORI_BASE, sessionDurationMs: 60_000 },
 ] as const;
 
 export function getStroopLevel(livello: number): StroopLevelConfig {

@@ -23,7 +23,7 @@ export interface PLLevelConfig {
   trialsPerSession: number;
 }
 
-export const SESSION_TIMER_MS = 90_000;
+export const SESSION_TIMER_MS = 60_000;
 
 export const PL_LEVELS: readonly PLLevelConfig[] = [
   { livello:  1, isiMs: 2500, ops: ["+"],      seqLen: 6, trialsPerSession: 5 },

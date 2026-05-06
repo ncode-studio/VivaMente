@@ -22,7 +22,7 @@ export interface WCSLevelConfig {
   trialsPerSession: number;
 }
 
-export const SESSION_TIMER_MS   = 90_000;
+export const SESSION_TIMER_MS   = 60_000;
 export const WCS_TARGET_FLOOR_MS = 15_000;
 
 export const WCS_LEVELS: readonly WCSLevelConfig[] = [

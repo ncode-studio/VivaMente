@@ -17,7 +17,7 @@ export interface WCLevelConfig {
   trialsPerSession: number;
 }
 
-export const SESSION_TIMER_MS    = 90_000;
+export const SESSION_TIMER_MS    = 60_000;
 export const WC_TARGET_FLOOR_MS  = 15_000;
 
 export const WC_LEVELS: readonly WCLevelConfig[] = [

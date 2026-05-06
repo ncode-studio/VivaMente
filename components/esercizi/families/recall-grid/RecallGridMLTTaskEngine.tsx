@@ -56,10 +56,11 @@ export function RecallGridMLTTaskEngine({
 
   const config = getRecallGridMLTLevel(livello);
 
-  const rngRef           = useRef<() => number>(Math.random);
-  const recentlyUsedRef  = useRef<string[]>([]);
-  /** Anti zone-out: cumulativo cross-trial dei tap sulla palla. */
-  const pallaTapCountRef = useRef<number>(0);
+  const rngRef              = useRef<() => number>(Math.random);
+  const recentlyUsedRef     = useRef<string[]>([]);
+  const distrattoreHitsRef  = useRef(0);
+  const distrattoreMissRef  = useRef(0);
+  const distrattoreFARef    = useRef(0);
 
   // ── Micro-progressione: limite runtime = ncells(gridSize) ────────────────
 
@@ -162,18 +163,18 @@ export function RecallGridMLTTaskEngine({
           (precedenti.tempo_totale_repro_ms ?? 0) + Math.round(risposta.tempoReproMs),
         trial_completati:
           (precedenti.trial_completati ?? 0) + 1,
-        // Cumulativo cross-trial: si sovrascrive a ogni trial col valore
-        // corrente del ref (è già aggregato). Pattern alternativo: leggerlo
-        // solo a fine sessione, ma TrialFlow non offre un hook "fine sessione"
-        // pre-onComplete diverso da questo.
-        palla_tap_count: pallaTapCountRef.current,
+        distrattore_hits:        distrattoreHitsRef.current,
+        distrattore_misses:      distrattoreMissRef.current,
+        distrattore_false_alarms: distrattoreFARef.current,
       };
     },
     [],
   );
 
-  const handlePallaTap = useCallback(() => {
-    pallaTapCountRef.current += 1;
+  const handleDistrattoreMetriche = useCallback((hits: number, misses: number, falseAlarms: number) => {
+    distrattoreHitsRef.current  += hits;
+    distrattoreMissRef.current  += misses;
+    distrattoreFARef.current    += falseAlarms;
   }, []);
 
   // ── renderStimolo (monta RecallGridSession + BouncingBall) ───────────────
@@ -191,12 +192,12 @@ export function RecallGridMLTTaskEngine({
           <BouncingBall
             durataMs={props.stimolo.delayMs}
             onCompleto={onCompleto}
-            onTap={handlePallaTap}
+            onDistrattoreMetriche={handleDistrattoreMetriche}
           />
         )}
       />
     ),
-    [handlePallaTap, tempoScaduto],
+    [handleDistrattoreMetriche, tempoScaduto],
   );
 
   // ── onCompleteWrapped — override accuratezza clinica (SART via b) ─────────
@@ -222,12 +223,10 @@ export function RecallGridMLTTaskEngine({
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
         pagine: [{
-          titolo: "Memorizza, poi segui la pallina",
+          titolo: "Memorizza e riposiziona",
           testo:
-            `Vedrai una griglia con alcune immagini. Memorizza ogni immagine e ` +
-            `dove si trova. Tra una griglia e l'altra dovrai seguire una pallina ` +
-            `che rimbalza per qualche minuto. Poi ti chiederemo di riposizionare ` +
-            `ogni immagine nella cella giusta.`,
+            `Vedrai una griglia con alcune immagini. Memorizza ogni immagine e dove si trova. ` +
+            `Alla fine dovrai riposizionare le immagini nella cella giusta.`,
         }],
       }
     : null;

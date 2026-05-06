@@ -166,8 +166,7 @@ export function AssociativeMemoryTaskEngine({
           titolo: "Memorizza le coppie",
           testo:
             "Vedrai delle coppie di parole o immagini una alla volta. " +
-            "Memorizza ogni coppia. Poi, dopo una breve pausa con la pallina, " +
-            "ti chiederemo qual era abbinata a ciascun elemento.",
+            "Memorizza ogni coppia. Poi ti chiederemo qual era abbinata a ciascun elemento.",
         }],
       }
     : null;

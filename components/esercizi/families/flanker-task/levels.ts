@@ -1,5 +1,5 @@
 // Tutte le durate sono in millisecondi (ms). Nessuna eccezione.
-// sessionDurationMs usa valori letterali 90_000 | 120_000 — nessun campo in secondi.
+// sessionDurationMs usa il valore letterale 60_000 — nessun campo in secondi.
 
 import type { MicroProgressioneConfig } from "@/lib/exercise-types";
 
@@ -43,7 +43,7 @@ export interface FlankerLevelConfig {
    */
   nFlankers: 2 | 4 | 6;
   /** Timer di sessione. see docs/gdd/families/flanker-task.md §Timer di sessione */
-  sessionDurationMs: 90_000 | 120_000;
+  sessionDurationMs: 60_000;
 }
 
 // ── Micro-progressione (costanti di famiglia) ──────────────────────────────────
@@ -94,16 +94,16 @@ export function getFlankerMechanicWarning(
 // ── Tabella livelli (fonte: docs/gdd/families/flanker-task.md §Tabella livelli) ──
 
 export const FLANKER_LEVELS: readonly FlankerLevelConfig[] = [
-  { livello: 1,  tLimMs: 3000, incongruentRatio: 0.20, nFlankers: 2, sessionDurationMs: 90_000 },
-  { livello: 2,  tLimMs: 2800, incongruentRatio: 0.20, nFlankers: 2, sessionDurationMs: 90_000 },
-  { livello: 3,  tLimMs: 2600, incongruentRatio: 0.25, nFlankers: 2, sessionDurationMs: 90_000 },
-  { livello: 4,  tLimMs: 2400, incongruentRatio: 0.25, nFlankers: 2, sessionDurationMs: 90_000 },
-  { livello: 5,  tLimMs: 2200, incongruentRatio: 0.30, nFlankers: 2, sessionDurationMs: 90_000 },
-  { livello: 6,  tLimMs: 2000, incongruentRatio: 0.30, nFlankers: 4, sessionDurationMs: 90_000 },
-  { livello: 7,  tLimMs: 1900, incongruentRatio: 0.35, nFlankers: 4, sessionDurationMs: 90_000 },
-  { livello: 8,  tLimMs: 1800, incongruentRatio: 0.35, nFlankers: 4, sessionDurationMs: 90_000 },
-  { livello: 9,  tLimMs: 1700, incongruentRatio: 0.40, nFlankers: 4, sessionDurationMs: 90_000 },
-  { livello: 10, tLimMs: 1600, incongruentRatio: 0.40, nFlankers: 4, sessionDurationMs: 90_000 },
+  { livello: 1,  tLimMs: 3000, incongruentRatio: 0.20, nFlankers: 2, sessionDurationMs: 60_000 },
+  { livello: 2,  tLimMs: 2800, incongruentRatio: 0.20, nFlankers: 2, sessionDurationMs: 60_000 },
+  { livello: 3,  tLimMs: 2600, incongruentRatio: 0.25, nFlankers: 2, sessionDurationMs: 60_000 },
+  { livello: 4,  tLimMs: 2400, incongruentRatio: 0.25, nFlankers: 2, sessionDurationMs: 60_000 },
+  { livello: 5,  tLimMs: 2200, incongruentRatio: 0.30, nFlankers: 2, sessionDurationMs: 60_000 },
+  { livello: 6,  tLimMs: 2000, incongruentRatio: 0.30, nFlankers: 4, sessionDurationMs: 60_000 },
+  { livello: 7,  tLimMs: 1900, incongruentRatio: 0.35, nFlankers: 4, sessionDurationMs: 60_000 },
+  { livello: 8,  tLimMs: 1800, incongruentRatio: 0.35, nFlankers: 4, sessionDurationMs: 60_000 },
+  { livello: 9,  tLimMs: 1700, incongruentRatio: 0.40, nFlankers: 4, sessionDurationMs: 60_000 },
+  { livello: 10, tLimMs: 1600, incongruentRatio: 0.40, nFlankers: 4, sessionDurationMs: 60_000 },
 ] as const;
 
 export function getFlankerLevel(livello: number): FlankerLevelConfig {

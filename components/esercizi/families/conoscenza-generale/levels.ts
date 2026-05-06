@@ -31,7 +31,7 @@ export interface CGLevelConfig {
   trialsPerSession: number;
 }
 
-export const SESSION_TIMER_MS = 90_000;
+export const SESSION_TIMER_MS = 60_000;
 
 // trialsPerSession = ceil(90000 / (tLimMs + 800)) + 3
 export const CG_LEVELS: readonly CGLevelConfig[] = [

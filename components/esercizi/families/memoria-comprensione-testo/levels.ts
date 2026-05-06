@@ -70,6 +70,38 @@ export function getMCTLevel(livello: number): MCTLevelConfig {
   return MCT_LEVELS[Math.min(10, Math.max(1, livello)) - 1];
 }
 
+// ── Tabella B — Ordine Narrativo MBT ──────────────────────────────────────────
+
+export interface MCTOrdineNarrativoLevelConfig {
+  livello:          number;
+  nEventi:          number;
+  nDistractors:     number;
+  trialsPerSession: number;
+}
+
+/** Micro-progressione ordine: +1 evento per trial bonus (max +2). */
+export const MCTON_MICRO_DELTA    = 1;
+export const MCTON_MICRO_MAX_OVER = 2;
+
+export const MCTON_LEVELS: readonly MCTOrdineNarrativoLevelConfig[] = [
+  { livello:  1, nEventi: 3, nDistractors: 0, trialsPerSession: 4 },
+  { livello:  2, nEventi: 3, nDistractors: 0, trialsPerSession: 4 },
+  { livello:  3, nEventi: 4, nDistractors: 0, trialsPerSession: 4 },
+  { livello:  4, nEventi: 4, nDistractors: 0, trialsPerSession: 4 },
+  { livello:  5, nEventi: 4, nDistractors: 1, trialsPerSession: 5 },
+  { livello:  6, nEventi: 5, nDistractors: 1, trialsPerSession: 5 },
+  { livello:  7, nEventi: 5, nDistractors: 1, trialsPerSession: 5 },
+  { livello:  8, nEventi: 5, nDistractors: 2, trialsPerSession: 5 },
+  { livello:  9, nEventi: 6, nDistractors: 2, trialsPerSession: 5 },
+  { livello: 10, nEventi: 6, nDistractors: 2, trialsPerSession: 5 },
+];
+
+export function getMCTOrdineNarrativoLevel(
+  livello: number,
+): MCTOrdineNarrativoLevelConfig {
+  return MCTON_LEVELS[Math.min(10, Math.max(1, livello)) - 1];
+}
+
 export function getMCTMechanicWarning(
   livelloPrec: number | undefined,
   livelloCorrente: number,

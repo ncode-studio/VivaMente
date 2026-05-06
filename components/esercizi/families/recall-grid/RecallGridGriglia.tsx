@@ -67,10 +67,19 @@ function isStimoloEmoji(stim: StimoloRecallGrid): boolean {
   return stim.id.startsWith("e_");
 }
 
-function fontSizeStimolo(gridSize: GridSize, isEmoji: boolean): string {
+function fontSizeStimolo(gridSize: GridSize, isEmoji: boolean, wordLength?: number): string {
   const piccola = gridSize === "5x5" || gridSize === "6x6";
   if (isEmoji) return piccola ? "2.5rem" : "3rem";
-  return piccola ? "1rem" : "1.25rem";
+
+  // Per le parole: calcola la dimensione che fa stare il testo in una riga.
+  // Monospace: larghezza carattere ≈ 0.6 × fontSize.
+  const cellSize = cellaSizePx(gridSize);
+  const availW   = cellSize - 10; // 5px padding per lato
+  const charW    = 0.6;
+  const maxFs    = piccola ? 16 : 20;
+  const len      = wordLength ?? 6;
+  const fs       = Math.min(maxFs, availW / (len * charW));
+  return `${Math.max(10, Math.round(fs))}px`;
 }
 
 function fontFamilyStimolo(isEmoji: boolean): string {
@@ -191,12 +200,13 @@ export function RecallGridGriglia({
     return (
       <span
         style={{
-          fontFamily: fontFamilyStimolo(emoji),
-          fontSize:   fontSizeStimolo(gridSize, emoji),
-          fontWeight: 700,
-          lineHeight: 1,
-          textAlign:  "center",
-          padding:    "2px",
+          fontFamily:  fontFamilyStimolo(emoji),
+          fontSize:    fontSizeStimolo(gridSize, emoji, emoji ? undefined : stim.valore.length),
+          fontWeight:  700,
+          lineHeight:  1,
+          textAlign:   "center",
+          whiteSpace:  "nowrap",
+          padding:     "2px",
         }}
       >
         {stim.valore}

@@ -98,17 +98,17 @@ export type OddOneOutLevelConfig = {
  *   lv 20 → 12 stimoli, astratto,              5000,  10 trial, 120000ms
  */
 export const ODD_ONE_OUT_LEVELS: readonly OddOneOutLevelConfig[] = [
-  { livello:  1, nStimuli: 4, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 6, sessionDurationMs: 90000 },
-  { livello:  2, nStimuli: 4, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 6, sessionDurationMs: 90000 },
-  { livello:  3, nStimuli: 5, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 6, sessionDurationMs: 90000 },
-  { livello:  4, nStimuli: 5, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 7, sessionDurationMs: 90000 },
-  { livello:  5, nStimuli: 6, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 7, sessionDurationMs: 90000 },
+  { livello:  1, nStimuli: 4, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 6, sessionDurationMs: 60000 },
+  { livello:  2, nStimuli: 4, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 6, sessionDurationMs: 60000 },
+  { livello:  3, nStimuli: 5, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 6, sessionDurationMs: 60000 },
+  { livello:  4, nStimuli: 5, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 7, sessionDurationMs: 60000 },
+  { livello:  5, nStimuli: 6, dimensione: "categoriale_alto",  tLimMs: null, trialsPerSession: 7, sessionDurationMs: 60000 },
   // ── Lv 6: cambio meccanica → categoriale medio (warning) ──
-  { livello:  6, nStimuli: 6, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 7, sessionDurationMs: 90000 },
-  { livello:  7, nStimuli: 7, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 8, sessionDurationMs: 90000 },
-  { livello:  8, nStimuli: 7, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 8, sessionDurationMs: 90000 },
-  { livello:  9, nStimuli: 8, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 8, sessionDurationMs: 90000 },
-  { livello: 10, nStimuli: 8, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 9, sessionDurationMs: 90000 },
+  { livello:  6, nStimuli: 6, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 7, sessionDurationMs: 60000 },
+  { livello:  7, nStimuli: 7, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 8, sessionDurationMs: 60000 },
+  { livello:  8, nStimuli: 7, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 8, sessionDurationMs: 60000 },
+  { livello:  9, nStimuli: 8, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 8, sessionDurationMs: 60000 },
+  { livello: 10, nStimuli: 8, dimensione: "categoriale_medio", tLimMs: null, trialsPerSession: 9, sessionDurationMs: 60000 },
 ] as const;
 
 export function getOddOneOutLevel(livello: number): OddOneOutLevelConfig {

@@ -45,7 +45,7 @@ export interface STBackwardLevelConfig {
 
 // ── Costante timer sessione ────────────────────────────────────────────────────
 
-export const SESSION_TIMER_MS = 90_000;
+export const SESSION_TIMER_MS = 60_000;
 
 // ── Tabelle livelli ────────────────────────────────────────────────────────────
 

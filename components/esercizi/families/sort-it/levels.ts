@@ -22,7 +22,7 @@ export interface SortItLevelConfig {
   trialsPerSession:    number;
 }
 
-export const SESSION_TIMER_MS = 90_000;
+export const SESSION_TIMER_MS = 60_000;
 
 export const SORT_IT_LEVELS: readonly SortItLevelConfig[] = [
   { livello:  1, nCategorie: 2, stimoliPerCategoria: 3, switchOgniN: null, feedbackMode: "full",    tLimCartaMs: null, trialsPerSession: 6 },

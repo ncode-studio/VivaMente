@@ -104,9 +104,12 @@ export function SequenceTapTaskEngine({
     (stimolo: StimoloST, risposta: RispostaST | null): boolean => {
       if (risposta === null) return false;
       const target = stimolo.targetSequence;
-      return (
-        risposta.length === target.length &&
-        risposta.every((r, i) => r === target[i])
+      if (risposta.length !== target.length) return false;
+      const isParole = stimolo.mode === "parole_forward" || stimolo.mode === "parole_backward";
+      return risposta.every((r, i) =>
+        isParole
+          ? r.trim().toLowerCase() === target[i].toLowerCase()
+          : r === target[i],
       );
     },
     [],

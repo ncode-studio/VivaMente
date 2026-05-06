@@ -8,75 +8,65 @@ import type {
   TutorialConfig,
 } from "@/lib/exercise-types";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
-import { BouncingBall } from "@/components/esercizi/shared/distrattore-palla/BouncingBall";
 import {
-  getMCTMLTLevel,
-  getMCTMechanicWarning,
-  MCTMLT_MICRO_DELTA,
-  MCTMLT_MICRO_MAX_OVER,
+  getMCTOrdineNarrativoLevel,
+  MCTON_MICRO_DELTA,
+  MCTON_MICRO_MAX_OVER,
 } from "./levels";
 import {
-  generaStimoloMCT,
-  creaMCTPoolRef,
-  type StimoloMCT,
-  type RispostaMCT,
-} from "./sequence";
-import { MemoriaComprensioneTestoMLTSession } from "./MemoriaComprensioneTestoMLTSession";
+  generaStimoloOrdineNarrativo,
+  creaMCTONPoolRef,
+  type StimoloOrdineNarrativo,
+  type RispostaOrdineNarrativo,
+} from "./sequence-ordine";
+import { OrdineNarrativoSession } from "./OrdineNarrativoSession";
 
-// StimoloMCT esteso con delayMs (valoreCorrente della micro-progressione)
-interface StimoloMCTMLT extends StimoloMCT {
-  delayMs: number;
-}
-
-export function MemoriaComprensioneTestoMLTTaskEngine({
+export function OrdineNarrativoTaskEngine({
   livello,
   tempoScaduto,
   mostraTutorial,
-  livelloPrec,
   onReady,
   onComplete,
   onProgress,
 }: GameEngineProps) {
-
-  const config  = getMCTMLTLevel(livello);
+  const config  = getMCTOrdineNarrativoLevel(livello);
   const rngRef  = useRef<() => number>(Math.random);
-  const poolRef = useRef(creaMCTPoolRef(rngRef.current));
+  const poolRef = useRef(creaMCTONPoolRef(rngRef.current));
 
-  // ── Micro-progressione su delayMs (+15s per bonus, max +30s) ─────────────
+  // ── Micro-progressione su nEventi (+1 per trial bonus, max +2) ───────────
 
   const microProgressione: MicroProgressioneConfig = useMemo(
     () => ({
-      valoreBase: config.delayMs,
-      delta:      MCTMLT_MICRO_DELTA,
-      maxDelta:   MCTMLT_MICRO_MAX_OVER,
+      valoreBase: config.nEventi,
+      delta:      MCTON_MICRO_DELTA,
+      maxDelta:   MCTON_MICRO_MAX_OVER,
     }),
-    [config.delayMs],
+    [config.nEventi],
   );
 
   // ── generaStimolo ─────────────────────────────────────────────────────────
 
   const generaStimolo = useCallback(
-    (ctx: { valoreCorrente: number }): StimoloMCTMLT => {
-      const base = generaStimoloMCT(
-        config.nFrasi,
-        config.nDomande,
-        config.nOpzioni,
-        "fattuale",
+    (ctx: { valoreCorrente: number }): StimoloOrdineNarrativo =>
+      generaStimoloOrdineNarrativo(
+        ctx.valoreCorrente,
+        config.nDistractors,
         poolRef.current,
         rngRef.current,
-      );
-      return { ...base, delayMs: ctx.valoreCorrente };
-    },
-    [config],
+      ),
+    [config.nDistractors],
   );
 
-  // ── valutaRisposta (strict: tutte le domande corrette) ────────────────────
+  // ── valutaRisposta (strict: tutte le posizioni corrette) ─────────────────
 
   const valutaRisposta = useCallback(
-    (stimolo: StimoloMCTMLT, risposta: RispostaMCT | null): boolean => {
+    (
+      stimolo: StimoloOrdineNarrativo,
+      risposta: RispostaOrdineNarrativo | null,
+    ): boolean => {
       if (!risposta) return false;
-      return risposta.risposte.every(
-        (r, i) => r === stimolo.domande[i]?.idxCorr,
+      return risposta.slotIds.every(
+        (id, i) => id === stimolo.ordineCorretto[i],
       );
     },
     [],
@@ -87,21 +77,21 @@ export function MemoriaComprensioneTestoMLTTaskEngine({
   const aggiornaMetriche = useCallback(
     (
       precedenti: Record<string, number>,
-      stimolo: StimoloMCTMLT,
-      risposta: RispostaMCT | null,
-      _corretto: boolean,
+      stimolo:    StimoloOrdineNarrativo,
+      risposta:   RispostaOrdineNarrativo | null,
+      _corretto:  boolean,
     ): Record<string, number> => {
       if (!risposta) return precedenti;
 
-      const corrette = risposta.risposte.filter(
-        (r, i) => r === stimolo.domande[i]?.idxCorr,
+      const corrette = risposta.slotIds.filter(
+        (id, i) => id === stimolo.ordineCorretto[i],
       ).length;
 
       return {
         ...precedenti,
-        domande_totali:   (precedenti.domande_totali   ?? 0) + stimolo.domande.length,
-        domande_corrette: (precedenti.domande_corrette ?? 0) + corrette,
-        trial_completati: (precedenti.trial_completati ?? 0) + 1,
+        posizioni_totali:   (precedenti.posizioni_totali   ?? 0) + stimolo.nSlot,
+        posizioni_corrette: (precedenti.posizioni_corrette ?? 0) + corrette,
+        trial_completati:   (precedenti.trial_completati   ?? 0) + 1,
       };
     },
     [],
@@ -111,32 +101,25 @@ export function MemoriaComprensioneTestoMLTTaskEngine({
 
   const renderStimolo = useCallback(
     (props: {
-      stimolo: StimoloMCTMLT;
-      onRisposta: (risposta: RispostaMCT) => void;
+      stimolo:    StimoloOrdineNarrativo;
+      onRisposta: (risposta: RispostaOrdineNarrativo) => void;
     }) => (
-      <MemoriaComprensioneTestoMLTSession
+      <OrdineNarrativoSession
         stimolo={props.stimolo}
         onRisposta={props.onRisposta}
         tempoScaduto={tempoScaduto}
-        delayComponent={({ onCompleto }) => (
-          <BouncingBall
-            durataMs={props.stimolo.delayMs}
-            onCompleto={onCompleto}
-            mostraCountdown
-          />
-        )}
       />
     ),
     [tempoScaduto],
   );
 
-  // ── onCompleteWrapped — accuratezza per domanda ────────────────────────────
+  // ── onCompleteWrapped — accuratezza per posizione ─────────────────────────
 
   const onCompleteWrapped = useCallback(
     (risultato: SessionResult) => {
       const m        = risultato.metriche;
-      const totali   = m.domande_totali   ?? 0;
-      const corrette = m.domande_corrette ?? 0;
+      const totali   = m.posizioni_totali   ?? 0;
+      const corrette = m.posizioni_corrette ?? 0;
       const acc      = totali > 0 ? corrette / totali : 0;
 
       onComplete({
@@ -152,24 +135,25 @@ export function MemoriaComprensioneTestoMLTTaskEngine({
 
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
-        pagine: [{
-          titolo: "Leggi, poi ricorda",
-          testo:  "Leggi con attenzione il testo che ti viene mostrato. Dopo ti faremo alcune domande su quello che hai letto — le risposte si trovano nel testo.",
-        }],
+        pagine: [
+          {
+            titolo: "Ricostruisci la storia",
+            testo:
+              "Leggi con attenzione il testo. Poi vedrai i pezzi della storia nell'ordine sbagliato — toccane uno per selezionarlo (diventa giallo), poi tocca il numero dove vuoi metterlo.",
+          },
+          {
+            titolo: "Come funziona",
+            testo:
+              "Puoi rimettere un pezzo nel mazzo toccando lo slot. Quando hai riempito tutti gli slot, tocca 'Conferma ordine'. Metti i pezzi nell'ordine in cui sono avvenuti nel testo.",
+          },
+        ],
       }
     : null;
-
-  // ── Warning cambio meccanica (condiviso con MBT) ──────────────────────────
-
-  const warning = useMemo(
-    () => getMCTMechanicWarning(livelloPrec, livello),
-    [livelloPrec, livello],
-  );
 
   // ── Render (Modello B) ────────────────────────────────────────────────────
 
   return (
-    <TrialFlow<StimoloMCTMLT, RispostaMCT>
+    <TrialFlow<StimoloOrdineNarrativo, RispostaOrdineNarrativo>
       tLimMs={null}
       trialValutativi={config.trialsPerSession}
       microProgressione={microProgressione}
@@ -178,7 +162,7 @@ export function MemoriaComprensioneTestoMLTTaskEngine({
       valutaRisposta={valutaRisposta}
       aggiornaMetriche={aggiornaMetriche}
       tutorial={tutorial}
-      warning={warning}
+      warning={null}
       feedbackType="standard"
       tempoScaduto={tempoScaduto}
       onReady={onReady}

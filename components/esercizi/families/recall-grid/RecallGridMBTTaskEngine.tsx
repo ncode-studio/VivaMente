@@ -304,7 +304,7 @@ export function RecallGridMBTTaskEngine({
   return (
     <TrialFlow<TrialRecallGrid, RispostaRecallGrid>
       tLimMs={null}
-      trialValutativi={null}
+      trialValutativi={config.trialsPerSession}
       microProgressione={microProgressione}
       generaStimolo={generaStimolo}
       renderStimolo={renderStimolo}

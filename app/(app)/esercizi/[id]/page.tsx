@@ -15,6 +15,7 @@ import {
   fetchEsercizioById, fetchUltimoLivelloEsercizio, contaSessioniPerEsercizio, fetchUserLevels,
 } from "@/lib/sync";
 import { getFamily } from "@/components/esercizi/registry";
+import { TimerControlContext } from "@/components/esercizi/shared/TimerControlContext";
 import type { EventoProgressione } from "@/lib/progression";
 import type { SessionResult } from "@/lib/exercise-types";
 
@@ -83,6 +84,7 @@ export default function EsercizioPage() {
   // ── Refs ────────────────────────────────────────────────────────────────────
   const timerIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number | null>(null);
+  const pausaInizioRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
   const onCompleteFiredRef = useRef(false);
 
@@ -190,6 +192,32 @@ export default function EsercizioPage() {
     if (total === null) return; // Modello A: ignora
     setProgressoTrial({ current, total });
   }, []);
+
+  const handleTimerPausa = useCallback(() => {
+    if (timerIdRef.current !== null) {
+      clearInterval(timerIdRef.current);
+      timerIdRef.current = null;
+      pausaInizioRef.current = Date.now();
+    }
+  }, []);
+
+  const handleTimerRiprendi = useCallback(() => {
+    if (pausaInizioRef.current === null || startTimeRef.current === null || sessionDurationMs === null) return;
+    startTimeRef.current += Date.now() - pausaInizioRef.current;
+    pausaInizioRef.current = null;
+    timerIdRef.current = setInterval(() => {
+      if (!mountedRef.current) return;
+      const elapsed = Date.now() - (startTimeRef.current ?? Date.now());
+      const remaining = Math.max(0, sessionDurationMs - elapsed);
+      setTempoRimanente(Math.ceil(remaining / 1000));
+      if (remaining <= 0) {
+        clearInterval(timerIdRef.current!);
+        timerIdRef.current = null;
+        setTempoScaduto(true);
+        setStato("time-up");
+      }
+    }, 1000);
+  }, [sessionDurationMs]);
 
   // ── handleComplete ──────────────────────────────────────────────────────────
   const handleComplete = useCallback(async (risultato: SessionResult) => {
@@ -334,12 +362,10 @@ export default function EsercizioPage() {
             {formatTempo(tempoRimanente)}
           </div>
         )}
-        {(stato === "running" || stato === "time-up") && sessionDurationMs === null && progressoTrial !== null && (
+        {(stato === "running" || stato === "time-up") && sessionDurationMs === null && progressoTrial !== null && progressoTrial.current < progressoTrial.total && (
           <div className="px-3 py-1 rounded-full text-sm font-bold tabular-nums flex-shrink-0"
             style={{ backgroundColor: COLORS.primaryLight, color: COLORS.primary }}>
-            {progressoTrial.current === progressoTrial.total && stato === "running"
-              ? "Bonus"
-              : `${progressoTrial.current}/${progressoTrial.total}`}
+            {progressoTrial.current}/{progressoTrial.total}
           </div>
         )}
       </div>
@@ -386,16 +412,18 @@ export default function EsercizioPage() {
 
         {/* ── ESERCIZIO (running + time-up) ────────────────────────────────── */}
         {(stato === "running" || stato === "time-up") && Engine && (
-          <Engine
-            esercizioId={esercizio!.id}
-            livello={livelloCorrente}
-            mostraTutorial={mostraTutorial}
-            livelloPrec={livelloPrec}
-            tempoScaduto={tempoScaduto}
-            onReady={handleReady}
-            onComplete={handleComplete}
-            onProgress={handleProgress}
-          />
+          <TimerControlContext.Provider value={{ pausa: handleTimerPausa, riprendi: handleTimerRiprendi }}>
+            <Engine
+              esercizioId={esercizio!.id}
+              livello={livelloCorrente}
+              mostraTutorial={mostraTutorial}
+              livelloPrec={livelloPrec}
+              tempoScaduto={tempoScaduto}
+              onReady={handleReady}
+              onComplete={handleComplete}
+              onProgress={handleProgress}
+            />
+          </TimerControlContext.Provider>
         )}
 
         {/* ── SAVING ───────────────────────────────────────────────────────── */}

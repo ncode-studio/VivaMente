@@ -13,7 +13,7 @@ export interface HaylingLevelConfig {
   tRispostaMs:  number;  // limite per singola risposta in ms
 }
 
-export const SESSION_TIMER_MS         = 90_000;
+export const SESSION_TIMER_MS         = 60_000;
 export const HAYLING_MICRO_DELTA      = -1_000;
 export const HAYLING_MICRO_MAX_OVER   = 2;
 export const HAYLING_RISPOSTA_FLOOR   = 7_000;
