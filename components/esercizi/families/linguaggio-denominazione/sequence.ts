@@ -39,7 +39,7 @@ export function normalizzaRisposta(s: string): string {
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/\p{Mn}/gu, "")
+    .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9\s]/g, "")
     .replace(/\s+/g, " ");
 }

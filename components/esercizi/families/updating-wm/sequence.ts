@@ -185,7 +185,7 @@ function generaDistrattorice(
   for (let attempt = 0; attempt < 20; attempt++) {
     const cand = [...corretto];
     const n = 1 + (rng() < 0.3 ? 1 : 0); // modifica 1-2 cifre
-    const positions = shuffle([...Array(len).keys()], rng).slice(0, n);
+    const positions = shuffle(Array.from(Array(len).keys()), rng).slice(0, n);
     for (const p of positions) {
       const delta = rng() < 0.5 ? 1 : -1;
       cand[p] = Math.max(0, cand[p] + delta);

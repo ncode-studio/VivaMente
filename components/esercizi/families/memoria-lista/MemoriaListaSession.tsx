@@ -95,7 +95,7 @@ export function MemoriaListaSession({
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      selezioneRef.current = [...next];
+      selezioneRef.current = Array.from(next);
       return next;
     });
   }, []);

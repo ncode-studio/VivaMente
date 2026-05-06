@@ -103,11 +103,11 @@ export function getMCTOrdineNarrativoLevel(
 }
 
 export function getMCTMechanicWarning(
-  livelloPrec: number | undefined,
+  livelloPrec: number | null,
   livelloCorrente: number,
-): string | null {
+): { titolo: string; testo: string } | null {
   if (livelloPrec === 6 && livelloCorrente === 7) {
-    return "Da questo livello ogni domanda avrà quattro possibili risposte invece di tre.";
+    return { titolo: "Cambio difficoltà", testo: "Da questo livello ogni domanda avrà quattro possibili risposte invece di tre." };
   }
   return null;
 }

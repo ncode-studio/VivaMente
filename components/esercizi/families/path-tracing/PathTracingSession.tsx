@@ -90,7 +90,7 @@ export function PathTracingSession({ stimolo, onRisposta, tempoScaduto }: Props)
 
     // celle visitate
     ctx.fillStyle = VISIT_COLOR;
-    for (const key of visitedRef.current) {
+    Array.from(visitedRef.current).forEach((key) => {
       const [r, c] = key.split(",").map(Number);
       ctx.fillRect(
         PADDING + c * cellPx,
@@ -98,7 +98,7 @@ export function PathTracingSession({ stimolo, onRisposta, tempoScaduto }: Props)
         cellPx,
         cellPx,
       );
-    }
+    });
 
     // muri
     ctx.strokeStyle = WALL_COLOR;

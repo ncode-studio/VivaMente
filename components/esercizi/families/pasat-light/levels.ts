@@ -43,11 +43,11 @@ export function getPLLevel(livello: number): PLLevelConfig {
 }
 
 export function getPLMechanicWarning(
-  livelloPrec: number | undefined,
+  livelloPrec: number | null,
   livelloCorrente: number,
-): string | null {
+): { titolo: string; testo: string } | null {
   if (livelloPrec === 6 && livelloCorrente === 7) {
-    return "Da questo livello appaiono anche sottrazioni: calcola sempre [precedente] − [nuovo numero].";
+    return { titolo: "Cambio difficoltà", testo: "Da questo livello appaiono anche sottrazioni: calcola sempre [precedente] − [nuovo numero]." };
   }
   return null;
 }

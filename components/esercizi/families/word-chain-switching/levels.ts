@@ -43,11 +43,11 @@ export function getWCSLevel(livello: number): WCSLevelConfig {
 }
 
 export function getWCSMechanicWarning(
-  livelloPrec: number | undefined,
+  livelloPrec: number | null,
   livelloCorrente: number,
-): string | null {
+): { titolo: string; testo: string } | null {
   if (livelloPrec === 5 && livelloCorrente === 6) {
-    return "Da questo livello scompare il nome della categoria — guida solo il colore delle parole.";
+    return { titolo: "Cambio difficoltà", testo: "Da questo livello scompare il nome della categoria — guida solo il colore delle parole." };
   }
   return null;
 }

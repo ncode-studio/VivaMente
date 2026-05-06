@@ -172,7 +172,7 @@ export function generaParoleBackward(
     tastiera = shuffled(lettere, rng);
   } else if (tasteraMode === "mista_4" || tasteraMode === "mista_6") {
     const nDist = tasteraMode === "mista_4" ? 4 : 6;
-    const uniche = [...new Set(lettere)];
+    const uniche = Array.from(new Set(lettere));
     const candidates: string[] = [];
     for (const l of uniche) {
       for (const v of VICINI[l] ?? []) {

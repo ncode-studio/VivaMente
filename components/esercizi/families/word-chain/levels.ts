@@ -38,11 +38,11 @@ export function getWCLevel(livello: number): WCLevelConfig {
 }
 
 export function getWCMechanicWarning(
-  livelloPrec: number | undefined,
+  livelloPrec: number | null,
   livelloCorrente: number,
-): string | null {
+): { titolo: string; testo: string } | null {
   if (livelloPrec === 5 && livelloCorrente === 6) {
-    return "Da questo livello le parole appartengono a categorie più simili — richiede più attenzione.";
+    return { titolo: "Cambio difficoltà", testo: "Da questo livello le parole appartengono a categorie più simili — richiede più attenzione." };
   }
   return null;
 }

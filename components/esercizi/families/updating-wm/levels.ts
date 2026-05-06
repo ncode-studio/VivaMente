@@ -73,14 +73,14 @@ export function getUWMTabBLevel(livello: number): UWMTabBLevel {
 // ── Mechanic warnings (Numeri only, per lv 1–10) ─────────────────────────────
 
 export function getUWMNumeriWarning(
-  livelloPrec: number | undefined,
+  livelloPrec: number | null,
   livelloCorrente: number,
-): string | null {
+): { titolo: string; testo: string } | null {
   if (livelloPrec === 5 && livelloCorrente === 6) {
-    return "Nuova regola: sottrai 1 a ogni numero della sequenza.";
+    return { titolo: "Nuova regola", testo: "Sottrai 1 a ogni numero della sequenza." };
   }
   if (livelloPrec === 7 && livelloCorrente === 8) {
-    return "Nuova regola: la trasformazione alterna tra +2 e −2 ad ogni trial.";
+    return { titolo: "Nuova regola", testo: "La trasformazione alterna tra +2 e −2 ad ogni trial." };
   }
   return null;
 }

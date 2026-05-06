@@ -39,14 +39,14 @@ export function getPTLevel(livello: number): PTLevelConfig {
 }
 
 export function getPTMechanicWarning(
-  livelloPrec: number | undefined,
+  livelloPrec: number | null,
   livelloCorrente: number,
-): string | null {
+): { titolo: string; testo: string } | null {
   if (livelloPrec === 3 && livelloCorrente === 4) {
-    return "Da questo livello il labirinto è più grande: 5×5.";
+    return { titolo: "Cambio difficoltà", testo: "Da questo livello il labirinto è più grande: 5×5." };
   }
   if (livelloPrec === 7 && livelloCorrente === 8) {
-    return "Da questo livello il labirinto diventa ancora più grande: 6×6.";
+    return { titolo: "Cambio difficoltà", testo: "Da questo livello il labirinto diventa ancora più grande: 6×6." };
   }
   return null;
 }

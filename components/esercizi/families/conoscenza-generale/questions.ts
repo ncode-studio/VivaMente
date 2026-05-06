@@ -188,4 +188,3 @@ export const DOMANDE_PER_RARITÀ: Record<string, CGDomanda[]> = {
   rara:       RARA,
 };
 
-export type { CGDomanda };

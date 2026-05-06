@@ -37,14 +37,14 @@ export function getAMLevel(livello: number): AMLevelConfig {
 }
 
 export function getAMMechanicWarning(
-  livelloPrec: number | undefined,
+  livelloPrec: number | null,
   livelloCorrente: number,
-): string | null {
+): { titolo: string; testo: string } | null {
   if (livelloPrec === 4 && livelloCorrente === 5) {
-    return "Da questo livello il tempo di attesa tra memorizzazione e domande aumenta a 1 minuto.";
+    return { titolo: "Cambio difficoltà", testo: "Da questo livello il tempo di attesa tra memorizzazione e domande aumenta a 1 minuto." };
   }
   if (livelloPrec === 8 && livelloCorrente === 9) {
-    return "Da questo livello il tempo di attesa aumenta a 1 minuto e 30 secondi.";
+    return { titolo: "Cambio difficoltà", testo: "Da questo livello il tempo di attesa aumenta a 1 minuto e 30 secondi." };
   }
   return null;
 }

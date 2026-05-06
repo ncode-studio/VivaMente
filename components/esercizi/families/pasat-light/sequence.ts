@@ -62,7 +62,7 @@ function generaOpzioniMC(
   let pad = 0;
   while (set.size < 4) { if (!set.has(pad)) set.add(pad); pad++; }
 
-  const arr = [...set];
+  const arr = Array.from(set);
   // Fisher-Yates shuffle
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));

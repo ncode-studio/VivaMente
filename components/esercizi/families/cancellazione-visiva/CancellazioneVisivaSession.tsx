@@ -58,7 +58,7 @@ export function CancellazioneVisivaSession({
     if (completatoRef.current) return;
     completatoRef.current = true;
     setToccate((prev) => {
-      onRispostaRef.current({ toccate: [...prev] });
+      onRispostaRef.current({ toccate: Array.from(prev) });
       return prev;
     });
   }, []);
