@@ -337,8 +337,8 @@ function AreaCerebraleCard({ cat }: { cat: ScoreCategoria }) {
         </div>
 
         {/* Grafico */}
-        <div style={{ height: 140 }}>
-          <ResponsiveContainer width="100%" height="100%">
+        <ChartBox height={140}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <LineChart data={dati} margin={{ top: 5, right: 5, bottom: 0, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis dataKey="label" tick={{ fontSize: 9, fill: COLORS.inkMuted }} axisLine={false} tickLine={false} />
@@ -365,7 +365,7 @@ function AreaCerebraleCard({ cat }: { cat: ScoreCategoria }) {
               />
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </ChartBox>
       </div>
 
       {/* Testo discorsivo */}
@@ -527,9 +527,7 @@ function DettaglioGiorno({ dateStr, storicoSessioni, esercizioDelGiornoId }: { d
                   <p className="flex-1 text-sm font-medium" style={{ color: s ? COLORS.ink : COLORS.inkMuted }}>
                     {CAT_NOMI_DET[catId]}
                   </p>
-                  {s ? (
-                    <span className="text-sm font-bold" style={{ color: cc?.text ?? COLORS.primary }}>{s.score}%</span>
-                  ) : (
+                  {!s && (
                     <span className="text-xs font-medium" style={{ color: COLORS.inkMuted }}>Non svolto</span>
                   )}
                 </div>
@@ -544,6 +542,12 @@ function DettaglioGiorno({ dateStr, storicoSessioni, esercizioDelGiornoId }: { d
 
 const TREND_ARROW: Record<string, string> = { crescita: "↑", stabile: "→", calo: "↓" };
 const TREND_TEXT:  Record<string, string> = { crescita: "In crescita", stabile: "Stabile", calo: "In calo" };
+
+function ChartBox({ height, children }: { height: number; children: React.ReactNode }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => { setReady(true); }, []);
+  return <div style={{ height }}>{ready ? children : null}</div>;
+}
 
 function StatCell({ value, label, color }: { value: string; label: string; color: string }) {
   return (
@@ -628,8 +632,8 @@ function CervelloGlobaleCard({ scoreCategorie }: { scoreCategorie: ScoreCategori
         </div>
 
         {/* Grafico */}
-        <div style={{ height: 140 }}>
-          <ResponsiveContainer width="100%" height="100%">
+        <ChartBox height={140}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <LineChart data={dati} margin={{ top: 5, right: 5, bottom: 0, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis dataKey="label" tick={{ fontSize: 9, fill: COLORS.inkMuted }} axisLine={false} tickLine={false} />
@@ -656,7 +660,7 @@ function CervelloGlobaleCard({ scoreCategorie }: { scoreCategorie: ScoreCategori
               />
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </ChartBox>
       </div>
 
       {/* Testo discorsivo */}
@@ -768,8 +772,8 @@ function AttivitaTab({ filtro: filtroExt, setFiltro: setFiltroExt, hidePills, sc
           />
         </div>
 
-        <div style={{ height: 160 }}>
-          <ResponsiveContainer width="100%" height="100%">
+        <ChartBox height={160}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis dataKey="label" tick={{ fontSize: 9, fill: COLORS.inkMuted }} axisLine={false} tickLine={false} />
@@ -814,7 +818,7 @@ function AttivitaTab({ filtro: filtroExt, setFiltro: setFiltroExt, hidePills, sc
               }
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </ChartBox>
       </div>
 
       {/* Stats */}

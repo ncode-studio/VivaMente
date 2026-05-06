@@ -653,9 +653,11 @@ export async function fetchDatiProgressi(userId: string): Promise<{
     const trend: "crescita" | "stabile" | "calo" = avgUltimi > avgPrec + 2 ? "crescita" : avgUltimi < avgPrec - 2 ? "calo" : "stabile";
 
     // Storico score: raggruppa per giorno
+    const MESI_SHORT_SYNC = ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
     const byDay: Record<string, number[]> = {};
     for (const s of catSessions) {
-      const day = new Date(s.created_at as string).toLocaleDateString("it-IT", { day: "numeric", month: "short" });
+      const d = new Date(s.created_at as string);
+      const day = `${d.getDate()} ${MESI_SHORT_SYNC[d.getMonth()]}`;
       (byDay[day] = byDay[day] ?? []).push(s.score as number ?? 0);
     }
     const storico = Object.entries(byDay).map(([label, scores]) => ({
