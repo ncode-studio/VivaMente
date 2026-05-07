@@ -80,7 +80,7 @@ function StreakCircles({ isGuest }: { isGuest?: boolean }) {
       {progressiSettimanali.map((g) => {
         const isOggi = g.giorno === oggi;
         const isFuturo = GIORNO_INDEX[g.giorno] > oggiIndex;
-        const completato = g.esercizi >= 5 && !isFuturo;
+        const completato = !isFuturo && g.memoria > 0 && g.attenzione > 0 && g.linguaggio > 0 && g.esecutive > 0 && g.visuospaziali > 0;
         const d = new Date(monday);
         d.setDate(monday.getDate() + OFFSET_DA_LUNEDI[g.giorno]);
         const dayNumber = d.getDate();
