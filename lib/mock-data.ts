@@ -173,16 +173,16 @@ export const mockEsercizi = [
     config: { game: "go_nogo", stimulusType: "cromatico" },
   },
   {
-    id: "flanker-frecce",
-    categoria_id: "attenzione",
-    titolo: "Flanker — Frecce",
-    descrizione: "Indica la direzione della freccia centrale ignorando quelle ai lati.",
+    id: "simon-spaziale",
+    categoria_id: "esecutive",
+    titolo: "Simon Spaziale",
+    descrizione: "Tocca la direzione della freccia, ignorando dove appare sullo schermo.",
     difficolta: "facile",
     livello: 1,
-    famiglia: "flanker",
+    famiglia: "simon",
     durata_stimata: 60,
-    beneficio: "Allena l'attenzione selettiva e il controllo dell'interferenza.",
-    config: { game: "flanker" },
+    beneficio: "Allena il controllo dell'interferenza spaziale e la risoluzione del conflitto.",
+    config: { game: "simon" },
   },
   {
     id: "task-switching-numeri",
@@ -316,19 +316,6 @@ export const mockEsercizi = [
     beneficio: "Allena l'attenzione sostenuta e la vigilanza nel tempo.",
     config: { game: "vigilance" },
   },
-  {
-    id: "hayling-quotidiano",
-    categoria_id: "esecutive",
-    titolo: "Hayling",
-    descrizione: "Prima completa la frase naturalmente, poi scegli una parola non correlata.",
-    difficolta: "medio",
-    livello: 1,
-    famiglia: "hayling",
-    durata_stimata: 60,
-    beneficio: "Allena il controllo inibitorio e la soppressione delle risposte automatiche.",
-    config: { game: "hayling", sentenceType: "frasi_quotidiane" },
-  },
-
   // ── ODD ONE OUT ───────────────────────────────────────────────────────────
   {
     id: "odd-one-out-numeri-lettere",
@@ -417,31 +404,6 @@ export const mockEsercizi = [
     config: { game: "sort_it", stimulusType: "dimensione" },
   },
 
-  // ── HAYLING — varianti aggiuntive ─────────────────────────────────────────
-  {
-    id: "hayling-narrativo",
-    categoria_id: "esecutive",
-    titolo: "Hayling — Frasi Narrative",
-    descrizione: "Completa le frasi narrative, poi scegli una parola non correlata.",
-    difficolta: "medio",
-    livello: 1,
-    famiglia: "hayling",
-    durata_stimata: 60,
-    beneficio: "Allena il controllo inibitorio su testi narrativi.",
-    config: { game: "hayling", sentenceType: "frasi_narrative" },
-  },
-  {
-    id: "hayling-tecnico",
-    categoria_id: "esecutive",
-    titolo: "Hayling — Frasi Tecnico-Scientifiche",
-    descrizione: "Completa le frasi tecnico-scientifiche, poi scegli una parola non correlata.",
-    difficolta: "difficile",
-    livello: 1,
-    famiglia: "hayling",
-    durata_stimata: 60,
-    beneficio: "Allena il controllo inibitorio su contenuti specialistici.",
-    config: { game: "hayling", sentenceType: "frasi_tecnico_scientifiche" },
-  },
 
   // ── PASAT LIGHT — variante doppia ─────────────────────────────────────────
   {
@@ -657,32 +619,6 @@ export const mockEsercizi = [
     durata_stimata: 60,
     beneficio: "Allena l'inibizione lessicale e la decisione rapida sulle parole.",
     config: { game: "go_nogo", stimulusType: "lessicale" },
-  },
-
-  // ── STROOP ────────────────────────────────────────────────────────────────
-  {
-    id: "stroop-color-word",
-    categoria_id: "esecutive",
-    titolo: "Stroop — Colore e Parola",
-    descrizione: "Tocca il colore dell'inchiostro, ignora la parola scritta.",
-    difficolta: "medio",
-    livello: 1,
-    famiglia: "stroop",
-    durata_stimata: 60,
-    beneficio: "Allena l'inibizione e il controllo dell'interferenza automatica.",
-    config: { game: "stroop_color_word" },
-  },
-  {
-    id: "stroop-spatial",
-    categoria_id: "esecutive",
-    titolo: "Stroop Spaziale",
-    descrizione: "Indica la direzione della freccia, ignora la sua posizione sullo schermo.",
-    difficolta: "medio",
-    livello: 1,
-    famiglia: "stroop",
-    durata_stimata: 60,
-    beneficio: "Allena il controllo dell'interferenza spaziale (effetto Simon).",
-    config: { game: "spatial_stroop" },
   },
 
   // ── PIANIFICAZIONE — variante Brixton ─────────────────────────────────────

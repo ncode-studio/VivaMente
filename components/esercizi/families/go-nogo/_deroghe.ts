@@ -66,17 +66,14 @@ export const GO_NOGO_FEEDBACK_TYPE: "standard" | "error-only" = "standard";
 
 /**
  * Numero di colori distrattori (No-Go) per livello.
- *   lv 1-2: 1 (GDD strict, binario classico, mantiene coppia canonical)
- *   lv 3:   2
- *   lv 4:   3
- *   lv 5:   4
- *   lv 6:   5
- *   lv 7+:  6 (max — tutti i colori non-go disponibili tranne quelli pari Go)
  *
+ * Deprecato a favore del campo `nDistrattori` nel `GoNogoLevelConfig`
+ * (vedi `levels.ts`). Mantenuto come fallback se la deroga è disattivata.
  * Quando GO_NOGO_N_DISTRATTORI_LV3_PLUS=false, ritorna sempre 1.
  */
-export function getNDistrattori(livello: number): number {
+export function getNDistrattori(livello: number, nDistrattoriConfig: number): number {
   if (!GO_NOGO_N_DISTRATTORI_LV3_PLUS) return 1;
-  if (livello <= 2) return 1;
-  return Math.min(6, livello - 1);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  void livello;
+  return nDistrattoriConfig;
 }

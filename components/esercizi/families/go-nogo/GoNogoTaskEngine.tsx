@@ -36,18 +36,16 @@
  *   ./_deroghe.ts
  */
 
-import { useRef, useCallback, useMemo } from "react";
+import { useRef, useCallback } from "react";
 import type {
   GameEngineProps,
   TutorialConfig,
-  MicroProgressioneConfig,
   SessionResult,
 } from "@/lib/exercise-types";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
   getGoNogoLevel,
   getGoNogoMechanicWarning,
-  MICRO_PROGRESSIONE_GO_NOGO,
   COLORE_CSS_GO_NOGO,
   type CoppiaColore,
   type ColoreGoNogo,
@@ -59,7 +57,7 @@ import {
   type GoNogoStimolo,
 } from "./sequence";
 import { GoNogoStimulus, type GoNogoRisposta } from "./GoNogoStimulus";
-import { getNDistrattori, getIsiMs, GO_NOGO_FEEDBACK_TYPE } from "./_deroghe";
+import { getIsiMs, GO_NOGO_FEEDBACK_TYPE } from "./_deroghe";
 
 // ── Tutti i colori disponibili ───────────────────────────────────────────────
 
@@ -97,19 +95,19 @@ function scegliCoppiaCanonical(
 function GoNogoDemo({ tipo, coppia }: { tipo: "go" | "nogo"; coppia: CoppiaColore }) {
   const colore = tipo === "go" ? coppia.go : coppia.nogo;
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-3">
       <div
         className="w-24 h-24 rounded-full"
-        style={{ backgroundColor: COLORE_CSS_GO_NOGO[colore] }}
+        style={{
+          backgroundColor: COLORE_CSS_GO_NOGO[colore],
+          boxShadow: tipo === "go" ? "0 0 0 4px #22C55E55" : "none",
+          opacity: tipo === "go" ? 1 : 0.85,
+        }}
         aria-label={`Cerchio ${colore}`}
       />
-      <div className={`px-6 py-3 rounded-xl text-white text-sm font-bold ${
-        tipo === "go"
-          ? "bg-blue-600 ring-2 ring-green-500"
-          : "bg-blue-600 opacity-30"
-      }`}>
-        {tipo === "go" ? "Tocca" : "NON toccare"}
-      </div>
+      <p className="text-sm font-bold" style={{ color: tipo === "go" ? "#15803D" : "#B91C1C" }}>
+        {tipo === "go" ? "Tocca il cerchio" : "NON toccare"}
+      </p>
     </div>
   );
 }
@@ -129,35 +127,42 @@ export function GoNogoTaskEngine({
   // ── Configurazione livello ──────────────────────────────────────────────
 
   const config = getGoNogoLevel(livello);
-  const nDistrattori = getNDistrattori(livello);
-
-  const microProgressione: MicroProgressioneConfig = useMemo(
-    () => ({
-      valoreBase: config.tLimMs,
-      ...MICRO_PROGRESSIONE_GO_NOGO,
-    }),
-    [config.tLimMs],
-  );
+  const nGoTarget    = config.nGoTarget;
+  const nDistrattori = config.nDistrattori;
 
   // ── RNG sessione ────────────────────────────────────────────────────────
   const rngRef = useRef<() => number>(Math.random);
 
-  // ── Setup coppia attiva + pool distrattori (lazy init al mount) ──────────
+  // ── Setup colori go + pool distrattori (lazy init al mount) ──────────────
 
   const coppiaAttivaRef = useRef<CoppiaColore | null>(null);
+  const goColoriRef     = useRef<readonly ColoreGoNogo[] | null>(null);
   const distrattoriRef  = useRef<readonly ColoreGoNogo[] | null>(null);
 
   if (coppiaAttivaRef.current === null) {
     const coppia = scegliCoppiaCanonical(config.coppieAmmesse, rngRef.current);
     coppiaAttivaRef.current = coppia;
 
+    // Colori go: il go della coppia + (eventualmente) un secondo colore go.
+    // Il secondo go è SEMPRE l'altro "base" (verde se la coppia ha go=blu, e viceversa).
+    const goColori: ColoreGoNogo[] = [coppia.go];
+    if (nGoTarget >= 2) {
+      const altroBase: ColoreGoNogo = coppia.go === "verde" ? "blu" : "verde";
+      goColori.push(altroBase);
+    }
+    goColoriRef.current = goColori;
+
+    // Distrattori: il nogo canonical della coppia + altri colori non-go pescati a caso.
     if (nDistrattori === 1) {
       distrattoriRef.current = [coppia.nogo];
     } else {
-      const candidati = TUTTI_COLORI.filter((c) => c !== coppia.go);
-      distrattoriRef.current = pescaN(candidati, nDistrattori, rngRef.current);
+      const candidati = TUTTI_COLORI.filter((c) => !goColori.includes(c) && c !== coppia.nogo);
+      const extra = pescaN(candidati, nDistrattori - 1, rngRef.current);
+      distrattoriRef.current = [coppia.nogo, ...extra];
     }
   }
+
+  const goColoriAttivi = goColoriRef.current!;
 
   // ── Stato stream cumulativo (cap + ratio rolling) ────────────────────────
   const streamStateRef = useRef<GoNogoStreamState>(creaStreamState());
@@ -169,26 +174,39 @@ export function GoNogoTaskEngine({
 
   const coppia = coppiaAttivaRef.current!;
 
+  // Stringhe colore per il tutorial (es. "verde" oppure "verde o blu")
+  const goColoriLabel = goColoriAttivi.length === 1
+    ? goColoriAttivi[0]
+    : goColoriAttivi.slice(0, -1).join(", ") + " o " + goColoriAttivi[goColoriAttivi.length - 1];
+
+  const paginaGoTitolo = goColoriAttivi.length === 1
+    ? `Tocca i cerchi ${goColoriLabel}`
+    : `Tocca i cerchi ${goColoriLabel}`;
+
+  const paginaGoTesto = goColoriAttivi.length === 1
+    ? `Appariranno cerchi colorati in punti diversi dello schermo. Quando vedi un cerchio ${goColoriLabel}, toccalo subito.`
+    : `Appariranno cerchi colorati in punti diversi dello schermo. Tocca subito ogni cerchio ${goColoriLabel}.`;
+
   const paginaNogoTitolo = nDistrattori === 1
     ? `NON toccare i cerchi ${coppia.nogo}`
-    : `NON toccare i cerchi di altri colori`;
+    : `NON toccare gli altri colori`;
 
   const paginaNogoTesto = nDistrattori === 1
     ? `Quando vedi un cerchio ${coppia.nogo}, NON toccare. Aspetta il prossimo.`
-    : `Da questo livello compaiono cerchi di colori diversi. Tocca SOLO i cerchi ${coppia.go}, ignora tutti gli altri colori.`;
+    : `Compaiono cerchi di colori diversi. Tocca SOLO i cerchi ${goColoriLabel}, ignora tutti gli altri colori.`;
 
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
         pagine: [
           {
-            titolo: `Tocca i cerchi ${coppia.go}`,
-            testo: `Quando vedi un cerchio ${coppia.go}, tocca subito il pulsante.`,
-            demo: <GoNogoDemo tipo="go" coppia={coppia} />,
+            titolo: paginaGoTitolo,
+            testo:  paginaGoTesto,
+            demo:   <GoNogoDemo tipo="go" coppia={coppia} />,
           },
           {
             titolo: paginaNogoTitolo,
-            testo: paginaNogoTesto,
-            demo: <GoNogoDemo tipo="nogo" coppia={coppia} />,
+            testo:  paginaNogoTesto,
+            demo:   <GoNogoDemo tipo="nogo" coppia={coppia} />,
           },
         ],
       }
@@ -203,11 +221,12 @@ export function GoNogoTaskEngine({
   const generaStimolo = useCallback((): GoNogoStimolo => {
     return generaProssimoStimolo(
       streamStateRef.current,
-      coppiaAttivaRef.current!,
+      goColoriRef.current!,
       distrattoriRef.current!,
+      config.multiSpawnRate,
       rngRef.current,
     );
-  }, []);
+  }, [config.multiSpawnRate]);
 
   // ── renderGoNogoStimolo ─────────────────────────────────────────────────
 
@@ -225,9 +244,12 @@ export function GoNogoTaskEngine({
 
   const valutaRisposta = useCallback(
     (stimolo: GoNogoStimolo, risposta: GoNogoRisposta | null): boolean => {
-      if (risposta === null) {
-        return stimolo.tipo === "nogo";
-      }
+      // Timeout (no tap) → corretto solo se nogo (inibizione riuscita)
+      if (risposta === null) return stimolo.tipo === "nogo";
+      // Tap su un cerchio:
+      //   - su "main": corretto solo se il main è go
+      //   - su "decoy": sempre errato (il decoy è sempre nogo)
+      if (risposta.target === "decoy") return false;
       return stimolo.tipo === "go";
     },
     [],
@@ -280,7 +302,7 @@ export function GoNogoTaskEngine({
     <TrialFlow<GoNogoStimolo, GoNogoRisposta>
       tLimMs={config.tLimMs}
       trialValutativi={null}
-      microProgressione={microProgressione}
+      microProgressione={null}
       generaStimolo={generaStimolo}
       renderStimolo={renderGoNogoStimolo}
       valutaRisposta={valutaRisposta}

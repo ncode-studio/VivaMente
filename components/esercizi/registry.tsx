@@ -3,21 +3,16 @@ import type { GameEngineProps } from "@/lib/exercise-types";
 import { GoNogoTaskEngine } from "./families/go-nogo/GoNogoTaskEngine";
 import { GO_NOGO_TIMER_MS } from "./families/go-nogo/_deroghe";
 import { GoNogoSemanticoTaskEngine, GO_NOGO_SEMANTICO_TIMER_MS } from "./families/go-nogo-semantico/GoNogoSemanticoTaskEngine";
-import { FlankerTaskEngine } from "./families/flanker-task/FlankerTaskEngine";
-import { getFlankerLevel } from "./families/flanker-task/levels";
-import { StroopTaskEngine } from "./families/stroop/StroopTaskEngine";
-import { getStroopLevel } from "./families/stroop/levels";
+import { SimonTaskEngine } from "./families/simon/SimonTaskEngine";
+import { SESSION_TIMER_MS as SIMON_TIMER_MS } from "./families/simon/levels";
 import { OddOneOutTaskEngine } from "./families/odd-one-out/OddOneOutTaskEngine";
 import { ODD_ONE_OUT_TIMER_MS } from "./families/odd-one-out/_deroghe";
 import { MemoriaProspetticaTaskEngine } from "./families/memoria-prospettica/MemoriaProspetticaTaskEngine";
 import { SequenceTapTaskEngine } from "./families/sequence-tap/SequenceTapTaskEngine";
 import { SESSION_TIMER_MS as ST_TIMER_MS } from "./families/sequence-tap/levels";
-import { SortItTaskEngine } from "./families/sort-it/SortItTaskEngine";
-import { SESSION_TIMER_MS as SI_TIMER_MS } from "./families/sort-it/levels";
 import { RecallGridMBTTaskEngine } from "./families/recall-grid/RecallGridMBTTaskEngine";
 import { RecallGridMLTTaskEngine } from "./families/recall-grid/RecallGridMLTTaskEngine";
 import { LinguaggioDenominazioneTaskEngine } from "./families/linguaggio-denominazione/LinguaggioDenominazioneTaskEngine";
-import { SESSION_TIMER_MS as LD_TIMER_MS } from "./families/linguaggio-denominazione/levels";
 import { CulturaGeneraleTaskEngine } from "./families/conoscenza-generale/CulturaGeneraleTaskEngine";
 import { SESSION_TIMER_MS as CG_TIMER_MS } from "./families/conoscenza-generale/levels";
 import { PasatLightTaskEngine } from "./families/pasat-light/PasatLightTaskEngine";
@@ -34,11 +29,23 @@ import { MemoriaComprensioneTestoTaskEngine } from "./families/memoria-comprensi
 import { MemoriaComprensioneTestoMLTTaskEngine } from "./families/memoria-comprensione-testo/MemoriaComprensioneTestoMLTTaskEngine";
 import { OrdineNarrativoTaskEngine } from "./families/memoria-comprensione-testo/OrdineNarrativoTaskEngine";
 import { PathTracingTaskEngine } from "./families/path-tracing/PathTracingTaskEngine";
-import { HaylingTaskEngine } from "./families/hayling-game/HaylingTaskEngine";
-import { SESSION_TIMER_MS as HAYLING_TIMER_MS } from "./families/hayling-game/levels";
 import { VerbalFluencyTaskEngine } from "./families/verbal-fluency/VerbalFluencyTaskEngine";
 import { CancellazioneVisivaTaskEngine } from "./families/cancellazione-visiva/CancellazioneVisivaTaskEngine";
 import { CV_SESSION_TIMER_MS } from "./families/cancellazione-visiva/levels";
+import { RilevamentoCambiamentoTaskEngine } from "./families/rilevamento-cambiamento/RilevamentoCambiamentoTaskEngine";
+import { RILEVAMENTO_SESSION_TIMER_MS } from "./families/rilevamento-cambiamento/levels";
+import { FallingObjectsTaskEngine } from "./families/falling-objects/FallingObjectsTaskEngine";
+import { FALL_SESSION_TIMER_MS } from "./families/falling-objects/levels";
+import { GuardianoGiardinoTaskEngine } from "./families/guardiano-giardino/GuardianoGiardinoTaskEngine";
+import { GG_SESSION_TIMER_MS } from "./families/guardiano-giardino/levels";
+import { OsservatorioStellareTaskEngine } from "./families/osservatorio-stellare/OsservatorioStellareTaskEngine";
+import { OS_SESSION_TIMER_MS } from "./families/osservatorio-stellare/levels";
+import { PescatoreTaskEngine } from "./families/pescatore/PescatoreTaskEngine";
+import { PESCATORE_SESSION_TIMER_MS } from "./families/pescatore/levels";
+import { CambiaRegolaTaskEngine } from "./families/cambia-regola/CambiaRegolaTaskEngine";
+import { CAMBIA_REGOLA_SESSION_TIMER_MS } from "./families/cambia-regola/levels";
+import { VigileUrbanoTaskEngine } from "./families/vigile-urbano/VigileUrbanoTaskEngine";
+import { VU_SESSION_TIMER_MS } from "./families/vigile-urbano/levels";
 
 // ── Wrapper inline per Recall Grid MBT (discrimina stimulusType) ─────────────
 
@@ -107,16 +114,10 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     getSessionDurationMs: () => GO_NOGO_SEMANTICO_TIMER_MS,
   },
 
-  // ── Famiglia 15: Stroop Task (Modello A — timer-based) ───────────────────
-  stroop_classico: {
-    Engine: StroopTaskEngine,
-    getSessionDurationMs: (livello) => getStroopLevel(livello).sessionDurationMs,
-  },
-
-  // ── Famiglia 17: Flanker Task (Modello A — timer-based) ──────────────────
-  flanker_frecce: {
-    Engine: FlankerTaskEngine,
-    getSessionDurationMs: (livello) => getFlankerLevel(livello).sessionDurationMs,
+  // ── Famiglia 17: Simon Spaziale (Modello A — timer 60s) ──────────────────
+  simon_spaziale: {
+    Engine: SimonTaskEngine,
+    getSessionDurationMs: () => SIMON_TIMER_MS,
   },
 
   // ── Famiglia 3: Odd One Out — 2 varianti (Modello A — timer-based) ──────
@@ -133,16 +134,6 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   memoria_prospettica_time_based: {
     Engine: MemoriaProspetticaTaskEngine,
     getSessionDurationMs: () => null,
-  },
-
-  // ── Famiglia 4: Sort It — 2 varianti (Modello A — timer 90s) ────────────────
-  sort_it_percettivo: {
-    Engine: SortItTaskEngine,
-    getSessionDurationMs: () => SI_TIMER_MS,
-  },
-  sort_it_semantico: {
-    Engine: SortItTaskEngine,
-    getSessionDurationMs: () => SI_TIMER_MS,
   },
 
   // ── Famiglia 1: Sequence Tap — 4 varianti (Modello A — timer 90s) ───────────
@@ -175,12 +166,8 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     getSessionDurationMs: () => CG_TIMER_MS,
   },
 
-  // ── Famiglia 7: Updating WM — 3 varianti (Modello A — timer 90s) ────────────
+  // ── Famiglia 7: Updating WM — 2 varianti (Modello A — timer 90s) ────────────
   updating_wm_parole: {
-    Engine: UpdatingWMTaskEngine,
-    getSessionDurationMs: () => UWM_TIMER_MS,
-  },
-  updating_wm_immagini: {
     Engine: UpdatingWMTaskEngine,
     getSessionDurationMs: () => UWM_TIMER_MS,
   },
@@ -235,20 +222,52 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     getSessionDurationMs: () => null,
   },
 
-  // ── Famiglia 5: Hayling Game — 2 varianti (Modello A — timer 90s) ───────────
-  hayling_ab: {
-    Engine: HaylingTaskEngine,
-    getSessionDurationMs: () => HAYLING_TIMER_MS,
-  },
-  hayling_b_only: {
-    Engine: HaylingTaskEngine,
-    getSessionDurationMs: () => HAYLING_TIMER_MS,
-  },
-
   // ── Cancellazione Visiva (Modello A — timer 60s, extra GDD) ─────────────────
   cancellazione_visiva: {
     Engine: CancellazioneVisivaTaskEngine,
     getSessionDurationMs: () => CV_SESSION_TIMER_MS,
+  },
+
+  // ── Stimoli Cadenti (Falling Go/No-Go, Modello A — timer 60s) ───────────────
+  stimoli_cadenti: {
+    Engine: FallingObjectsTaskEngine,
+    getSessionDurationMs: () => FALL_SESSION_TIMER_MS,
+  },
+
+  // ── Il Guardiano del Giardino (Go/No-Go orizzontale, Modello A — timer 60s) ─
+  guardiano_giardino: {
+    Engine: GuardianoGiardinoTaskEngine,
+    getSessionDurationMs: () => GG_SESSION_TIMER_MS,
+  },
+
+  // ── L'Osservatorio Stellare (vigilanza prolungata, Modello A — timer 60s) ───
+  osservatorio_stellare: {
+    Engine: OsservatorioStellareTaskEngine,
+    getSessionDurationMs: () => OS_SESSION_TIMER_MS,
+  },
+
+  // ── Il Pescatore (attenzione divisa · dual task, Modello A — timer 60s) ─────
+  pescatore: {
+    Engine: PescatoreTaskEngine,
+    getSessionDurationMs: () => PESCATORE_SESSION_TIMER_MS,
+  },
+
+  // ── Cambia Regola (flessibilità attentiva · task switching, Modello A — timer 60s) ─
+  cambia_regola: {
+    Engine: CambiaRegolaTaskEngine,
+    getSessionDurationMs: () => CAMBIA_REGOLA_SESSION_TIMER_MS,
+  },
+
+  // ── Il Vigile Urbano (attenzione spaziale · multi-focus, Modello A — timer 60s) ─
+  vigile_urbano: {
+    Engine: VigileUrbanoTaskEngine,
+    getSessionDurationMs: () => VU_SESSION_TIMER_MS,
+  },
+
+  // ── Rilevamento del Cambiamento (Change Detection, Modello A — timer 90s) ──
+  rilevamento_cambiamento: {
+    Engine: RilevamentoCambiamentoTaskEngine,
+    getSessionDurationMs: () => RILEVAMENTO_SESSION_TIMER_MS,
   },
 
   // ── Famiglia 22: Path Tracing (Modello B con T.Lim per trial) ───────────────
@@ -275,14 +294,10 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     getSessionDurationMs: () => null,
   },
 
-  // ── Famiglia 20: Linguaggio e Denominazione (Modello A — timer 90s) ─────────
-  picture_naming: {
-    Engine: LinguaggioDenominazioneTaskEngine,
-    getSessionDurationMs: () => LD_TIMER_MS,
-  },
+  // ── Famiglia 20: Linguaggio e Denominazione — solo Synonym/Antonym ──────────
   synonym_antonym_decision: {
     Engine: LinguaggioDenominazioneTaskEngine,
-    getSessionDurationMs: () => LD_TIMER_MS,
+    getSessionDurationMs: () => 60_000,
   },
 
   // ── Da aggiungere progressivamente (una entry per id JSON del catalogo) ──
@@ -290,10 +305,6 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   // sequence_tap_numeri_backward:          { Engine: SequenceTapEngine,           getSessionDurationMs: () => null },
   // sequence_tap_parole_forward:           { Engine: SequenceTapEngine,           getSessionDurationMs: () => null },
   // sequence_tap_parole_backward:          { Engine: SequenceTapEngine,           getSessionDurationMs: () => null },
-  // sort_it_percettivo:                    { Engine: SortItEngine,                getSessionDurationMs: () => null },
-  // sort_it_semantico:                     { Engine: SortItEngine,                getSessionDurationMs: () => null },
-  // hayling_ab:                            { Engine: HaylingGameEngine,           getSessionDurationMs: () => null },
-  // hayling_b_only:                        { Engine: HaylingGameEngine,           getSessionDurationMs: () => null },
   // pasat_light_visivo: già registrato sopra
   // updating_wm_parole:                    { Engine: UpdatingWmEngine,            getSessionDurationMs: () => null },
   // updating_wm_immagini:                  { Engine: UpdatingWmEngine,            getSessionDurationMs: () => null },

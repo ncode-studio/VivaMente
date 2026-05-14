@@ -1,24 +1,10 @@
-/**
- * components/esercizi/families/linguaggio-denominazione/sequence.ts
- *
- * Tipi e generatori per Picture Naming e Synonym/Antonym Decision.
- */
-
 import {
-  POOL_FO, POOL_FO_AU,
   POOL_SA_BASSA, POOL_SA_MEDIA,
-  type PNItem, type SAItem, type SARelazione,
+  type SAItem, type SARelazione,
 } from "./word-pools";
-import type { LDFrequencyBand, LDDifficoltà } from "./levels";
+import type { LDDifficoltà } from "./levels";
 
 // ── Tipi stimolo ───────────────────────────────────────────────────────────────
-
-export interface StimoloPN {
-  modo: "picture_naming";
-  emoji: string;
-  risposteAccettate: string[];
-  tLimMs: number;
-}
 
 export interface StimoloSA {
   modo: "synonym_antonym";
@@ -28,35 +14,13 @@ export interface StimoloSA {
   tLimMs: number;
 }
 
-export type StimoloLD = StimoloPN | StimoloSA;
+export type StimoloLD = StimoloSA;
 
-export type RispostaLD = string | SARelazione | null;
-
-// ── Normalizzazione risposta PN ────────────────────────────────────────────────
-
-export function normalizzaRisposta(s: string): string {
-  return s
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9\s]/g, "")
-    .replace(/\s+/g, " ");
-}
-
-export function isRispostaPNCorretta(risposta: string, accettate: string[]): boolean {
-  const n = normalizzaRisposta(risposta);
-  return n.length > 0 && accettate.some((a) => normalizzaRisposta(a) === n);
-}
+export type RispostaLD = SARelazione | null;
 
 // ── Stato pool senza ripetizione ───────────────────────────────────────────────
 
 export interface LDPoolRef {
-  poolPN_FO:    PNItem[];
-  idxPN_FO:     number;
-  poolPN_FO_AU: PNItem[];
-  idxPN_FO_AU:  number;
-  // SA sub-pools per relazione × difficoltà
   sin_b: SAItem[]; idxSinB: number;
   con_b: SAItem[]; idxConB: number;
   nc_b:  SAItem[]; idxNcB:  number;
@@ -80,40 +44,13 @@ export function creaPoolRef(rng: () => number): LDPoolRef {
     shuffle(pool.filter((x) => x.relazione === rel), rng);
 
   return {
-    poolPN_FO:    shuffle([...POOL_FO],    rng),
-    idxPN_FO:     0,
-    poolPN_FO_AU: shuffle([...POOL_FO_AU], rng),
-    idxPN_FO_AU:  0,
-    sin_b: byRel(POOL_SA_BASSA as SAItem[], "sinonimo"),     idxSinB: 0,
-    con_b: byRel(POOL_SA_BASSA as SAItem[], "contrario"),    idxConB: 0,
-    nc_b:  byRel(POOL_SA_BASSA as SAItem[], "non_correlato"), idxNcB: 0,
-    sin_m: byRel(POOL_SA_MEDIA as SAItem[], "sinonimo"),     idxSinM: 0,
-    con_m: byRel(POOL_SA_MEDIA as SAItem[], "contrario"),    idxConM: 0,
-    nc_m:  byRel(POOL_SA_MEDIA as SAItem[], "non_correlato"), idxNcM: 0,
+    sin_b: byRel(POOL_SA_BASSA as SAItem[], "sinonimo"),      idxSinB: 0,
+    con_b: byRel(POOL_SA_BASSA as SAItem[], "contrario"),     idxConB: 0,
+    nc_b:  byRel(POOL_SA_BASSA as SAItem[], "non_correlato"), idxNcB:  0,
+    sin_m: byRel(POOL_SA_MEDIA as SAItem[], "sinonimo"),      idxSinM: 0,
+    con_m: byRel(POOL_SA_MEDIA as SAItem[], "contrario"),     idxConM: 0,
+    nc_m:  byRel(POOL_SA_MEDIA as SAItem[], "non_correlato"), idxNcM:  0,
     saCycleIdx: 0,
-  };
-}
-
-// ── Generatori ─────────────────────────────────────────────────────────────────
-
-export function generaPictureNaming(
-  banda: LDFrequencyBand,
-  tLimMs: number,
-  poolRef: LDPoolRef,
-): StimoloPN {
-  let item: PNItem;
-  if (banda === "FO") {
-    item = poolRef.poolPN_FO[poolRef.idxPN_FO % poolRef.poolPN_FO.length];
-    poolRef.idxPN_FO++;
-  } else {
-    item = poolRef.poolPN_FO_AU[poolRef.idxPN_FO_AU % poolRef.poolPN_FO_AU.length];
-    poolRef.idxPN_FO_AU++;
-  }
-  return {
-    modo: "picture_naming",
-    emoji: item.emoji,
-    risposteAccettate: item.risposteAccettate,
-    tLimMs,
   };
 }
 

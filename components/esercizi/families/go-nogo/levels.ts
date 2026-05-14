@@ -18,7 +18,7 @@
  *
  * Decisioni implementative:
  *   - Lv 1–13 first-pass (regola singola). Lv 14–20 (congiunzione) → step separato.
- *   - 6 coppie colore GDD implementate (2 per saliency). Selezione runtime nell'engine.
+ *   - 6 coppie colore GDD implementate (2 per salienza). Selezione runtime nell'engine.
  *   - ISI inter-trial = 0 (flusso continuo, deroga GDD shared/02-trial-flow.md).
  *     TrialFlow consuma: tLimMs = config.tLimMs, isiMs = 0, feedbackType = "error-only".
  *
@@ -27,21 +27,19 @@
  *   ./_deroghe.ts
  */
 
-import type { MicroProgressioneConfig } from "@/lib/exercise-types";
-
 // ── Tipo colore ────────────────────────────────────────────────────────────────
-// 8 colori totali: 2 "go base" (verde, blu) condivisi tra le saliency,
-// 6 "nogo specifici" che variano per saliency.
+// 8 colori totali: 2 "go base" (verde, blu) condivisi tra le salienza,
+// 6 "nogo specifici" che variano per salienza.
 
 export type ColoreGoNogo =
-  | "verde"    // go base — saliency alta e media
-  | "rosso"    // nogo — saliency alta
-  | "blu"      // go base — saliency alta e media
-  | "arancio"  // nogo — saliency alta
-  | "giallo"   // nogo — saliency media
-  | "viola"    // nogo — saliency media
-  | "turchese" // nogo — saliency bassa
-  | "azzurro"; // nogo — saliency bassa
+  | "verde"    // go base — salienza alta e media
+  | "rosso"    // nogo — salienza alta
+  | "blu"      // go base — salienza alta e media
+  | "arancio"  // nogo — salienza alta
+  | "giallo"   // nogo — salienza media
+  | "viola"    // nogo — salienza media
+  | "turchese" // nogo — salienza bassa
+  | "azzurro"; // nogo — salienza bassa
 
 // ── Hex CSS per ciascun colore (forma su surface #FFFFFF) ─────────────────────
 // Tutti i valori passano WCAG AA (≥ 4.5:1 su bianco).
@@ -82,25 +80,23 @@ export interface GoNogoLevelConfig {
    * TrialFlow: tLimMs = this.tLimMs, isiMs = 0 (flusso continuo).
    */
   tLimMs: number;
-  saliency: "alta" | "media" | "bassa";
+  salienza: "alta" | "media" | "bassa";
   /**
-   * Coppie colore go/nogo ammesse a questo livello.
-   * L'engine seleziona random tra le coppie all'inizio di ogni sessione,
-   * escludendo l'ultima coppia usata per impedire ripetizione consecutiva.
-   * Per lv 1–13: sempre 2 coppie (una per saliency level).
+   * Coppie colore go/nogo ammesse a questo livello (palette di riferimento).
+   * L'engine seleziona random tra le coppie all'inizio di ogni sessione.
+   * Il `go` della coppia scelta è SEMPRE incluso fra i colori target.
    */
   coppieAmmesse: readonly [CoppiaColore, CoppiaColore] | readonly [CoppiaColore];
+  /** Numero di colori target (go) attivi nella sessione. Lv 1-3 = 1, lv 4+ = 2. */
+  nGoTarget: number;
+  /** Numero di colori distrattori (nogo) attivi nella sessione. */
+  nDistrattori: number;
+  /**
+   * Probabilità di multi-spawn (cerchio go + decoy nogo visibili insieme).
+   * Solo applicato quando lo stimolo è di tipo go. Lv 1-7 = 0, lv 8+ > 0.
+   */
+  multiSpawnRate: number;
 }
-
-// ── Micro-progressione (costanti di famiglia) ─────────────────────────────────
-// see docs/gdd/families/go-nogo.md §Micro-progressione
-// Parametro modulato: tLimMs (= ISI del GDD).
-
-export const MICRO_PROGRESSIONE_GO_NOGO = {
-  delta:    -50,   // GDD: −50ms ISI per trial bonus
-  maxDelta: 2,     // GDD: max 2 step (−100ms totale)
-  limite:   600,   // GDD: floor 600ms
-} satisfies Omit<MicroProgressioneConfig, "valoreBase">;
 
 // ── Warning cambio meccanica ──────────────────────────────────────────────────
 
@@ -110,9 +106,27 @@ export const MICRO_PROGRESSIONE_GO_NOGO = {
  * Per first-pass lv 1–13 nessun cambio meccanica → ritorna sempre null.
  */
 export function getGoNogoMechanicWarning(
-  _livelloPrec: number | null,
-  _livelloCorrente: number,
+  livelloPrec: number | null,
+  livelloCorrente: number,
 ): { titolo: string; testo: string } | null {
+  if (livelloPrec === 2 && livelloCorrente === 3) {
+    return {
+      titolo: "Doppio cerchio!",
+      testo:  "Da questo livello a volte appaiono DUE cerchi insieme: tocca SOLO quelli del colore giusto e ignora gli altri.",
+    };
+  }
+  if (livelloPrec === 3 && livelloCorrente === 4) {
+    return {
+      titolo: "Due colori da toccare",
+      testo:  "Da questo livello ci sono DUE colori target: dovrai toccare i cerchi di entrambi i colori e ignorare tutti gli altri.",
+    };
+  }
+  if (livelloPrec === 5 && livelloCorrente === 6) {
+    return {
+      titolo: "Colori più simili",
+      testo:  "Da questo livello i colori dei cerchi sono meno contrastanti: serve più attenzione per distinguerli.",
+    };
+  }
   return null;
 }
 
@@ -125,16 +139,16 @@ export function getGoNogoMechanicWarning(
  * Lo `sequenceLength` GDD non è più utilizzato (timer fisso 60s).
  */
 export const GO_NOGO_LEVELS: readonly GoNogoLevelConfig[] = [
-  { livello: 1,  tLimMs: 1500, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA] },
-  { livello: 2,  tLimMs: 1400, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA] },
-  { livello: 3,  tLimMs: 1300, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA] },
-  { livello: 4,  tLimMs: 1300, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA] },
-  { livello: 5,  tLimMs: 1200, saliency: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA] },
-  { livello: 6,  tLimMs: 1200, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV] },
-  { livello: 7,  tLimMs: 1100, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV] },
-  { livello: 8,  tLimMs: 1100, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV] },
-  { livello: 9,  tLimMs: 1000, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV] },
-  { livello: 10, tLimMs: 1000, saliency: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV] },
+  { livello: 1,  tLimMs: 1500, salienza: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA], nGoTarget: 1, nDistrattori: 1, multiSpawnRate: 0    },
+  { livello: 2,  tLimMs: 1400, salienza: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA], nGoTarget: 1, nDistrattori: 1, multiSpawnRate: 0    },
+  { livello: 3,  tLimMs: 1300, salienza: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA], nGoTarget: 1, nDistrattori: 2, multiSpawnRate: 0.20 },
+  { livello: 4,  tLimMs: 1300, salienza: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA], nGoTarget: 2, nDistrattori: 2, multiSpawnRate: 0.25 },
+  { livello: 5,  tLimMs: 1200, salienza: "alta",  coppieAmmesse: [COPPIA_VR, COPPIA_BA], nGoTarget: 2, nDistrattori: 3, multiSpawnRate: 0.30 },
+  { livello: 6,  tLimMs: 1200, salienza: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV], nGoTarget: 2, nDistrattori: 3, multiSpawnRate: 0.35 },
+  { livello: 7,  tLimMs: 1100, salienza: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV], nGoTarget: 2, nDistrattori: 4, multiSpawnRate: 0.40 },
+  { livello: 8,  tLimMs: 1100, salienza: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV], nGoTarget: 2, nDistrattori: 4, multiSpawnRate: 0.45 },
+  { livello: 9,  tLimMs: 1000, salienza: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV], nGoTarget: 2, nDistrattori: 5, multiSpawnRate: 0.50 },
+  { livello: 10, tLimMs: 1000, salienza: "media", coppieAmmesse: [COPPIA_VG, COPPIA_BV], nGoTarget: 2, nDistrattori: 5, multiSpawnRate: 0.55 },
 ] as const;
 
 export function getGoNogoLevel(livello: number): GoNogoLevelConfig {

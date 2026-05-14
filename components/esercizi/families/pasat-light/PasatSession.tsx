@@ -1,151 +1,284 @@
 "use client";
 
 /**
- * PasatSession — UI per un trial Pasat Light (scelta multipla, lv 1-10).
+ * PasatSession — UI continua per Pasat Light.
  *
- * Le cifre appaiono una alla volta a cadenza fissa (isiMs).
- * La prima cifra si memorizza (nessuna risposta richiesta).
- * Per ogni cifra successiva: mostra "OP CIFRA" + 4 opzioni MC.
- * L'utente tappa l'opzione corretta prima che appaia la cifra successiva.
- * Se non risponde entro isiMs, il passo è marcato errato automaticamente.
+ * Modalità continua: una sola lunga catena per tutta la sessione.
+ *   - Fase "memorizza": viene mostrata una cifra di partenza (no risposta).
+ *   - Fase "calc": appare op+cifra, l'utente digita il risultato cumulativo e conferma.
+ *     - Risposta corretta → si prosegue con il nuovo risultato come somma corrente.
+ *     - Risposta sbagliata o assente → reset: nuova "memorizza" con cifra nuova.
+ *   - La sessione termina quando tempoScaduto diventa true.
  *
- * Chiama onRisposta({ corretti, totali }) al termine della sequenza.
+ * Riporta corretti / totali / chainMax via onFine al termine.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { StimoloPL, RispostaPL, PLPasso } from "./sequence";
+import type { PLLevelConfig } from "./levels";
+import {
+  generaCifraIniziale,
+  generaPasso,
+  type PLPasso,
+} from "./sequence";
+
+export interface PasatSessionMetriche {
+  corretti: number;
+  totali:   number;
+  chainMax: number;
+}
 
 type Props = {
-  stimolo:    StimoloPL;
-  onRisposta: (r: RispostaPL) => void;
+  level:        PLLevelConfig;
+  tempoScaduto: boolean;
+  onFine:       (m: PasatSessionMetriche) => void;
 };
+
+const FEEDBACK_MS = 350;
 
 // ── Componente ─────────────────────────────────────────────────────────────────
 
-export function PasatSession({ stimolo, onRisposta }: Props) {
-  // Stato display
-  const [dispStep,  setDispStep]  = useState(0);
-  const [dispPct,   setDispPct]   = useState(100);
-  const [dispHlIdx, setDispHlIdx] = useState<number | null>(null);
-  const [dispHlOk,  setDispHlOk]  = useState<boolean | null>(null);
+export function PasatSession({ level, tempoScaduto, onFine }: Props) {
+  const [dispCifra,   setDispCifra]   = useState<number>(0);
+  const [dispOp,      setDispOp]      = useState<PLPasso["op"] | null>(null);
+  const [isMemorizza, setIsMemorizza] = useState(true);
+  const [dispPct,     setDispPct]     = useState(100);
+  const [inputVal,    setInputVal]    = useState("");
+  const [feedback,    setFeedback]    = useState<"ok" | "ko" | null>(null);
 
-  // Ref stabili
-  const cancelledRef  = useRef(false);
-  const stepIdxRef    = useRef(0);
-  const correttiRef   = useRef(0);
-  const totaliRef     = useRef(0);
-  const rispostaRef   = useRef<number | null>(null);
-  const onRispostaRef = useRef(onRisposta);
+  // Stato sessione
+  const risCorrenteRef = useRef<number>(0);
+  const correttiRef    = useRef(0);
+  const totaliRef      = useRef(0);
+  const chainCorrRef   = useRef(0);   // catena corrente di corrette
+  const chainMaxRef    = useRef(0);   // catena più lunga della sessione
+  const passoRef       = useRef<PLPasso | null>(null);
+  const rispostaRef    = useRef<number | null>(null);
 
-  useLayoutEffect(() => { onRispostaRef.current = onRisposta; });
+  // Timer
+  const cancelledRef    = useRef(false);
+  const barIntRef       = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tempoScadutoRef = useRef(tempoScaduto);
 
-  // ── Avanza al passo idx ────────────────────────────────────────────────────
-  const advanceStep = useCallback((idx: number) => {
+  const onFineRef = useRef(onFine);
+  useLayoutEffect(() => { onFineRef.current = onFine; });
+
+  const rng = useRef<() => number>(Math.random).current;
+
+  // ── Pulizia timer ──────────────────────────────────────────────────────────
+  const clearTimers = () => {
+    if (barIntRef.current) { clearInterval(barIntRef.current); barIntRef.current = null; }
+    if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+  };
+
+  // ── Fine sessione ──────────────────────────────────────────────────────────
+  const terminaSessione = useCallback(() => {
+    cancelledRef.current = true;
+    clearTimers();
+    onFineRef.current({
+      corretti: correttiRef.current,
+      totali:   totaliRef.current,
+      chainMax: chainMaxRef.current,
+    });
+  }, []);
+
+  // ── Fase "memorizza": mostra cifra iniziale, attende isiMs, poi avvia calc ─
+  const avviaMemorizza = useCallback(() => {
     if (cancelledRef.current) return;
+    clearTimers();
 
-    stepIdxRef.current  = idx;
+    chainCorrRef.current = 0;
+
+    const cifra = generaCifraIniziale(rng);
+    risCorrenteRef.current = cifra;
+    passoRef.current   = null;
     rispostaRef.current = null;
-    setDispStep(idx);
+
+    setIsMemorizza(true);
+    setDispCifra(cifra);
+    setDispOp(null);
+    setInputVal("");
+    setFeedback(null);
     setDispPct(100);
-    setDispHlIdx(null);
-    setDispHlOk(null);
 
-    const t0     = Date.now();
-    const isiMs  = stimolo.isiMs;
+    const t0    = Date.now();
+    const isiMs = level.isiMs;
 
-    const barInt = setInterval(() => {
-      if (cancelledRef.current) { clearInterval(barInt); return; }
-      const pct = Math.max(0, 100 - (Date.now() - t0) / isiMs * 100);
-      setDispPct(pct);
+    barIntRef.current = setInterval(() => {
+      if (cancelledRef.current) { clearTimers(); return; }
+      setDispPct(Math.max(0, 100 - (Date.now() - t0) / isiMs * 100));
     }, 50);
 
-    setTimeout(() => {
-      clearInterval(barInt);
+    timeoutRef.current = setTimeout(() => {
       if (cancelledRef.current) return;
-
-      // Registra risultato step (se non è il primo)
-      if (idx >= 1) {
-        const passo = stimolo.passi[idx - 1];
-        totaliRef.current++;
-        if (rispostaRef.current !== null && rispostaRef.current === passo.idxCorr) {
-          correttiRef.current++;
-        }
-        rispostaRef.current = null;
-      }
-
-      const nextIdx = idx + 1;
-      if (nextIdx >= stimolo.cifre.length) {
-        onRispostaRef.current({
-          corretti: correttiRef.current,
-          totali:   totaliRef.current,
-        });
-      } else {
-        advanceStep(nextIdx);
-      }
+      if (tempoScadutoRef.current) { terminaSessione(); return; }
+      avviaCalc();
     }, isiMs);
-
-    // (timer IDs non esposti — cancelledRef gestisce i ghost timer)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stimolo]);
+  }, [level, terminaSessione]);
 
-  // Reset completo su cambio stimolo
+  const avviaCalcRef = useRef<() => void>(() => {});
+
+  // ── Fase "calc": genera passo, mostra op+cifra, attende risposta ───────────
+  const avviaCalc = useCallback(() => {
+    if (cancelledRef.current) return;
+    if (tempoScadutoRef.current) { terminaSessione(); return; }
+    clearTimers();
+
+    const passo = generaPasso(risCorrenteRef.current, level.ops, rng);
+    passoRef.current    = passo;
+    rispostaRef.current = null;
+
+    setIsMemorizza(false);
+    setDispCifra(passo.cifraCorr);
+    setDispOp(passo.op);
+    setInputVal("");
+    setFeedback(null);
+    setDispPct(100);
+
+    const t0    = Date.now();
+    const isiMs = level.isiMs;
+
+    barIntRef.current = setInterval(() => {
+      if (cancelledRef.current) { clearTimers(); return; }
+      setDispPct(Math.max(0, 100 - (Date.now() - t0) / isiMs * 100));
+    }, 50);
+
+    timeoutRef.current = setTimeout(() => {
+      if (cancelledRef.current) return;
+      // Timeout senza risposta = errore → mostra feedback breve, poi reset catena
+      totaliRef.current++;
+      setFeedback("ko");
+      clearTimers();
+      timeoutRef.current = setTimeout(() => {
+        finalizzaPasso(false);
+      }, FEEDBACK_MS);
+    }, isiMs);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level, terminaSessione]);
+
+  useLayoutEffect(() => { avviaCalcRef.current = avviaCalc; });
+
+  // ── Finalizza passo e prosegue ─────────────────────────────────────────────
+  const finalizzaPasso = useCallback((corretto: boolean) => {
+    if (cancelledRef.current) return;
+    clearTimers();
+
+    if (tempoScadutoRef.current) { terminaSessione(); return; }
+
+    if (corretto) {
+      const passo = passoRef.current;
+      if (passo) risCorrenteRef.current = passo.risultato;
+      avviaCalcRef.current();
+    } else {
+      avviaMemorizza();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avviaMemorizza, terminaSessione]);
+
+  // ── Mount: avvia prima memorizza ───────────────────────────────────────────
   useEffect(() => {
     cancelledRef.current = false;
-    stepIdxRef.current   = 0;
     correttiRef.current  = 0;
     totaliRef.current    = 0;
-    rispostaRef.current  = null;
-
-    advanceStep(0);
-
-    return () => { cancelledRef.current = true; };
+    chainCorrRef.current = 0;
+    chainMaxRef.current  = 0;
+    avviaMemorizza();
+    return () => {
+      cancelledRef.current = true;
+      clearTimers();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stimolo]);
+  }, []);
 
-  // ── Tap opzione MC ─────────────────────────────────────────────────────────
-  const handleTap = useCallback((optIdx: number) => {
-    if (cancelledRef.current) return;
-    if (rispostaRef.current !== null) return; // già risposto
-    if (stepIdxRef.current < 1) return;        // prima cifra, nessuna risposta
+  // ── Watch tempoScaduto ─────────────────────────────────────────────────────
+  useEffect(() => {
+    tempoScadutoRef.current = tempoScaduto;
+    if (tempoScaduto && !cancelledRef.current) {
+      terminaSessione();
+    }
+  }, [tempoScaduto, terminaSessione]);
 
-    rispostaRef.current = optIdx;
-    const passo: PLPasso = stimolo.passi[stepIdxRef.current - 1];
-    const ok = optIdx === passo.idxCorr;
-    setDispHlIdx(optIdx);
-    setDispHlOk(ok);
-  }, [stimolo]);
+  // ── Input handlers ─────────────────────────────────────────────────────────
+  const isLocked = feedback !== null || isMemorizza || rispostaRef.current !== null;
+
+  const handleDigit = useCallback((d: string) => {
+    if (isLocked) return;
+    setInputVal((prev) => (prev + d).slice(0, 4));
+  }, [isLocked]);
+
+  const handleBackspace = useCallback(() => {
+    if (isLocked) return;
+    setInputVal((prev) => prev.slice(0, -1));
+  }, [isLocked]);
+
+  const handleSubmit = useCallback(() => {
+    if (isLocked) return;
+    if (inputVal === "") return;
+    const val = parseInt(inputVal, 10);
+    if (isNaN(val)) return;
+    const passo = passoRef.current;
+    if (!passo) return;
+
+    rispostaRef.current = val;
+    const corretto = val === passo.risultato;
+    totaliRef.current++;
+
+    if (corretto) {
+      correttiRef.current++;
+      chainCorrRef.current++;
+      if (chainCorrRef.current > chainMaxRef.current) {
+        chainMaxRef.current = chainCorrRef.current;
+      }
+    }
+    setFeedback(corretto ? "ok" : "ko");
+
+    clearTimers();
+    timeoutRef.current = setTimeout(() => {
+      finalizzaPasso(corretto);
+    }, FEEDBACK_MS);
+  }, [inputVal, isLocked, finalizzaPasso]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  const isFirstDigit = dispStep === 0;
-  const passo: PLPasso | null = dispStep >= 1 ? stimolo.passi[dispStep - 1] : null;
+  const keypadBtnStyle: React.CSSProperties = {
+    padding: "1.1rem 0",
+    borderRadius: "0.85rem",
+    fontSize: "1.4rem",
+    fontWeight: 800,
+    border: "2px solid #D1D5DB",
+    backgroundColor: "#FFFFFF",
+    color: "#111827",
+    cursor: isLocked ? "default" : "pointer",
+    transition: "background-color 100ms",
+    width: "100%",
+  };
 
-  const getBtnStyle = (i: number): React.CSSProperties => {
-    const base: React.CSSProperties = {
-      flex: 1,
-      padding: "1rem 0.5rem",
-      borderRadius: "0.85rem",
-      fontSize: "1.25rem",
-      fontWeight: 800,
-      border: "2px solid #D1D5DB",
-      backgroundColor: "#FFFFFF",
-      color: "#111827",
-      cursor: dispHlIdx !== null ? "default" : "pointer",
-      transition: "background-color 100ms, border-color 100ms",
-      minWidth: 64,
-    };
-    if (dispHlIdx === null) return base;
+  const submitDisabled = isLocked || inputVal === "";
+  const submitBtnStyle: React.CSSProperties = {
+    ...keypadBtnStyle,
+    backgroundColor: submitDisabled ? "#E5E7EB" : "#3B82F6",
+    color: submitDisabled ? "#9CA3AF" : "#FFFFFF",
+    borderColor: submitDisabled ? "#D1D5DB" : "#2563EB",
+  };
 
-    if (passo && i === passo.idxCorr) {
-      return { ...base, backgroundColor: "#DCFCE7", borderColor: "#22C55E", color: "#15803D" };
-    }
-    if (i === dispHlIdx && dispHlOk === false) {
-      return { ...base, backgroundColor: "#FEE2E2", borderColor: "#EF4444", color: "#B91C1C" };
-    }
-    return { ...base, opacity: 0.4 };
+  const inputDisplayStyle: React.CSSProperties = {
+    width: "100%",
+    minHeight: 56,
+    padding: "0.5rem 1rem",
+    borderRadius: "0.85rem",
+    fontSize: "1.75rem",
+    fontWeight: 800,
+    textAlign: "center",
+    border: `2px solid ${feedback === "ok" ? "#22C55E" : feedback === "ko" ? "#EF4444" : "#D1D5DB"}`,
+    backgroundColor: feedback === "ok" ? "#DCFCE7" : feedback === "ko" ? "#FEE2E2" : "#F9FAFB",
+    color: feedback === "ok" ? "#15803D" : feedback === "ko" ? "#B91C1C" : "#111827",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   };
 
   return (
-    <div className="flex flex-col items-center gap-5 px-4 py-4">
+    <div className="flex flex-col items-center gap-4 px-4 py-4">
 
       {/* Barra ISI */}
       <div style={{ width: "100%", height: 6, backgroundColor: "#E5E7EB", borderRadius: 3, overflow: "hidden" }}>
@@ -162,60 +295,75 @@ export function PasatSession({ stimolo, onRisposta }: Props) {
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          minHeight: 140,
+          minHeight: 120,
           width: "100%",
           borderRadius: "1.5rem",
-          backgroundColor: isFirstDigit ? "#F0F9FF" : "#F5F3FF",
-          border: `2px solid ${isFirstDigit ? "#BAE6FD" : "#DDD6FE"}`,
+          backgroundColor: isMemorizza ? "#F0F9FF" : "#F5F3FF",
+          border: `2px solid ${isMemorizza ? "#BAE6FD" : "#DDD6FE"}`,
         }}
       >
-        {isFirstDigit ? (
-          <>
-            <p style={{ fontSize: "0.75rem", color: "#38BDF8", fontWeight: 600, marginBottom: 6, letterSpacing: "0.06em" }}>
-              MEMORIZZA
-            </p>
-            <p style={{ fontSize: "5rem", fontWeight: 900, color: "#0C4A6E", lineHeight: 1 }}>
-              {stimolo.cifre[0]}
-            </p>
-          </>
-        ) : passo ? (
-          <>
-            <p style={{ fontSize: "0.75rem", color: "#7C3AED", fontWeight: 600, marginBottom: 6, letterSpacing: "0.06em" }}>
-              PRECEDENTE {passo.op} …
-            </p>
-            <p style={{ fontSize: "5rem", fontWeight: 900, color: "#3730A3", lineHeight: 1 }}>
-              {passo.op}{passo.cifraCorr}
-            </p>
-            <p style={{ fontSize: "0.85rem", color: "#6D28D9", marginTop: 6, fontWeight: 600 }}>
-              = ?
-            </p>
-          </>
-        ) : null}
+        <p style={{
+          fontSize: "4.5rem",
+          fontWeight: 900,
+          color: isMemorizza ? "#0C4A6E" : "#3730A3",
+          lineHeight: 1,
+        }}>
+          {isMemorizza ? dispCifra : `${dispOp ?? ""}${dispCifra}`}
+        </p>
       </div>
 
-      {/* Opzioni MC */}
-      {!isFirstDigit && passo && (
-        <div style={{ display: "flex", gap: "0.6rem", width: "100%", flexWrap: "wrap" }}>
-          {passo.opzioni.map((v, i) => (
+      {/* Input display + tastierino (solo durante calc) */}
+      {!isMemorizza && (
+        <>
+          <div style={inputDisplayStyle}>
+            {inputVal === "" ? " " : inputVal}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem", width: "100%" }}>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+              <button
+                key={n}
+                onClick={() => handleDigit(String(n))}
+                disabled={isLocked}
+                style={keypadBtnStyle}
+                className={!isLocked ? "active:scale-95" : ""}
+              >
+                {n}
+              </button>
+            ))}
             <button
-              key={i}
-              onClick={() => handleTap(i)}
-              disabled={dispHlIdx !== null}
-              className={dispHlIdx === null ? "active:scale-95" : ""}
-              style={getBtnStyle(i)}
+              onClick={handleBackspace}
+              disabled={isLocked || inputVal === ""}
+              style={{ ...keypadBtnStyle, fontSize: "1.6rem" }}
+              className={!isLocked && inputVal !== "" ? "active:scale-95" : ""}
             >
-              {v}
+              ⌫
             </button>
-          ))}
-        </div>
+            <button
+              onClick={() => handleDigit("0")}
+              disabled={isLocked}
+              style={keypadBtnStyle}
+              className={!isLocked ? "active:scale-95" : ""}
+            >
+              0
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={submitDisabled}
+              style={submitBtnStyle}
+              className={!submitDisabled ? "active:scale-95" : ""}
+            >
+              ✓
+            </button>
+          </div>
+        </>
       )}
 
-      {/* Contatore passi */}
+      {/* Contatore corretti/totali */}
       <p style={{ fontSize: "0.75rem", color: "#9CA3AF", alignSelf: "flex-end" }}>
-        {dispStep} / {stimolo.cifre.length - 1}
+        {correttiRef.current} / {totaliRef.current}
       </p>
     </div>
   );

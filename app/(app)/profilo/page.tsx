@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/card";
 import Btn from "@/components/ui/btn";
 import Toggle from "@/components/ui/toggle";
@@ -556,8 +558,15 @@ type TabProfilo = "dati" | "impostazioni" | "famiglia";
 
 export default function ProfiloPage() {
   const { nome, isGuest } = useUserStore();
+  const router = useRouter();
   const membroDal = "20 marzo 2025";
   const [tab, setTab] = useState<TabProfilo>("dati");
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.replace("/onboarding/accedi");
+  }
 
   useEffect(() => {
     if (isGuest) {
@@ -621,6 +630,17 @@ export default function ProfiloPage() {
               </div>
             </div>
             <SezioneInfo />
+            {!isGuest && (
+              <div className="flex justify-center pt-2 pb-6">
+                <button
+                  onClick={handleLogout}
+                  className="text-base font-semibold underline underline-offset-4"
+                  style={{ color: COLORS.primary }}
+                >
+                  Esci dall&apos;account
+                </button>
+              </div>
+            )}
           </>
         )}
         {tab === "impostazioni" && <SezioneNotifiche />}

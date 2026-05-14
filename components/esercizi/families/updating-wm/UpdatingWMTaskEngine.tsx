@@ -1,15 +1,13 @@
 "use client";
 
 /**
- * UpdatingWMTaskEngine — engine per Updating WM (3 varianti).
+ * UpdatingWMTaskEngine — engine per Updating WM (2 varianti).
  *
- *   updating_wm_parole   → Tab A, variante "parole"
- *   updating_wm_immagini → Tab A, variante "immagini"
- *   updating_wm_numeri   → Tab B, trasformazioni alternanti
+ *   updating_wm_parole → Tab A, modalità single (lv 1-3) o updating multi-round (lv 4+)
+ *   updating_wm_numeri → Tab B, trasformazioni alternanti
  *
- * Modello A (timer 90s). Timing sequenza gestito internamente (tLimMs={null}).
- * Micro-progressione su nStimuli/nDigits: +1 per trial bonus, max +2.
- * feedbackType="standard" — feedback post-risposta da TrialFlow.
+ * Modello A (timer 60s). Timing sequenza gestito internamente (tLimMs={null}).
+ * Micro-progressione su nPerRound/nDigits: +1 per trial bonus, max +2.
  *
  * Riferimento: docs/gdd/families/updating-wm.md
  */
@@ -25,11 +23,13 @@ import {
   getUWMTabALevel,
   getUWMTabBLevel,
   getUWMNumeriWarning,
+  getUWMParoleWarning,
 } from "./levels";
 import {
   creaUWMPoolRef,
   generaStimoloPIInner,
   generaStimoloN,
+  normalizzaUWM,
   type StimoloUWM,
   type RispostaUWM,
   type UWMPoolRef,
@@ -48,21 +48,20 @@ export function UpdatingWMTaskEngine({
   onComplete,
   onProgress,
 }: GameEngineProps) {
-  const isNumeri   = esercizioId === "updating_wm_numeri";
-  const variante   = esercizioId === "updating_wm_immagini" ? "immagini" : "parole";
+  const isNumeri    = esercizioId === "updating_wm_numeri";
 
-  const rng        = useRef(Math.random);
-  const poolRef    = useRef<UWMPoolRef>(creaUWMPoolRef(rng.current));
+  const rng         = useRef(Math.random);
+  const poolRef     = useRef<UWMPoolRef>(creaUWMPoolRef(rng.current));
   const trasfIdxRef = useRef(0);
 
   // ── Livelli ────────────────────────────────────────────────────────────────
   const levelA = useMemo(() => (!isNumeri ? getUWMTabALevel(livello) : null), [isNumeri, livello]);
   const levelB = useMemo(() => (isNumeri  ? getUWMTabBLevel(livello) : null), [isNumeri, livello]);
 
-  const valoreBase = isNumeri ? (levelB!.nDigits) : (levelA!.nStimuli);
+  const valoreBase = isNumeri ? (levelB!.nDigits) : (levelA!.nPerRound);
   const trialCount = isNumeri ? (levelB!.trialsPerSession) : (levelA!.trialsPerSession);
 
-  // ── Micro-progressione: nStimuli / nDigits +1 per trial bonus ────────────
+  // ── Micro-progressione: nPerRound / nDigits +1 per trial bonus ───────────
   const microProgressione = useMemo((): MicroProgressioneConfig => ({
     valoreBase,
     delta:    1,
@@ -83,22 +82,30 @@ export function UpdatingWMTaskEngine({
         return generaStimoloPIInner(
           levelA,
           ctx.valoreCorrente,
-          variante as "parole" | "immagini",
           poolRef.current,
           rng.current,
         );
       }
-      // Fallback non raggiungibile
       throw new Error("UWM: livello non disponibile");
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isNumeri, levelA, levelB, variante],
+    [isNumeri, levelA, levelB],
   );
 
   // ── valutaRisposta ─────────────────────────────────────────────────────────
+  //   PI: una risposta per round, tutte devono essere corrette
+  //   N:  una sola risposta
   const valutaRisposta = useCallback(
-    (stimolo: StimoloUWM, risposta: RispostaUWM): boolean =>
-      risposta !== null && risposta === stimolo.idxCorr,
+    (stimolo: StimoloUWM, risposta: RispostaUWM): boolean => {
+      if (risposta === null || risposta.length === 0) return false;
+      if (stimolo.variante === "numeri") {
+        return normalizzaUWM(risposta[0]) === stimolo.rispostaAttesa;
+      }
+      if (risposta.length !== stimolo.rounds.length) return false;
+      return stimolo.rounds.every(
+        (r, i) => normalizzaUWM(risposta[i]) === r.rispostaAttesa,
+      );
+    },
     [],
   );
 
@@ -117,23 +124,29 @@ export function UpdatingWMTaskEngine({
           ? [{
               titolo: "Updating WM — Numeri",
               testo:
-                "Vedrai una serie di numeri, uno alla volta. " +
-                "Poi ti verrà mostrata la regola (es. «Aggiungi 1»). " +
-                "Scegli tra le quattro opzioni la sequenza trasformata corretta.",
+                "All'inizio del trial vedrai la regola di trasformazione " +
+                "(es. «Aggiungi 1 a ogni numero»). Poi appariranno alcuni numeri, uno alla volta. " +
+                "Memorizzali, applica la regola a ciascuno e digita la sequenza trasformata " +
+                "sul tastierino. Premi ✓ per confermare.",
             }]
           : [{
-              titolo: variante === "parole" ? "Updating WM — Parole" : "Updating WM — Immagini",
+              titolo: "Updating WM — Parole",
               testo:
-                "Vedrai una serie di oggetti, uno alla volta. " +
-                "Memorizza quale ha la proprietà richiesta (es. il più grande). " +
-                "Alla fine scegli l'oggetto corretto tra le quattro opzioni.",
+                "All'inizio vedrai la domanda (es. «Quale era il più GRANDE?»). " +
+                "Poi appariranno alcuni oggetti, uno alla volta. " +
+                "Dai livelli più alti gli oggetti arrivano in più round: dopo ogni round dovrai " +
+                "digitare il nome dell'oggetto che risponde alla domanda considerando TUTTI " +
+                "gli oggetti visti finora, anche quelli dei round precedenti. " +
+                "Premi ✓ per confermare ogni risposta.",
             }],
       }
     : null;
 
   // ── Warning ────────────────────────────────────────────────────────────────
   const warning = useMemo(
-    () => (isNumeri ? getUWMNumeriWarning(livelloPrec, livello) : null),
+    () => (isNumeri
+      ? getUWMNumeriWarning(livelloPrec, livello)
+      : getUWMParoleWarning(livelloPrec, livello)),
     [isNumeri, livelloPrec, livello],
   );
 

@@ -18,13 +18,30 @@
  * nel renderer per lv 1–13. Lv 14–20 (congiunzione) estenderà con campo forma.
  */
 
-import type { CoppiaColore, ColoreGoNogo } from "./levels";
+import type { ColoreGoNogo } from "./levels";
 
 // ── Tipi (esportati — usati da GoNogoTaskEngine e GoNogoStimulus) ────────────
+
+/** Posizione relativa all'area di gioco, in percentuale [0..1]. */
+export interface PosRel {
+  x: number;
+  y: number;
+}
+
+/** Cerchio decoy che appare insieme al cerchio principale (lv 8+ multi-spawn).
+ *  Sempre tipo "nogo" — l'utente deve discriminare. Toccarlo = errore. */
+export interface DecoyCerchio {
+  colore: ColoreGoNogo;
+  pos:    PosRel;
+}
 
 export interface GoNogoStimolo {
   tipo:   "go" | "nogo";
   colore: ColoreGoNogo;
+  /** Posizione del cerchio principale, randomizzata ad ogni stimolo. */
+  pos:    PosRel;
+  /** Decoy nogo opzionale (lv 8+ multi-spawn, solo quando tipo === "go"). */
+  decoy:  DecoyCerchio | null;
 }
 
 // ── Costanti (esportate per testabilità) ──────────────────────────────────────
@@ -140,10 +157,46 @@ function generaPatternBlocco(
  *                          Per lv 1-2 è [coppiaCanonical.nogo].
  * @param rng               Generatore casuale [0,1). Default Math.random.
  */
+// ── Posizionamento casuale ───────────────────────────────────────────────────
+
+/** Margini interni per evitare i bordi dell'area di gioco (cerchio non tagliato). */
+const POS_MARGIN_MIN = 0.12;
+const POS_MARGIN_MAX = 0.88;
+/** Distanza minima tra cerchio principale e decoy (in unità relative). */
+const MIN_DIST = 0.35;
+
+function randPos(rng: () => number): PosRel {
+  return {
+    x: POS_MARGIN_MIN + rng() * (POS_MARGIN_MAX - POS_MARGIN_MIN),
+    y: POS_MARGIN_MIN + rng() * (POS_MARGIN_MAX - POS_MARGIN_MIN),
+  };
+}
+
+function dist(a: PosRel, b: PosRel): number {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function randPosLontanaDa(ref: PosRel, rng: () => number): PosRel {
+  for (let i = 0; i < 30; i++) {
+    const p = randPos(rng);
+    if (dist(p, ref) >= MIN_DIST) return p;
+  }
+  // Fallback: piazza nell'angolo opposto
+  return {
+    x: ref.x < 0.5 ? POS_MARGIN_MAX : POS_MARGIN_MIN,
+    y: ref.y < 0.5 ? POS_MARGIN_MAX : POS_MARGIN_MIN,
+  };
+}
+
+// ── generaProssimoStimolo ────────────────────────────────────────────────────
+
 export function generaProssimoStimolo(
   state: GoNogoStreamState,
-  coppiaCanonical: CoppiaColore,
+  goColori: readonly ColoreGoNogo[],
   distrattori: readonly ColoreGoNogo[],
+  multiSpawnRate: number,
   rng: () => number = Math.random,
 ): GoNogoStimolo {
   // Lazy init pattern al boundary del blocco.
@@ -169,13 +222,31 @@ export function generaProssimoStimolo(
     state.currentBlockPattern = [];
   }
 
-  // Pesca colore.
+  // Pesca colore: per "go" pesca random tra i colori target attivi;
+  // per "nogo" pesca random tra i distrattori.
   const colore: ColoreGoNogo =
     tipo === "go"
-      ? coppiaCanonical.go
+      ? (goColori.length === 1
+          ? goColori[0]
+          : goColori[Math.floor(rng() * goColori.length)])
       : (distrattori.length === 1
           ? distrattori[0]
           : distrattori[Math.floor(rng() * distrattori.length)]);
 
-  return { tipo, colore };
+  // Posizione casuale del cerchio principale
+  const pos = randPos(rng);
+
+  // Decoy multi-spawn: solo quando tipo === "go" e con probabilità multiSpawnRate
+  let decoy: DecoyCerchio | null = null;
+  if (tipo === "go" && multiSpawnRate > 0 && rng() < multiSpawnRate) {
+    const decoyColore: ColoreGoNogo = distrattori.length === 1
+      ? distrattori[0]
+      : distrattori[Math.floor(rng() * distrattori.length)];
+    decoy = {
+      colore: decoyColore,
+      pos:    randPosLontanaDa(pos, rng),
+    };
+  }
+
+  return { tipo, colore, pos, decoy };
 }
