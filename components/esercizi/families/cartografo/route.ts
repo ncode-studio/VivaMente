@@ -173,7 +173,7 @@ const ACTION_TXT: Record<Action, string> = {
   indietro: "torna indietro",
 };
 
-export function stepToText(s: RouteStep, index: number): string {
+export function stepToText(s: RouteStep, _index: number): string {
   const action = ACTION_TXT[s.action];
   if (s.landmarkNome) {
     return `arrivato a ${s.landmarkNome}, ${action}`;

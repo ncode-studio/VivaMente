@@ -29,7 +29,6 @@ import {
   COLORI, FORME, NUMERI, TAGLIE, GAMBI, SFONDI,
   SFONDO_PALETTE,
   type VivaioLevelConfig,
-  type Colore, type Forma, type Numero, type Taglia, type Gambo, type Sfondo,
   type Dimensione,
 } from "./levels";
 import { CartaFioreSvg, VasoSvg, type FioreStimolo } from "./flowers";
@@ -37,8 +36,6 @@ import { CartaFioreSvg, VasoSvg, type FioreStimolo } from "./flowers";
 // ── Palette UI ───────────────────────────────────────────────────────────────
 
 const BG       = "#F7F4EE";
-const SURFACE  = "#FFFFFF";
-const INK_SOFT = "#6B7280";
 const RULE     = "rgba(31,41,55,0.12)";
 const OK       = "#16A34A";
 const ERR      = "#DC2626";

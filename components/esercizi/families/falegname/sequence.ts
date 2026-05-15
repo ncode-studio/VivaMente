@@ -18,7 +18,7 @@
 
 import type { FalegnameLevelConfig } from "./levels";
 import type { ShapeId, GruppoSemantico, ShapeRenderKind } from "./shapes";
-import { SHAPE_LIST, shapesByGruppo, shapesByComplessita, getShape } from "./shapes";
+import { shapesByGruppo, shapesByComplessita, getShape } from "./shapes";
 
 export interface OpzioneFalegname {
   /** Identificatore stabile per React key. */

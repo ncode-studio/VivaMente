@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import type { GameEngineProps, SessionResult } from "@/lib/exercise-types";
+import type { GameEngineProps } from "@/lib/exercise-types";
 import { MapView } from "./MapView";
 import { getMap } from "./maps";
 import { LEVELS, MAX_LIVELLO } from "./levels";

@@ -31,10 +31,10 @@ import {
   type PostinoLevelConfig, POSTINO_BORGO_TRIAL_VALUTATIVI,
 } from "./levels";
 import {
-  generaMappa, type VillageMap, type NodeId,
+  generaMappa, type VillageMap, type NodeId, type VillageEdge,
 } from "./mapgen";
 import {
-  canTraverse, edgeKey, shortestPathLength,
+  canTraverse,
 } from "./pathfinding";
 import {
   PALETTE, Decor, PostinoSprite, DestinatarioPin,
@@ -276,7 +276,7 @@ export function PostinoBorgoSession({
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  const { rows, cols, nodes, edges, postino, destinatari, capPassi, ottimo } = trial.map;
+  const { rows, cols, nodes, edges, postino, destinatari, capPassi } = trial.map;
   const consegnatiCount = trial.consegnati.size;
   const totaleDestinatari = destinatari.length;
   const passiCorrenti = trial.path.length - 1;
@@ -541,11 +541,11 @@ function scoreTrial(t: TrialState): number {
 
 function renderStreets(
   rows: number, cols: number,
-  edges: Map<string, NonNullable<ReturnType<typeof Map.prototype.get>>> | Map<string, any>,
+  edges: Map<string, VillageEdge>,
   cellXY: (n: NodeId) => { x: number; y: number },
 ) {
   const strisce: JSX.Element[] = [];
-  edges.forEach((e: any, k: string) => {
+  edges.forEach((e, k) => {
     if (e.kind === "closed" || e.kind === "stairs") return;
     const a = { row: e.fromRow, col: e.fromCol };
     const b = { row: e.toRow,   col: e.toCol };
@@ -569,11 +569,11 @@ function renderStreets(
 }
 
 function renderEdgeMarkers(
-  edges: Map<string, any>,
+  edges: Map<string, VillageEdge>,
   cellXY: (n: NodeId) => { x: number; y: number },
 ) {
   const out: JSX.Element[] = [];
-  edges.forEach((e: any, k: string) => {
+  edges.forEach((e, k) => {
     const a = { row: e.fromRow, col: e.fromCol };
     const b = { row: e.toRow,   col: e.toCol };
     const pa = cellXY(a); const pb = cellXY(b);
