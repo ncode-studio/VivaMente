@@ -402,8 +402,6 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
   }
 
   const cellPx = config.cellSizePx;
-  const boardWidth = currentMosaic.cols * cellPx + (currentMosaic.cols - 1) * BOARD_GAP_PX;
-  const boardHeight = currentMosaic.rows * cellPx + (currentMosaic.rows - 1) * BOARD_GAP_PX;
   const draggingFragment = dragKey ? pool.find(p => p.key === dragKey) : null;
   const visiblePool = pool.filter(p => !p.placed);
 

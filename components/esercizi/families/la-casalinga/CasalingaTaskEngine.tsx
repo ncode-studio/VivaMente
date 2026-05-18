@@ -13,7 +13,7 @@ import {
   getCasalingaLevel, getCasalingaMechanicWarning,
 } from "./levels";
 import { CasalingaSession } from "./CasalingaSession";
-import { ObjectSprite, KITCHEN_PALETTE, Candle, SurfaceFrame } from "./kitchen";
+import { ObjectSprite, KITCHEN_PALETTE, SurfaceFrame } from "./kitchen";
 
 /**
  * Mini-demo PRIMA/DOPO per il tutorial: mostra una mensola con 3 oggetti,
