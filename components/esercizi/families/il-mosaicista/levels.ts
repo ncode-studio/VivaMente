@@ -16,7 +16,7 @@
  *              quasi-identici, rotazione 90° richiesta
  */
 
-export const MOSAICISTA_SESSION_TIMER_MS = 90_000;
+export const MOSAICISTA_SESSION_TIMER_MS = 60_000;
 
 /** Lato cella in px nell'area di gioco. Touch target over 60. */
 export const CELL_SIZE_PX_BY_LEVEL: Record<number, number> = {
@@ -58,18 +58,18 @@ export interface MosaicistaLevelConfig {
 
 export const MOSAICISTA_LEVELS: readonly MosaicistaLevelConfig[] = [
   // lv 1–3: geometrici procedurali, frammenti grandi, no rotazione
-  { livello:  1, source: "procedural", fragmentsMin: 4,  fragmentsMax: 4,  rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 18_000, previewMs: 2_500,  cellSizePx: 92 },
-  { livello:  2, source: "procedural", fragmentsMin: 4,  fragmentsMax: 6,  rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 20_000, previewMs: 3_000,  cellSizePx: 88 },
-  { livello:  3, source: "procedural", fragmentsMin: 6,  fragmentsMax: 6,  rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 22_000, previewMs: 3_500,  cellSizePx: 84 },
+  { livello:  1, source: "procedural", fragmentsMin: 4,  fragmentsMax: 4,  rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 12_000, previewMs: 2_500, cellSizePx: 92 },
+  { livello:  2, source: "procedural", fragmentsMin: 4,  fragmentsMax: 6,  rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 14_000, previewMs: 3_000, cellSizePx: 88 },
+  { livello:  3, source: "procedural", fragmentsMin: 6,  fragmentsMax: 6,  rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 16_000, previewMs: 3_500, cellSizePx: 84 },
   // lv 4–7: soggetti figurativi curati, frammenti medi
-  { livello:  4, source: "curato",     fragmentsMin: 8,  fragmentsMax: 9,  rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 25_000, previewMs: 4_000,  cellSizePx: 80 },
-  { livello:  5, source: "curato",     fragmentsMin: 9,  fragmentsMax: 10, rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 28_000, previewMs: 5_000,  cellSizePx: 76 },
-  { livello:  6, source: "curato",     fragmentsMin: 10, fragmentsMax: 12, rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 32_000, previewMs: 6_000,  cellSizePx: 72 },
-  { livello:  7, source: "curato",     fragmentsMin: 12, fragmentsMax: 14, rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: true,  tLimMosaicoMs: 36_000, previewMs: 7_000,  cellSizePx: 68 },
+  { livello:  4, source: "curato",     fragmentsMin: 8,  fragmentsMax: 12, rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 18_000, previewMs: 4_000, cellSizePx: 80 },
+  { livello:  5, source: "curato",     fragmentsMin: 9,  fragmentsMax: 12, rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 20_000, previewMs: 4_500, cellSizePx: 76 },
+  { livello:  6, source: "curato",     fragmentsMin: 12, fragmentsMax: 15, rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 22_000, previewMs: 5_000, cellSizePx: 72 },
+  { livello:  7, source: "curato",     fragmentsMin: 12, fragmentsMax: 16, rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: true,  tLimMosaicoMs: 25_000, previewMs: 6_000, cellSizePx: 68 },
   // lv 8–10: complessi, rotazione richiesta, colori ambigui
-  { livello:  8, source: "curato",     fragmentsMin: 14, fragmentsMax: 16, rotazioneAttiva: true,  rotazioneRatio: 0.35, coloriAmbigui: true,  tLimMosaicoMs: 40_000, previewMs: 8_000,  cellSizePx: 66 },
-  { livello:  9, source: "curato",     fragmentsMin: 16, fragmentsMax: 18, rotazioneAttiva: true,  rotazioneRatio: 0.50, coloriAmbigui: true,  tLimMosaicoMs: 45_000, previewMs: 9_000,  cellSizePx: 62 },
-  { livello: 10, source: "curato",     fragmentsMin: 18, fragmentsMax: 20, rotazioneAttiva: true,  rotazioneRatio: 0.65, coloriAmbigui: true,  tLimMosaicoMs: 50_000, previewMs: 10_000, cellSizePx: 58 },
+  { livello:  8, source: "curato",     fragmentsMin: 15, fragmentsMax: 20, rotazioneAttiva: true,  rotazioneRatio: 0.35, coloriAmbigui: true,  tLimMosaicoMs: 28_000, previewMs: 6_500, cellSizePx: 66 },
+  { livello:  9, source: "curato",     fragmentsMin: 16, fragmentsMax: 20, rotazioneAttiva: true,  rotazioneRatio: 0.50, coloriAmbigui: true,  tLimMosaicoMs: 32_000, previewMs: 7_000, cellSizePx: 62 },
+  { livello: 10, source: "curato",     fragmentsMin: 18, fragmentsMax: 25, rotazioneAttiva: true,  rotazioneRatio: 0.65, coloriAmbigui: true,  tLimMosaicoMs: 36_000, previewMs: 8_000, cellSizePx: 58 },
 ] as const;
 
 export function getMosaicistaLevel(livello: number): MosaicistaLevelConfig {

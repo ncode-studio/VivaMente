@@ -58,9 +58,10 @@ export interface PescLevelConfig {
 }
 
 export const PESC_LEVELS: readonly PescLevelConfig[] = [
-  // lv 1–2: 2–3 specie, ritmo dinamico ma controllato
-  { livello:  1, poolSize:  2, crossMs: 4800, spawnMs: 2200, maxActive: 2, regolaMareChangeMs: 15_000, targetRate: 0.55 },
-  { livello:  2, poolSize:  3, crossMs: 4400, spawnMs: 2000, maxActive: 2, regolaMareChangeMs: 13_000, targetRate: 0.52 },
+  // lv 1: introduttivo — regola mare FISSA per tutta la sessione (no task switching)
+  { livello:  1, poolSize:  2, crossMs: 4800, spawnMs: 2200, maxActive: 2, regolaMareChangeMs: 90_000, targetRate: 0.55 },
+  // lv 2: introduzione del cambio regola mare (1–2 cambi in 60s)
+  { livello:  2, poolSize:  3, crossMs: 4400, spawnMs: 2000, maxActive: 2, regolaMareChangeMs: 22_000, targetRate: 0.52 },
   // lv 3–5: introduzione progressiva
   { livello:  3, poolSize:  4, crossMs: 4000, spawnMs: 1850, maxActive: 3, regolaMareChangeMs: 11_000, targetRate: 0.50 },
   { livello:  4, poolSize:  5, crossMs: 3700, spawnMs: 1700, maxActive: 3, regolaMareChangeMs: 10_000, targetRate: 0.48 },
@@ -83,6 +84,14 @@ export function getPescMechanicWarning(
   livelloPrec: number | null,
   livello: number,
 ): { titolo: string; testo: string } | null {
+  if (livelloPrec !== null && livelloPrec === 1 && livello === 2) {
+    return {
+      titolo: "Il mare cambia regola!",
+      testo:
+        "Da questo livello il target del mare cambia ogni tanto. " +
+        "Controlla l'insegna in alto a destra per sapere quale pesce raccogliere.",
+    };
+  }
   if (livelloPrec !== null && livelloPrec <= 3 && livello === 4) {
     return {
       titolo: "Nuove specie nell'acqua!",

@@ -17,7 +17,7 @@ import { getNaturalistaLevel } from "./levels";
 import { IlNaturalistaSession } from "./IlNaturalistaSession";
 import {
   PaperBackground, NAT_COLORS, SceneDefs,
-  Creature, BoscoScene, LenteIcon, ZoomInIcon,
+  Creature, BoscoScene, LenteIcon,
 } from "./sprites";
 
 type Fase = "tutorial" | "sessione";
@@ -64,9 +64,9 @@ export function IlNaturalistaTaskEngine({
             display: "flex", flexDirection: "column", gap: "0.55rem",
             width: "100%", maxWidth: 380,
           }}>
-            <Hint icona={<LenteIcon size={16} />} testo="Usa la lente in basso a destra per ingrandire." />
-            <Hint icona={<ZoomInIcon size={16} />} testo="Quando ingrandisci, trascina la tavola per spostarti." />
+            <Hint icona={<LenteIcon size={16} color={NAT_COLORS.cartaChiara} />} testo="Osserva con calma la tavola: ogni creatura è lì da scovare." />
             <Hint icona="•" testo="L'area attorno a ogni creatura è generosa: basta toccarla vicino." />
+            <Hint icona="•" testo="Più sali di livello, più sono mimetizzate con lo sfondo." />
           </div>
 
           <p style={{

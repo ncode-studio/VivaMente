@@ -2,11 +2,15 @@
  * components/esercizi/families/associative-memory/levels.ts
  *
  * Livelli per Associative Memory (lv 1–10, tutte e 3 le varianti).
- * Modello B — sessione a completamento (no timer fisso).
+ * Modello A — sessione a tempo fisso (60s). I trial si susseguono
+ * finché il timer non scade. trialsPerSession resta nei config come
+ * upper bound teorico (non usato dal TrialFlow in Modello A).
  * Micro-progressione: +1 coppia per trial bonus, max +2.
  *
  * Riferimento: docs/gdd/families/associative-memory.md
  */
+
+export const SESSION_TIMER_MS = 60_000;
 
 export interface AMLevelConfig {
   livello:          number;

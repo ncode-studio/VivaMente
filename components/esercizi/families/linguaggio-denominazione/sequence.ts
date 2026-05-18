@@ -27,7 +27,8 @@ export interface LDPoolRef {
   sin_m: SAItem[]; idxSinM: number;
   con_m: SAItem[]; idxConM: number;
   nc_m:  SAItem[]; idxNcM:  number;
-  saCycleIdx: number;
+  rng: () => number;
+  saQueue: SARelazione[];
 }
 
 function shuffle<T>(arr: T[], rng: () => number): T[] {
@@ -50,19 +51,22 @@ export function creaPoolRef(rng: () => number): LDPoolRef {
     sin_m: byRel(POOL_SA_MEDIA as SAItem[], "sinonimo"),      idxSinM: 0,
     con_m: byRel(POOL_SA_MEDIA as SAItem[], "contrario"),     idxConM: 0,
     nc_m:  byRel(POOL_SA_MEDIA as SAItem[], "non_correlato"), idxNcM:  0,
-    saCycleIdx: 0,
+    rng,
+    saQueue: [],
   };
 }
 
-const RELAZIONI_CYCLE: SARelazione[] = ["sinonimo", "contrario", "non_correlato"];
+const RELAZIONI_BASE: SARelazione[] = ["sinonimo", "contrario", "non_correlato"];
 
 export function generaSynonymAntonym(
   difficoltà: LDDifficoltà,
   tLimMs: number,
   poolRef: LDPoolRef,
 ): StimoloSA {
-  const relazione = RELAZIONI_CYCLE[poolRef.saCycleIdx % 3];
-  poolRef.saCycleIdx++;
+  if (poolRef.saQueue.length === 0) {
+    poolRef.saQueue = shuffle(RELAZIONI_BASE, poolRef.rng);
+  }
+  const relazione = poolRef.saQueue.shift()!;
 
   let item: SAItem;
   if (difficoltà === "bassa") {

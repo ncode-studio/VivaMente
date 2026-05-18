@@ -24,6 +24,7 @@ import { SESSION_TIMER_MS as WC_TIMER_MS } from "./families/word-chain/levels";
 import { WordChainSwitchingTaskEngine } from "./families/word-chain-switching/WordChainSwitchingTaskEngine";
 import { SESSION_TIMER_MS as WCS_TIMER_MS } from "./families/word-chain-switching/levels";
 import { AssociativeMemoryTaskEngine } from "./families/associative-memory/AssociativeMemoryTaskEngine";
+import { SESSION_TIMER_MS as AM_TIMER_MS } from "./families/associative-memory/levels";
 import { MemoriaListaTaskEngine } from "./families/memoria-lista/MemoriaListaTaskEngine";
 import { MemoriaComprensioneTestoTaskEngine } from "./families/memoria-comprensione-testo/MemoriaComprensioneTestoTaskEngine";
 import { MemoriaComprensioneTestoMLTTaskEngine } from "./families/memoria-comprensione-testo/MemoriaComprensioneTestoMLTTaskEngine";
@@ -204,10 +205,10 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     getSessionDurationMs: () => WCS_TIMER_MS,
   },
 
-  // ── Associative Memory (Modello B — trial-based, 3 varianti random) ─────────
+  // ── Associative Memory (Modello A — timer 60s, 3 varianti random) ──────────
   associative_memory: {
     Engine: AssociativeMemoryTaskEngine,
-    getSessionDurationMs: () => null,
+    getSessionDurationMs: () => AM_TIMER_MS,
   },
 
   // ── Famiglia 8: Memoria Comprensione Testo MBT (Modello B, 2 varianti) ──────
@@ -373,7 +374,7 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   // ── Famiglia 20: Linguaggio e Denominazione — solo Synonym/Antonym ──────────
   synonym_antonym_decision: {
     Engine: LinguaggioDenominazioneTaskEngine,
-    getSessionDurationMs: () => 60_000,
+    getSessionDurationMs: () => 90_000,
   },
 
   // ── Da aggiungere progressivamente (una entry per id JSON del catalogo) ──

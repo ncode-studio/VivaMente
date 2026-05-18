@@ -4,18 +4,18 @@
  * IlNaturalistaSession — loop di gioco del Naturalista.
  *
  * Per ogni scena:
- *  1. campiona tipologia scena dal pool del livello
- *  2. genera N creature, posizionate senza sovrapposizioni e con habitat coerente
+ *  1. campiona tipologia scena dal pool del livello, evita ripetizione consecutiva
+ *  2. genera N creature, posizionate senza sovrapposizioni in area "vivibile"
+ *     coerente con l'habitat (prato → suolo, fondale → acqua, ecc.)
  *  3. assegna lento moto (deriva ellittica) a `numMobili` creature dal lv 6
- *  4. l'utente esplora con zoom (1x / 1.5x / 2x) e pan, clicca ciascuna
+ *  4. l'utente tocca ciascuna entro un raggio generoso intorno al centro sprite
  *  5. quando tutte trovate o scade il tLimSceneMs → scena successiva
  *
- * Scoring:
- *   base per scena    = 30 punti se tutte le creature trovate
- *   bonus velocità    = round(40 * max(0, 1 - tempo / tLim))
+ * Scoring per scena:
+ *   base 30 se tutte trovate
+ *   bonus velocità = round(40 * max(0, 1 - tempo / tLim)) se tutte trovate
  *   bonus completezza = round(30 * (foundInScene / numCreature))
- *   penalità tap vuoti= -3 per ogni click che non centra alcuna creatura
- *   scoreGrezzo = avg per scena, normalizzato 0–100
+ *   scoreGrezzo = media per scena, 0–100.
  * Accuratezza valutativa = creatureTrovate / creatureMostrate (0..1).
  */
 
@@ -27,13 +27,13 @@ import {
 import type { SessionResult } from "@/lib/exercise-types";
 import {
   type NaturalistaLevelConfig, type SceneKind,
-  SCENE_VIEWBOX_W, SCENE_VIEWBOX_H,
+  SCENE_VIEWBOX_W, SCENE_VIEWBOX_H, HABITAT_POOL,
 } from "./levels";
 import {
-  PaperBackground, NAT_COLORS, SceneDefs,
+  PaperBackground, NAT_COLORS, SceneDefs, LenteIcon,
   PratoScene, PratoFiorito, BoscoScene, FondaleScene,
-  Creature, type CreatureKind, POOL_TERRA, POOL_ACQUA,
-  LenteIcon, ZoomInIcon, ZoomOutIcon, ZoomButton,
+  StagnoNinfeeScene, SottoboscoAutunnaleScene, ScoglieraMarinaScene, PratoAlpinoScene,
+  Creature, type CreatureKind,
 } from "./sprites";
 
 // ── Tipi interni ─────────────────────────────────────────────────────────────
@@ -41,12 +41,13 @@ import {
 interface PlacedCreature {
   id: number;
   kind: CreatureKind;
-  /** Posizione "ancora" nel viewBox (1000×700). */
   x: number;
   y: number;
   rotation: number;
-  /** Se !== null, parametri di moto lento (deriva ellittica). */
   motion: { rx: number; ry: number; periodMs: number; phase: number } | null;
+  /** Se true, viene disegnata una "foglia di primo piano" sopra parte dello sprite. */
+  occlusa: boolean;
+  occlusioneSeed: number;
   found: boolean;
 }
 
@@ -57,10 +58,9 @@ interface SceneInstance {
 
 // ── Costanti layout ──────────────────────────────────────────────────────────
 
-const MIN_DIST_BETWEEN_CREATURES = 110; // unità viewBox, anti-sovrapposizione
-const SCENE_INTRO_MS = 600;             // overlay "Scena #X" iniziale
-const SCENE_OUTRO_MS = 700;             // overlay "Ben fatto!" al completamento
-const ZOOM_LEVELS = [1, 1.5, 2] as const;
+const MIN_DIST_BETWEEN_CREATURES = 120;
+const SCENE_INTRO_MS = 600;
+const SCENE_OUTRO_MS = 700;
 const DRAG_TAP_THRESHOLD_PX = 8;
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -90,13 +90,8 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
   const sceneStartTsRef = useRef(0);
   const lastSceneKindRef = useRef<SceneKind | null>(null);
 
-  // ── zoom & pan (entrambi espressi in unità viewBox) ────────────────────
-  // pan = offset del viewBox visibile rispetto all'origine, in unità viewBox.
-  const [zoomIdx, setZoomIdx] = useState(0);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-
-  // ── moto creature ───────────────────────────────────────────────────────
-  const [tick, setTick] = useState(0);
+  // ── moto creature: tick di rerender per le mobili ───────────────────────
+  const [, setTick] = useState(0);
   useEffect(() => {
     if (config.numMobili === 0) return;
     let raf: number;
@@ -108,31 +103,47 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
     return () => cancelAnimationFrame(raf);
   }, [config.numMobili]);
 
+  // ── area "vivibile" della scena (intervallo y per posizione coerente) ──
+  const areaForScene = useCallback((k: SceneKind): { yMin: number; yMax: number; xMin: number; xMax: number } => {
+    switch (k) {
+      case "prato":
+      case "prato-fiorito":         return { yMin: 280, yMax: 640, xMin: 80, xMax: 920 };
+      case "prato-alpino":          return { yMin: 360, yMax: 640, xMin: 60, xMax: 940 };
+      case "bosco-rado":
+      case "bosco":
+      case "bosco-fitto":           return { yMin: 180, yMax: 640, xMin: 70, xMax: 930 };
+      case "sottobosco-autunnale":  return { yMin: 250, yMax: 640, xMin: 70, xMax: 930 };
+      case "stagno-ninfee":         return { yMin: 260, yMax: 640, xMin: 80, xMax: 920 };
+      case "fondale-chiaro":
+      case "fondale-fitto":         return { yMin: 130, yMax: 540, xMin: 80, xMax: 920 };
+      case "scogliera-marina":      return { yMin: 540, yMax: 670, xMin: 60, xMax: 940 };
+    }
+  }, []);
+
   // ── setup nuova scena ───────────────────────────────────────────────────
   const setupScene = useCallback(() => {
     const pool = config.scenePool;
     let kind = pool[Math.floor(Math.random() * pool.length)];
     if (pool.length > 1 && kind === lastSceneKindRef.current) {
-      // evita ripetizione consecutiva quando possibile
-      kind = pool.find(k => k !== lastSceneKindRef.current) ?? kind;
+      const alt = pool.find(k => k !== lastSceneKindRef.current);
+      if (alt) kind = alt;
     }
     lastSceneKindRef.current = kind;
 
-    const isAcqua = kind === "fondale-chiaro" || kind === "fondale-fitto";
-    const habitatPool = isAcqua ? POOL_ACQUA : POOL_TERRA;
+    const habitatPool = HABITAT_POOL[kind] as readonly CreatureKind[];
+    const area = areaForScene(kind);
 
     const placed: PlacedCreature[] = [];
     const N = config.numCreature;
     let safety = 0;
-    while (placed.length < N && safety < 400) {
+    while (placed.length < N && safety < 600) {
       safety++;
-      const x = 80 + Math.random() * (SCENE_VIEWBOX_W - 160);
-      const y = 90 + Math.random() * (SCENE_VIEWBOX_H - 180);
+      const x = area.xMin + Math.random() * (area.xMax - area.xMin);
+      const y = area.yMin + Math.random() * (area.yMax - area.yMin);
       const tooClose = placed.some(p => Math.hypot(p.x - x, p.y - y) < MIN_DIST_BETWEEN_CREATURES);
       if (tooClose) continue;
 
-      const kindIdx = (placed.length + Math.floor(Math.random() * habitatPool.length)) % habitatPool.length;
-      const creatureKind = habitatPool[kindIdx];
+      const creatureKind = habitatPool[Math.floor(Math.random() * habitatPool.length)];
       const willMove = placed.length < config.numMobili;
       placed.push({
         id: placed.length,
@@ -141,12 +152,14 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
         rotation: (Math.random() * 30 - 15),
         motion: willMove
           ? {
-            rx: 26 + Math.random() * 22,
-            ry: 14 + Math.random() * 12,
+            rx: 28 + Math.random() * 28,
+            ry: 14 + Math.random() * 14,
             periodMs: 6500 + Math.random() * 3500,
             phase: Math.random() * Math.PI * 2,
           }
           : null,
+        occlusa: Math.random() < config.probOcclusione,
+        occlusioneSeed: Math.floor(Math.random() * 1000),
         found: false,
       });
     }
@@ -154,11 +167,9 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
     creatureMostrateRef.current += placed.length;
     setScena({ kind, creatures: placed });
     sceneStartTsRef.current = performance.now();
-    setPan({ x: 0, y: 0 });
-    setZoomIdx(0);
     setShowIntro(true);
     setTimeout(() => setShowIntro(false), SCENE_INTRO_MS);
-  }, [config]);
+  }, [config, areaForScene]);
 
   // ── onReady & primo setup ───────────────────────────────────────────────
   useEffect(() => {
@@ -191,23 +202,6 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
     });
   }, [tempoScaduto, onComplete]);
 
-  // ── timeout scena: passa avanti penalizzando le mancate ─────────────────
-  useEffect(() => {
-    if (!scena || showIntro || showOutro || tempoScaduto || completedRef.current) return;
-    const restanti = scena.creatures.filter(c => !c.found).length;
-    if (restanti === 0) return;
-
-    const dueAt = sceneStartTsRef.current + config.tLimSceneMs;
-    const remaining = Math.max(50, dueAt - performance.now());
-    const t = setTimeout(() => {
-      if (completedRef.current || tempoScaduto) return;
-      // chiudi scena anche se incompleta
-      finalizeScene();
-    }, remaining);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scena, showIntro, showOutro, tempoScaduto, config.tLimSceneMs]);
-
   // ── finalizza scena corrente ────────────────────────────────────────────
   const finalizeScene = useCallback(() => {
     if (!scena) return;
@@ -222,9 +216,6 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
     } else {
       punti = Math.round(30 * (trovateNellaScena / N));
     }
-    // penalità tap vuoti (cap a 0)
-    // calcoliamo i tap vuoti DI QUESTA scena: non tracciati per-scena → usiamo media leggera
-    // Manteniamo il calcolo semplice: contiamo solo i tap vuoti totali alla fine.
     scoreTotaleRef.current += Math.max(0, punti);
     sceneCompleteRef.current += 1;
 
@@ -238,60 +229,38 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
     }, SCENE_OUTRO_MS);
   }, [scena, config.tLimSceneMs, tempoScaduto, setupScene]);
 
-  // ── click handling (con drag-vs-tap) ────────────────────────────────────
+  // ── timeout scena ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!scena || showIntro || showOutro || tempoScaduto || completedRef.current) return;
+    const restanti = scena.creatures.filter(c => !c.found).length;
+    if (restanti === 0) return;
+
+    const dueAt = sceneStartTsRef.current + config.tLimSceneMs;
+    const remaining = Math.max(50, dueAt - performance.now());
+    const t = setTimeout(() => {
+      if (completedRef.current || tempoScaduto) return;
+      finalizeScene();
+    }, remaining);
+    return () => clearTimeout(t);
+  }, [scena, showIntro, showOutro, tempoScaduto, config.tLimSceneMs, finalizeScene]);
+
+  // ── click handling (tap-only, niente zoom/pan) ──────────────────────────
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const pointerStartRef = useRef<{ x: number; y: number; pan: { x: number; y: number } } | null>(null);
-  const draggingRef = useRef(false);
-
-  const zoom = ZOOM_LEVELS[zoomIdx];
-
-  const clampPan = useCallback((p: { x: number; y: number }, z: number) => {
-    const visW = SCENE_VIEWBOX_W / z;
-    const visH = SCENE_VIEWBOX_H / z;
-    const maxX = SCENE_VIEWBOX_W - visW;
-    const maxY = SCENE_VIEWBOX_H - visH;
-    return {
-      x: Math.max(0, Math.min(maxX, p.x)),
-      y: Math.max(0, Math.min(maxY, p.y)),
-    };
-  }, []);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const handlePointerDown = useCallback((e: ReactPointerEvent<SVGSVGElement>) => {
-    pointerStartRef.current = { x: e.clientX, y: e.clientY, pan: { ...pan } };
-    draggingRef.current = false;
-    (e.target as Element).setPointerCapture?.(e.pointerId);
-  }, [pan]);
-
-  const handlePointerMove = useCallback((e: ReactPointerEvent<SVGSVGElement>) => {
-    const start = pointerStartRef.current;
-    if (!start) return;
-    const dx = e.clientX - start.x;
-    const dy = e.clientY - start.y;
-    if (!draggingRef.current && Math.hypot(dx, dy) > DRAG_TAP_THRESHOLD_PX) {
-      draggingRef.current = true;
-    }
-    if (draggingRef.current && zoom > 1 && svgRef.current) {
-      const rect = svgRef.current.getBoundingClientRect();
-      const vbW = SCENE_VIEWBOX_W / zoom;
-      const vbH = SCENE_VIEWBOX_H / zoom;
-      const dvbx = -(dx / rect.width) * vbW;
-      const dvby = -(dy / rect.height) * vbH;
-      setPan(clampPan({ x: start.pan.x + dvbx, y: start.pan.y + dvby }, zoom));
-    }
-  }, [zoom, clampPan]);
+    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+  }, []);
 
   const tryHitCreature = useCallback((clientX: number, clientY: number) => {
     if (!svgRef.current || !scena) return;
     const rect = svgRef.current.getBoundingClientRect();
     const px = clientX - rect.left;
     const py = clientY - rect.top;
-    // viewBox visibile: origin = pan, size = (W/z, H/z). Click in pixel → viewBox:
-    const visW = SCENE_VIEWBOX_W / zoom;
-    const visH = SCENE_VIEWBOX_H / zoom;
-    const xVb = pan.x + (px / rect.width) * visW;
-    const yVb = pan.y + (py / rect.height) * visH;
+    // viewBox fisso 0,0,W,H → pixel→viewBox lineare
+    const xVb = (px / rect.width) * SCENE_VIEWBOX_W;
+    const yVb = (py / rect.height) * SCENE_VIEWBOX_H;
 
-    // confronta con ciascuna creatura nella sua posizione corrente
     const now = performance.now();
     let hit: PlacedCreature | null = null;
     let bestDist = Infinity;
@@ -315,87 +284,71 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
         };
       });
       creatureTrovateRef.current += 1;
-      // se ho appena trovato l'ultima, chiudo la scena
-      const restanti = scena.creatures.filter(c => !c.found && c.id !== hit!.id).length;
+      const restanti = scena.creatures.filter(c => !c.found && c.id !== hitId).length;
       if (restanti === 0) {
         setTimeout(() => finalizeScene(), 250);
       }
     } else {
       tapVuotiRef.current += 1;
     }
-  }, [scena, pan, zoom, config.clickRadiusUnits, finalizeScene]);
+  }, [scena, config.clickRadiusUnits, finalizeScene]);
 
   const handlePointerUp = useCallback((e: ReactPointerEvent<SVGSVGElement>) => {
     const start = pointerStartRef.current;
     pointerStartRef.current = null;
     if (!start) return;
-    if (draggingRef.current) {
-      setPan(p => clampPan(p, zoom));
-      draggingRef.current = false;
-      return;
-    }
-    // tap → tenta hit
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    // ignora se è stato un drag involontario
+    if (Math.hypot(dx, dy) > DRAG_TAP_THRESHOLD_PX) return;
     if (!showIntro && !showOutro) {
       tryHitCreature(e.clientX, e.clientY);
     }
-  }, [zoom, clampPan, showIntro, showOutro, tryHitCreature]);
-
-  // ── zoom controls ────────────────────────────────────────────────────────
-  const onZoomIn = useCallback(() => {
-    setZoomIdx(i => {
-      const ni = Math.min(ZOOM_LEVELS.length - 1, i + 1);
-      const nz = ZOOM_LEVELS[ni];
-      // ri-centra la vista intorno al punto attualmente al centro
-      const visW = SCENE_VIEWBOX_W / nz;
-      const visH = SCENE_VIEWBOX_H / nz;
-      const prevZ = ZOOM_LEVELS[i];
-      const center = {
-        x: pan.x + (SCENE_VIEWBOX_W / prevZ) / 2,
-        y: pan.y + (SCENE_VIEWBOX_H / prevZ) / 2,
-      };
-      setPan(clampPan({ x: center.x - visW / 2, y: center.y - visH / 2 }, nz));
-      return ni;
-    });
-  }, [pan, clampPan]);
-  const onZoomOut = useCallback(() => {
-    setZoomIdx(i => {
-      const ni = Math.max(0, i - 1);
-      const nz = ZOOM_LEVELS[ni];
-      if (ni === 0) {
-        setPan({ x: 0, y: 0 });
-      } else {
-        const visW = SCENE_VIEWBOX_W / nz;
-        const visH = SCENE_VIEWBOX_H / nz;
-        const prevZ = ZOOM_LEVELS[i];
-        const center = {
-          x: pan.x + (SCENE_VIEWBOX_W / prevZ) / 2,
-          y: pan.y + (SCENE_VIEWBOX_H / prevZ) / 2,
-        };
-        setPan(clampPan({ x: center.x - visW / 2, y: center.y - visH / 2 }, nz));
-      }
-      return ni;
-    });
-  }, [pan, clampPan]);
+  }, [showIntro, showOutro, tryHitCreature]);
 
   // ── render scena ─────────────────────────────────────────────────────────
   const renderScene = (k: SceneKind) => {
     switch (k) {
-      case "prato":         return <PratoScene densita={config.densitaSfondo} />;
-      case "prato-fiorito": return <PratoFiorito densita={config.densitaSfondo} />;
-      case "bosco-rado":    return <BoscoScene densita={config.densitaSfondo} fitto={false} />;
-      case "bosco":         return <BoscoScene densita={config.densitaSfondo} fitto={false} />;
-      case "bosco-fitto":   return <BoscoScene densita={config.densitaSfondo} fitto={true} />;
-      case "fondale-chiaro":return <FondaleScene densita={config.densitaSfondo} fitto={false} />;
-      case "fondale-fitto": return <FondaleScene densita={config.densitaSfondo} fitto={true} />;
+      case "prato":                 return <PratoScene densita={config.densitaSfondo} />;
+      case "prato-fiorito":         return <PratoFiorito densita={config.densitaSfondo} />;
+      case "prato-alpino":          return <PratoAlpinoScene densita={config.densitaSfondo} />;
+      case "bosco-rado":            return <BoscoScene densita={config.densitaSfondo} fitto={false} />;
+      case "bosco":                 return <BoscoScene densita={config.densitaSfondo} fitto={false} />;
+      case "bosco-fitto":           return <BoscoScene densita={config.densitaSfondo} fitto={true} />;
+      case "sottobosco-autunnale":  return <SottoboscoAutunnaleScene densita={config.densitaSfondo} />;
+      case "stagno-ninfee":         return <StagnoNinfeeScene densita={config.densitaSfondo} />;
+      case "fondale-chiaro":        return <FondaleScene densita={config.densitaSfondo} fitto={false} />;
+      case "fondale-fitto":         return <FondaleScene densita={config.densitaSfondo} fitto={true} />;
+      case "scogliera-marina":      return <ScoglieraMarinaScene densita={config.densitaSfondo} />;
     }
   };
 
   // tinta mimetismo coerente con habitat
   const tintForScene = (k: SceneKind | undefined): string => {
     if (!k) return NAT_COLORS.verdeOliva;
-    if (k.startsWith("fondale")) return NAT_COLORS.blu;
+    if (k === "fondale-chiaro" || k === "fondale-fitto") return NAT_COLORS.blu;
+    if (k === "scogliera-marina") return NAT_COLORS.seppia;
+    if (k === "stagno-ninfee") return NAT_COLORS.verdeOliva;
+    if (k === "sottobosco-autunnale") return NAT_COLORS.ocra;
+    if (k === "prato-alpino") return "#5F7B4A";
     if (k.startsWith("bosco")) return NAT_COLORS.verdeBosco;
     return NAT_COLORS.verdeOliva;
+  };
+
+  const labelForScene = (k: SceneKind): string => {
+    switch (k) {
+      case "prato":                 return "Prato";
+      case "prato-fiorito":         return "Prato fiorito";
+      case "prato-alpino":          return "Prato alpino";
+      case "bosco-rado":            return "Bosco rado";
+      case "bosco":                 return "Bosco";
+      case "bosco-fitto":           return "Bosco fitto";
+      case "sottobosco-autunnale":  return "Sottobosco autunnale";
+      case "stagno-ninfee":         return "Stagno";
+      case "fondale-chiaro":        return "Fondale marino";
+      case "fondale-fitto":         return "Fondale tropicale";
+      case "scogliera-marina":      return "Scogliera";
+    }
   };
 
   const restanti = scena ? scena.creatures.filter(c => !c.found).length : 0;
@@ -405,18 +358,24 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
     <PaperBackground style={{ minHeight: 540, borderRadius: 12, padding: "0.8rem 0.6rem 1.1rem" }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.55rem" }}>
 
-        {/* ── Header: scena #, contatore ──────────────────────────────────── */}
+        {/* Header */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          width: "100%", maxWidth: 440, padding: "0.25rem 0.5rem",
+          width: "100%", maxWidth: 460, padding: "0.25rem 0.5rem",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
             <LenteIcon size={20} />
-            <span style={{
-              fontSize: "0.92rem", fontWeight: 800, color: NAT_COLORS.inchiostro,
-            }}>
+            <span style={{ fontSize: "0.92rem", fontWeight: 800, color: NAT_COLORS.inchiostro }}>
               Tavola #{sceneIndex + 1}
             </span>
+            {scena && (
+              <span style={{
+                fontSize: "0.72rem", color: NAT_COLORS.seppia, fontStyle: "italic",
+                fontFamily: "Georgia, 'Times New Roman', serif",
+              }}>
+                · {labelForScene(scena.kind)}
+              </span>
+            )}
           </div>
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
@@ -433,10 +392,10 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
           </div>
         </div>
 
-        {/* ── Scena SVG (cornice taccuino) ────────────────────────────────── */}
+        {/* Scena SVG (cornice taccuino) */}
         <div style={{
           position: "relative",
-          width: "100%", maxWidth: 440,
+          width: "100%", maxWidth: 460,
           border: `3px solid ${NAT_COLORS.seppia}`,
           borderRadius: 8,
           overflow: "hidden",
@@ -445,20 +404,19 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
         }}>
           <svg
             ref={svgRef}
-            viewBox={`${pan.x} ${pan.y} ${SCENE_VIEWBOX_W / zoom} ${SCENE_VIEWBOX_H / zoom}`}
+            viewBox={`0 0 ${SCENE_VIEWBOX_W} ${SCENE_VIEWBOX_H}`}
             preserveAspectRatio="xMidYMid slice"
             style={{
               display: "block",
               width: "100%",
               aspectRatio: `${SCENE_VIEWBOX_W} / ${SCENE_VIEWBOX_H}`,
-              touchAction: "none",
+              touchAction: "manipulation",
               userSelect: "none",
-              cursor: zoom > 1 ? "grab" : "crosshair",
+              cursor: "crosshair",
             }}
             onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
+            onPointerCancel={() => { pointerStartRef.current = null; }}
           >
             <SceneDefs />
             {scena && renderScene(scena.kind)}
@@ -469,23 +427,29 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
                 size={config.creaturaSizeUnits}
                 mimetismo={config.mimetismo}
                 tintColor={tintForScene(scena.kind)}
-                tick={tick}
               />
             ))}
-            {/* cornice taccuino sopra il contenuto (in coord scena, non zoomata visivamente al pan) */}
-            <rect x={pan.x + 4 / zoom} y={pan.y + 4 / zoom}
-              width={SCENE_VIEWBOX_W / zoom - 8 / zoom} height={SCENE_VIEWBOX_H / zoom - 8 / zoom}
-              fill="none" stroke={NAT_COLORS.seppia} strokeWidth={2 / zoom} opacity="0.4" rx={4 / zoom}
+            {/* doppia cornice interna stile tavola */}
+            <rect x="6" y="6" width={SCENE_VIEWBOX_W - 12} height={SCENE_VIEWBOX_H - 12}
+              fill="none" stroke={NAT_COLORS.seppia} strokeWidth="2" opacity="0.5" rx="3"
+              pointerEvents="none" />
+            <rect x="14" y="14" width={SCENE_VIEWBOX_W - 28} height={SCENE_VIEWBOX_H - 28}
+              fill="none" stroke={NAT_COLORS.seppia} strokeWidth="0.8" opacity="0.35" rx="2"
               pointerEvents="none" />
           </svg>
 
-          {/* Overlay intro/outro */}
+          {/* overlay intro/outro */}
           {showIntro && (
             <div style={overlayStyle()}>
               <span style={overlayBadgeStyle()}>Tavola #{sceneIndex + 1}</span>
-              <p style={{ fontSize: "0.95rem", color: NAT_COLORS.inchiostro, margin: "8px 0 0", fontWeight: 700 }}>
-                Cerca {totalScena} creature
-              </p>
+              {scena && (
+                <p style={{
+                  fontSize: "0.95rem", color: NAT_COLORS.inchiostro, margin: "8px 0 0",
+                  fontWeight: 700, fontFamily: "Georgia, 'Times New Roman', serif",
+                }}>
+                  {labelForScene(scena.kind)} · cerca {totalScena} creature
+                </p>
+              )}
             </div>
           )}
           {showOutro && (
@@ -495,41 +459,13 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
               </span>
             </div>
           )}
-
-          {/* Controlli zoom in basso a destra */}
-          <div style={{
-            position: "absolute", right: 10, bottom: 10,
-            display: "flex", flexDirection: "column", gap: 8,
-          }}>
-            <ZoomButton onClick={onZoomIn} disabled={zoomIdx >= ZOOM_LEVELS.length - 1} label="Ingrandisci">
-              <ZoomInIcon />
-            </ZoomButton>
-            <ZoomButton onClick={onZoomOut} disabled={zoomIdx === 0} label="Riduci">
-              <ZoomOutIcon />
-            </ZoomButton>
-          </div>
-
-          {/* badge zoom */}
-          {zoom > 1 && (
-            <div style={{
-              position: "absolute", left: 10, bottom: 12,
-              background: NAT_COLORS.cartaChiara,
-              border: `1.6px solid ${NAT_COLORS.seppia}`,
-              padding: "3px 9px", borderRadius: 999,
-              fontSize: "0.74rem", color: NAT_COLORS.inchiostro, fontWeight: 700,
-              boxShadow: "0 1px 3px rgba(60,40,20,0.2)",
-            }}>
-              {zoom}×
-            </div>
-          )}
         </div>
 
         <p style={{
           fontSize: "0.78rem", color: NAT_COLORS.seppia, margin: 0, textAlign: "center",
-          maxWidth: 380, lineHeight: 1.35,
+          maxWidth: 380, lineHeight: 1.35, fontStyle: "italic",
         }}>
-          Tocca ogni creatura che riesci a scovare.
-          {zoom > 1 ? " Trascina per spostare la lente." : " Usa la lente per ingrandire."}
+          Tocca ogni creatura che riesci a scovare. Lavora con calma.
         </p>
       </div>
     </PaperBackground>
@@ -566,43 +502,61 @@ function overlayBadgeStyle(): CSSProperties {
     fontSize: "1.05rem", fontWeight: 900,
     color: NAT_COLORS.inchiostro,
     boxShadow: "0 3px 10px rgba(60,40,20,0.25)",
+    fontFamily: "Georgia, 'Times New Roman', serif",
   };
 }
 
-// ── singolo slot creatura (gestisce moto + tinta mimetica) ─────────────────────
+// ── singolo slot creatura (gestisce moto + tinta mimetica + occlusione) ───────
 
 function CreatureSlot({
-  creature, size, mimetismo, tintColor, tick,
+  creature, size, mimetismo, tintColor,
 }: {
   creature: PlacedCreature;
   size: number;
   mimetismo: number;
   tintColor: string;
-  tick: number;
 }) {
-  void tick; // rerender forzato dal loop
   const now = performance.now();
   const pos = currentCreaturePos(creature, now);
-
-  // scala lo sprite creatura (disegnato in ~100u) a `size` u
   const scale = size / 100;
 
   return (
-    <g transform={`translate(${pos.x} ${pos.y}) rotate(${creature.rotation}) scale(${scale})`}>
+    <g transform={`translate(${pos.x} ${pos.y})`}>
       {creature.found && (
         <>
-          {/* cerchio "catturata" */}
-          <circle r="58" fill="none" stroke="#3A8E45" strokeWidth="3.5" opacity="0.9"
+          <circle r={size * 0.55} fill="none" stroke="#3A8E45" strokeWidth={3.5 / scale * scale} opacity="0.9"
             strokeDasharray="6 5" />
-          <circle r="44" fill="rgba(58,142,69,0.10)" />
+          <circle r={size * 0.42} fill="rgba(58,142,69,0.10)" />
         </>
       )}
-      <Creature
-        kind={creature.kind}
-        opacity={creature.found ? 1 : (0.95 - mimetismo * 0.10)}
-        tintColor={tintColor}
-        tintMix={creature.found ? 0 : mimetismo * 0.75}
-      />
+      <g transform={`rotate(${creature.rotation}) scale(${scale})`}>
+        <Creature
+          kind={creature.kind}
+          opacity={creature.found ? 1 : (0.95 - mimetismo * 0.12)}
+          tintColor={tintColor}
+          tintMix={creature.found ? 0 : mimetismo * 0.78}
+        />
+      </g>
+      {/* foglia di primo piano (occlusione parziale) — disegnata SOPRA lo sprite */}
+      {creature.occlusa && !creature.found && (
+        <OccludingLeaf seed={creature.occlusioneSeed} size={size} tintColor={tintColor} />
+      )}
+    </g>
+  );
+}
+
+function OccludingLeaf({ seed, size, tintColor }: { seed: number; size: number; tintColor: string }) {
+  const rot = (seed * 53) % 360;
+  const dx = ((seed * 7) % 30) - 15;
+  const dy = ((seed * 11) % 30) - 15;
+  const w = size * 0.6;
+  const h = size * 0.32;
+  return (
+    <g transform={`translate(${dx} ${dy}) rotate(${rot})`} opacity="0.88">
+      <ellipse cx="0" cy="0" rx={w / 2} ry={h / 2}
+        fill={tintColor} stroke={NAT_COLORS.inchiostro} strokeWidth="0.6" />
+      <line x1={-w / 2 + 2} y1="0" x2={w / 2 - 2} y2="0"
+        stroke={NAT_COLORS.inchiostro} strokeWidth="0.5" opacity="0.6" />
     </g>
   );
 }

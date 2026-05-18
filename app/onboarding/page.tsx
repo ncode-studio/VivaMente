@@ -76,12 +76,9 @@ export default function OnboardingPage() {
         <Link href="/onboarding/istruzioni" className="w-full">
           <Btn size="lg">Prova subito</Btn>
         </Link>
-        <p className="text-center text-sm text-ink-secondary">
-          Hai già un profilo?{" "}
-          <Link href="/onboarding/accedi" style={{ color: COLORS.primary, fontWeight: 500 }}>
-            Accedi
-          </Link>
-        </p>
+        <Link href="/onboarding/accedi" className="w-full">
+          <Btn size="lg" variant="outline">Accedi al tuo account</Btn>
+        </Link>
       </div>
     </div>
   );

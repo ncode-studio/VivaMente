@@ -242,9 +242,10 @@ export function CasalingaSession({
     if (tempoScaduto) fineSessione();
   }, [tempoScaduto, fineSessione]);
 
-  // ── Tick candela fase memo ────────────────────────────────────────────────
+  // ── Tick candela fase memo (solo se NON manuale) ──────────────────────────
   useEffect(() => {
     if (fase !== "memo") return;
+    if (configRef.current.memoManuale) return;
     const id = setInterval(() => {
       const elapsed = Date.now() - memoStart;
       const ratio = 1 - elapsed / configRef.current.memoMs;
@@ -421,17 +422,16 @@ export function CasalingaSession({
           ))}
         </div>
 
-        {/* riga 2: titolo fase + (memo) candela */}
+        {/* riga 2: titolo fase centrato; candela in posizione assoluta a destra */}
         <div
           style={{
+            position: "relative",
+            minHeight: 44,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: "0.7rem",
-            minHeight: 44,
           }}
         >
-          {isMemo && <Candle progress={memoProgress} height={44} />}
           <div style={{ textAlign: "center" }}>
             <p style={{
               margin: 0,
@@ -461,6 +461,19 @@ export function CasalingaSession({
               {fase === "isi"      && " "}
             </p>
           </div>
+
+          {isMemo && !config.memoManuale && (
+            <div style={{
+              position: "absolute",
+              right: 0,
+              top: "50%",
+              transform: "translateY(-50%)",
+              display: "flex",
+              alignItems: "center",
+            }}>
+              <Candle progress={memoProgress} height={44} />
+            </div>
+          )}
         </div>
 
         {/* riga 3: sotto-istruzione contestuale */}
@@ -472,7 +485,9 @@ export function CasalingaSession({
             textAlign: "center",
             lineHeight: 1.35,
           }}>
-            {isMemo && "Guarda dove si trova ogni oggetto. La candela segna il tempo."}
+            {isMemo && (config.memoManuale
+              ? "Guarda dove si trova ogni oggetto. Quando sei pronto, premi il pulsante."
+              : "Guarda dove si trova ogni oggetto. La candela segna il tempo.")}
             {fase === "recall" && "Tocca solo gli oggetti che sono stati spostati o cambiati."}
           </p>
         )}
@@ -602,6 +617,46 @@ export function CasalingaSession({
             Tra un istante tocca <strong>solo gli oggetti</strong>
             <br />che si sono spostati o sono cambiati.
           </p>
+        </div>
+      )}
+
+      {/* ── Pulsante "Sono pronto" in memo manuale ──────────────────────── */}
+      {isMemo && config.memoManuale && (
+        <div
+          style={{
+            padding: "0.75rem 0.85rem 0.95rem 0.85rem",
+            background: "#FBF4E8",
+            borderTop: "1px solid rgba(76,52,28,0.12)",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.6rem",
+          }}
+        >
+          <p style={{
+            margin: 0,
+            flex: 1,
+            fontSize: "0.78rem",
+            color: KITCHEN_PALETTE.inkSoft,
+            lineHeight: 1.35,
+          }}>
+            Nessuna fretta — premi quando hai memorizzato.
+          </p>
+          <button
+            onClick={() => setFase("transizione")}
+            style={{
+              all: "unset",
+              padding: "0.7rem 1.1rem",
+              borderRadius: "0.4rem",
+              background: KITCHEN_PALETTE.ink,
+              color: "#FBF4E8",
+              fontWeight: 700,
+              fontSize: "0.95rem",
+              cursor: "pointer",
+              textAlign: "center",
+            }}
+          >
+            Sono pronto
+          </button>
         </div>
       )}
 
