@@ -208,6 +208,10 @@ export function IlPostinoSession({ config, tempoScaduto, onReady, onComplete }: 
   const [duploSel1Idx, setDuploSel1Idx] = useState<number | null>(null);
   const duploSel1IdxRef = useRef<number | null>(null);
   useLayoutEffect(() => { duploSel1IdxRef.current = duploSel1Idx; }, [duploSel1Idx]);
+  // Seconda parola scelta: necessaria per riempire visivamente il secondo
+  // buco durante la fase di feedback del trial duplo. Senza questo stato il
+  // secondo buco resta vuoto e l'utente non vede la parola comparire.
+  const [duploSel2Idx, setDuploSel2Idx] = useState<number | null>(null);
 
   // Metriche
   const corretteRef       = useRef(0);
@@ -250,6 +254,7 @@ export function IlPostinoSession({ config, tempoScaduto, onReady, onComplete }: 
           setFbEsito("err");
           setFbIdx(null);
           setDuploSel1Idx(null);
+          setDuploSel2Idx(null);
           setFase("feedback");
         }
       }
@@ -258,14 +263,19 @@ export function IlPostinoSession({ config, tempoScaduto, onReady, onComplete }: 
   }, [registraTotaleCategoria]);
 
   // Feedback → ISI
+  // I trial duplo richiedono più tempo di lettura: la cartolina deve
+  // mostrare entrambe le parole inserite nei buchi prima di sparire.
   useEffect(() => {
     if (fase !== "feedback") return;
+    const isDuplo = trialRef.current?.item.duplo === true;
+    const fbMs = isDuplo ? 950 : 380;
     const tid = setTimeout(() => {
       setFbEsito(null);
       setFbIdx(null);
       setDuploSel1Idx(null);
+      setDuploSel2Idx(null);
       setFase("isi");
-    }, 380);
+    }, fbMs);
     return () => clearTimeout(tid);
   }, [fase, trial?.id]);
 
@@ -345,6 +355,9 @@ export function IlPostinoSession({ config, tempoScaduto, onReady, onComplete }: 
         setFbEsito("err");
       }
       setFbIdx(idx);
+      // Memorizza l'indice della seconda parola: serve al rendering della
+      // cartolina per riempire visivamente il secondo buco durante feedback.
+      setDuploSel2Idx(idx);
       setFase("feedback");
       return;
     }
@@ -397,7 +410,9 @@ export function IlPostinoSession({ config, tempoScaduto, onReady, onComplete }: 
             fbEsito={fbEsito}
             paroleRiempite={
               trial.item.duplo && duploSel1Idx !== null
-                ? [trial.opzioni[duploSel1Idx]]
+                ? duploSel2Idx !== null
+                  ? [trial.opzioni[duploSel1Idx], trial.opzioni[duploSel2Idx]]
+                  : [trial.opzioni[duploSel1Idx]]
                 : []
             }
           />
@@ -558,7 +573,7 @@ function Cartolina({
             <Blank
               evidenziaErr={fbEsito === "err"}
               attivo={paroleRiempite.length === 1}
-              riempitaCon={null}
+              riempitaCon={paroleRiempite[1] ?? null}
             />
             <span>{item.post}</span>
           </>

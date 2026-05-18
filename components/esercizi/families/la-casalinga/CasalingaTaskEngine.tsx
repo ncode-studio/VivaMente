@@ -22,7 +22,9 @@ import { ObjectSprite, KITCHEN_PALETTE, Candle, SurfaceFrame } from "./kitchen";
  */
 function MiniEsempio() {
   const slotStyle = (highlight: "none" | "ring" | "ringSrc"): React.CSSProperties => ({
-    width: 56, height: 56,
+    width: "100%",
+    minWidth: 0,
+    height: 56,
     background: "#FBF4E8",
     border: `2px solid ${
       highlight === "ring"    ? KITCHEN_PALETTE.err :
@@ -42,7 +44,8 @@ function MiniEsempio() {
   return (
     <div style={{
       display: "flex",
-      gap: "0.5rem",
+      flexDirection: "column",
+      gap: "0.35rem",
       alignItems: "stretch",
     }}>
       <style>{`
@@ -53,7 +56,7 @@ function MiniEsempio() {
       `}</style>
 
       {/* PRIMA */}
-      <div style={{ flex: 1, borderRadius: "0.45rem", overflow: "hidden", border: `1px solid rgba(76,52,28,0.18)` }}>
+      <div style={{ borderRadius: "0.45rem", overflow: "hidden", border: `1px solid rgba(76,52,28,0.18)` }}>
         <div style={{
           padding: "0.2rem 0.4rem",
           fontSize: "0.6rem",
@@ -68,29 +71,36 @@ function MiniEsempio() {
           Prima
         </div>
         <SurfaceFrame surface="piano">
-          <div style={{ display: "flex", gap: "0.3rem", marginTop: "0.85rem" }}>
-            <div style={slotStyle("none")}><ObjectSprite id="moka"     size={42} /></div>
-            <div style={slotStyle("none")}><ObjectSprite id="tazzina"  size={42} /></div>
-            <div style={slotStyle("none")}><ObjectSprite id="barattolo" size={42} /></div>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: "0.3rem",
+            marginTop: "0.85rem",
+          }}>
+            <div style={slotStyle("none")}><ObjectSprite id="moka"     size={40} /></div>
+            <div style={slotStyle("none")}><ObjectSprite id="tazzina"  size={40} /></div>
+            <div style={slotStyle("none")}><ObjectSprite id="barattolo" size={40} /></div>
             <div style={slotStyle("none")} />
           </div>
         </SurfaceFrame>
       </div>
 
-      {/* freccia */}
+      {/* freccia verso il basso */}
       <div style={{
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         color: KITCHEN_PALETTE.inkSoft,
-        fontSize: "1.2rem",
+        fontSize: "1.1rem",
         fontWeight: 700,
+        lineHeight: 1,
+        padding: "0.1rem 0",
       }}>
-        →
+        ↓
       </div>
 
       {/* DOPO */}
-      <div style={{ flex: 1, borderRadius: "0.45rem", overflow: "hidden", border: `1px solid rgba(76,52,28,0.18)` }}>
+      <div style={{ borderRadius: "0.45rem", overflow: "hidden", border: `1px solid rgba(76,52,28,0.18)` }}>
         <div style={{
           padding: "0.2rem 0.4rem",
           fontSize: "0.6rem",
@@ -105,11 +115,16 @@ function MiniEsempio() {
           Dopo
         </div>
         <SurfaceFrame surface="piano">
-          <div style={{ display: "flex", gap: "0.3rem", marginTop: "0.85rem" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: "0.3rem",
+            marginTop: "0.85rem",
+          }}>
             <div style={{ ...slotStyle("none"), opacity: 0.55 }} />
-            <div style={slotStyle("none")}><ObjectSprite id="tazzina"  size={42} /></div>
-            <div style={slotStyle("none")}><ObjectSprite id="barattolo" size={42} /></div>
-            <div style={slotStyle("ring")}><ObjectSprite id="moka" size={42} /></div>
+            <div style={slotStyle("none")}><ObjectSprite id="tazzina"  size={40} /></div>
+            <div style={slotStyle("none")}><ObjectSprite id="barattolo" size={40} /></div>
+            <div style={slotStyle("ring")}><ObjectSprite id="moka" size={40} /></div>
           </div>
         </SurfaceFrame>
       </div>
@@ -138,8 +153,8 @@ export function CasalingaTaskEngine({
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: "0.9rem",
-          padding: "1.1rem 1rem",
+          gap: "0.7rem",
+          padding: "0.85rem 0.85rem 0.95rem 0.85rem",
           background: KITCHEN_PALETTE.bg,
           borderRadius: "0.6rem",
         }}
@@ -165,111 +180,57 @@ export function CasalingaTaskEngine({
           </h2>
         </div>
 
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.7rem",
+        <p style={{
+          margin: 0,
+          fontSize: "0.9rem",
+          color: "#3A2A18",
+          lineHeight: 1.45,
+          textAlign: "center",
         }}>
-          {/* Passo 1 */}
-          <div style={{
-            display: "flex",
-            gap: "0.7rem",
-            padding: "0.6rem 0.7rem",
-            borderRadius: "0.45rem",
-            background: "#FBF4E8",
-            border: `1px solid rgba(76,52,28,0.18)`,
-            alignItems: "center",
-          }}>
-            <div style={{
-              width: 30, height: 30, borderRadius: 99,
-              background: KITCHEN_PALETTE.ink, color: "#FBF4E8",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontWeight: 700, fontSize: "0.95rem", flexShrink: 0,
-            }}>1</div>
-            <p style={{ margin: 0, fontSize: "0.88rem", color: "#3A2A18", lineHeight: 1.4, flex: 1 }}>
-              <strong>Memorizza</strong> dove sono gli oggetti in cucina.
-              La <strong>candela</strong> ti dice quanto tempo hai.
-            </p>
-            <Candle progress={0.55} height={46} />
-          </div>
-
-          {/* Passo 2 */}
-          <div style={{
-            display: "flex",
-            gap: "0.7rem",
-            padding: "0.6rem 0.7rem",
-            borderRadius: "0.45rem",
-            background: "#FFF1DA",
-            border: `1px solid rgba(76,52,28,0.18)`,
-            alignItems: "center",
-          }}>
-            <div style={{
-              width: 30, height: 30, borderRadius: 99,
-              background: KITCHEN_PALETTE.ink, color: "#FBF4E8",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontWeight: 700, fontSize: "0.95rem", flexShrink: 0,
-            }}>2</div>
-            <p style={{ margin: 0, fontSize: "0.88rem", color: "#3A2A18", lineHeight: 1.4, flex: 1 }}>
-              Alcuni oggetti si <strong>spostano</strong> o cambiano
-              verso. <strong>Tocca solo quegli oggetti</strong>, poi premi
-              <em> Conferma</em>. Gli spazi vuoti non si toccano.
-            </p>
-          </div>
-        </div>
+          Memorizza la cucina, poi tocca <strong>solo gli oggetti
+          che si sono spostati o cambiati</strong>.
+        </p>
 
         {/* Esempio illustrato */}
         <div style={{
-          padding: "0.75rem 0.7rem 0.85rem 0.7rem",
+          padding: "0.55rem 0.6rem 0.7rem 0.6rem",
           borderRadius: "0.45rem",
           background: "#FBF4E8",
           border: `1px solid rgba(76,52,28,0.18)`,
         }}>
-          <p style={{
-            margin: "0 0 0.6rem 0",
-            fontSize: "0.7rem",
-            fontWeight: 700,
-            color: KITCHEN_PALETTE.inkSoft,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            textAlign: "center",
-          }}>
-            Esempio
-          </p>
           <MiniEsempio />
           <p style={{
-            margin: "0.65rem 0 0 0",
-            fontSize: "0.82rem",
+            margin: "0.55rem 0 0 0",
+            fontSize: "0.8rem",
             color: "#3A2A18",
             textAlign: "center",
-            lineHeight: 1.4,
+            lineHeight: 1.35,
           }}>
-            La <strong>moka</strong> si è spostata. Toccheresti
-            <span style={{ color: KITCHEN_PALETTE.err, fontWeight: 700 }}> solo la moka</span> nel
-            suo nuovo posto. Lo spazio vuoto si ignora.
+            La <strong>moka</strong> si è spostata: toccheresti
+            <span style={{ color: KITCHEN_PALETTE.err, fontWeight: 700 }}> solo la moka</span>.
           </p>
         </div>
 
         <p style={{
           margin: 0,
-          fontSize: "0.82rem",
+          fontSize: "0.78rem",
           color: KITCHEN_PALETTE.inkSoft,
-          lineHeight: 1.45,
+          lineHeight: 1.4,
           textAlign: "center",
         }}>
-          La sessione dura <strong>5 osservazioni</strong>. Niente fretta:
-          non c'è un cronometro generale, solo la candela per ognuna.
+          5 osservazioni, niente cronometro generale.
         </p>
 
         <button
           onClick={() => setFase(warning ? "warning" : "sessione")}
           style={{
             width: "100%",
-            padding: "0.9rem",
+            padding: "0.75rem",
             borderRadius: "0.4rem",
             border: "none",
             background: KITCHEN_PALETTE.ink,
             color: "#FBF4E8",
-            fontSize: "0.98rem",
+            fontSize: "0.95rem",
             fontWeight: 700,
             cursor: "pointer",
           }}

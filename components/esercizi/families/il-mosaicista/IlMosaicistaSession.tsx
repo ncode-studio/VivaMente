@@ -33,8 +33,8 @@ import {
   generateProceduralMosaic, pickCuratedMosaic,
 } from "./mosaics";
 import {
-  AtelierBackground, MosaicCellRenderer, MosaicPreview,
-  LucidaturaOverlay, RotateIcon,
+  AtelierBackground, MosaicCellRenderer,
+  RotateIcon,
 } from "./sprites";
 
 // ── Stato fragment del pool ────────────────────────────────────────────────
@@ -56,13 +56,14 @@ interface BoardSlot {
   key: string;
   cell: MosaicCell;
   occupatoDa: string | null;  // key del fragment piazzato
+  /** true se il fragment piazzato matcha visivamente lo slot; false se errato. */
+  corretto: boolean;
 }
 
 // ── Layout costanti ────────────────────────────────────────────────────────
 
 const BOARD_GAP_PX = 4;
 const POOL_GAP_PX = 8;
-const POOL_ROWS_MAX = 3;
 const DRAG_TAP_THRESHOLD_PX = 7;
 const FINGER_OFFSET_Y = -42;  // frammento sopra il dito durante il drag
 
@@ -78,21 +79,13 @@ interface SessionProps {
 export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete }: SessionProps) {
 
   // ── Stato sessione (refs per accumulatori, state per render) ─────────────
-  const totalDropsRef = useRef(0);
-  const correctDropsRef = useRef(0);
-  const mosaiciCompletatiRef = useRef(0);
-  const mosaiciSenzaErroriRef = useRef(0);
-  const scoreTotaleRef = useRef(0);
   const completedRef = useRef(false);
 
-  const [mosaicIndex, setMosaicIndex] = useState(0);
   const [currentMosaic, setCurrentMosaic] = useState<MosaicDef | null>(null);
   const [pool, setPool] = useState<PoolFragment[]>([]);
   const [slots, setSlots] = useState<BoardSlot[]>([]);
   const lastMosaicIdRef = useRef<string | undefined>(undefined);
   const mosaicStartTsRef = useRef<number>(0);
-  const erroriMosaicoCorrenteRef = useRef(0);
-  const [showLucida, setShowLucida] = useState(false);
   const [fase, setFase] = useState<"preview" | "playing">("preview");
   const [previewElapsedPct, setPreviewElapsedPct] = useState(0);
 
@@ -101,13 +94,15 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
   const [hoverSlotKey, setHoverSlotKey] = useState<string | null>(null);
-  const [wrongFlash, setWrongFlash] = useState<string | null>(null);  // key fragment
 
   // ── Refs sincronizzati con state (fonte fresca dentro handler window) ─────
   const poolRef = useRef<PoolFragment[]>([]);
   const slotsRef = useRef<BoardSlot[]>([]);
+  const tempoScadutoRef = useRef(false);
+  const faseRef = useRef<"preview" | "playing">("preview");
   useEffect(() => { poolRef.current = pool; }, [pool]);
   useEffect(() => { slotsRef.current = slots; }, [slots]);
+  useEffect(() => { tempoScadutoRef.current = tempoScaduto; }, [tempoScaduto]);
 
   // ── Refs DOM per snap ─────────────────────────────────────────────────────
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -133,6 +128,7 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
       key: `${c.col}-${c.row}`,
       cell: c,
       occupatoDa: null,
+      corretto: false,
     }));
 
     // build pool (rotazione iniziale solo per cells con shape non-solid:
@@ -165,10 +161,10 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
     setCurrentMosaic(m);
     setSlots(newSlots);
     setPool(rotated);
-    erroriMosaicoCorrenteRef.current = 0;
     // mosaicStartTsRef sarà settato al passaggio preview → playing
     slotRefs.current.clear();
     setFase("preview");
+    faseRef.current = "preview";
     setPreviewElapsedPct(0);
 
     // suppress unused (numFrags solo per chiarezza intent)
@@ -197,6 +193,7 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
         // passa alla fase di gioco
         mosaicStartTsRef.current = performance.now();
         setFase("playing");
+        faseRef.current = "playing";
         return;
       }
       raf = requestAnimationFrame(tick);
@@ -205,59 +202,61 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
     return () => cancelAnimationFrame(raf);
   }, [fase, currentMosaic, config.previewMs]);
 
-  // ── Finalizzazione su tempoScaduto ────────────────────────────────────────
-  useEffect(() => {
-    if (!tempoScaduto || completedRef.current) return;
+  // ── Fine sessione ────────────────────────────────────────────────────────
+  /**
+   * Chiude la sessione con il risultato calcolato sui slot indicati.
+   * Chiamata sia quando il mosaico è interamente riempito (esauriti i pezzi),
+   * sia quando il timer 60s scade.
+   */
+  const terminaSessione = useCallback((slotsCorretti: number, slotsTotali: number) => {
+    if (completedRef.current) return;
     completedRef.current = true;
 
-    const totalDrops = Math.max(1, totalDropsRef.current);
-    const accuratezzaValutativa = correctDropsRef.current / totalDrops;
-    const scoreGrezzo = Math.min(100, Math.round(
-      scoreTotaleRef.current / Math.max(1, mosaiciCompletatiRef.current * 100) * 100
-    ));
+    const tempoSpesoMs = performance.now() - mosaicStartTsRef.current;
+    const perfetto = slotsTotali > 0 && slotsCorretti === slotsTotali;
+    const accuratezzaValutativa = slotsTotali > 0 ? slotsCorretti / slotsTotali : 0;
+
+    let scoreGrezzo: number;
+    if (perfetto) {
+      const speedFactor = Math.max(0, 1 - tempoSpesoMs / config.tLimMosaicoMs);
+      scoreGrezzo = Math.min(100, 60 + Math.round(40 * speedFactor));
+    } else {
+      scoreGrezzo = Math.round((slotsCorretti / Math.max(1, slotsTotali)) * 50);
+    }
 
     onComplete({
       accuratezzaValutativa,
-      scoreGrezzo: isFinite(scoreGrezzo) ? scoreGrezzo : 0,
+      scoreGrezzo,
       metriche: {
-        mosaici_completati: mosaiciCompletatiRef.current,
-        mosaici_senza_errori: mosaiciSenzaErroriRef.current,
-        drop_corretti: correctDropsRef.current,
-        drop_totali: totalDropsRef.current,
-        livello_speed_bonus_avg: scoreTotaleRef.current,
+        mosaico_perfetto: perfetto ? 1 : 0,
+        slot_corretti: slotsCorretti,
+        slot_totali: slotsTotali,
       },
     });
-  }, [tempoScaduto, onComplete]);
+  }, [config.tLimMosaicoMs, onComplete]);
 
-  // ── Completamento mosaico corrente ────────────────────────────────────────
-  const completeMosaic = useCallback(() => {
-    if (!currentMosaic) return;
-    const tempoSpesoMs = performance.now() - mosaicStartTsRef.current;
-    const errori = erroriMosaicoCorrenteRef.current;
+  // Trigger di fine sessione su timer scaduto (fallback se l'utente non
+  // riempie completamente il mosaico entro i 60s).
+  useEffect(() => {
+    if (!tempoScaduto) return;
+    const cur = slotsRef.current;
+    const slotsCorretti = cur.filter(s => s.corretto).length;
+    const slotsTotali = cur.length;
+    terminaSessione(slotsCorretti, slotsTotali);
+  }, [tempoScaduto, terminaSessione]);
 
-    // score composito
-    let punti = 0;
-    if (errori === 0) {
-      const base = 50;
-      const speedFactor = Math.max(0, 1 - tempoSpesoMs / config.tLimMosaicoMs);
-      const bonus = Math.round(50 * speedFactor);
-      punti = base + bonus;
-      mosaiciSenzaErroriRef.current += 1;
-    } else {
-      punti = Math.max(0, 50 - errori * 4);
-    }
-    scoreTotaleRef.current += punti;
-    mosaiciCompletatiRef.current += 1;
-
-    setShowLucida(true);
-    setTimeout(() => {
-      setShowLucida(false);
-      if (!completedRef.current && !tempoScaduto) {
-        setMosaicIndex(i => i + 1);
-        setupMosaic();
-      }
-    }, 850);
-  }, [currentMosaic, config.tLimMosaicoMs, setupMosaic, tempoScaduto]);
+  // Trigger di fine sessione quando TUTTI gli slot sono occupati (l'utente
+  // ha esaurito le mosse). Si attiva solo in fase playing dopo qualunque
+  // cambio di stato di `slots` — affidabile anche su drag tra slot.
+  useEffect(() => {
+    if (fase !== "playing" || completedRef.current) return;
+    if (slots.length === 0) return;
+    if (!slots.every(s => s.occupatoDa !== null)) return;
+    const corretti = slots.filter(s => s.corretto).length;
+    const totali = slots.length;
+    const id = setTimeout(() => terminaSessione(corretti, totali), 500);
+    return () => clearTimeout(id);
+  }, [slots, fase, terminaSessione]);
 
   // ── Drag logic ────────────────────────────────────────────────────────────
 
@@ -273,21 +272,31 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
     return best;
   }, []);
 
-  const flashWrong = useCallback((key: string) => {
-    setWrongFlash(key);
-    setTimeout(() => setWrongFlash(prev => prev === key ? null : prev), 320);
-  }, []);
-
-  /** Inizia drag (chiamato dall'onPointerDown del fragment nel pool). */
+  /**
+   * Inizia drag. Accetta frammenti sia dal pool (placed=false) sia da slot
+   * occupati (placed=true): in entrambi i casi si "stacca" il blocco e lo
+   * si segue col puntatore. Se viene da uno slot, lo slot torna vuoto subito.
+   */
   const handlePointerDown = useCallback((e: ReactPointerEvent, key: string) => {
-    if (showLucida || fase !== "playing") return;
+    if (fase !== "playing" || completedRef.current) return;
     const f = poolRef.current.find(p => p.key === key);
-    if (!f || f.placed) return;
+    if (!f) return;
     e.preventDefault();
     dragStartRef.current = { x: e.clientX, y: e.clientY };
     setDragKey(key);
     setDragPos({ x: e.clientX, y: e.clientY + FINGER_OFFSET_Y });
-  }, [showLucida, fase]);
+
+    // Se il fragment era piazzato su uno slot, svuota lo slot (il fragment
+    // è ora "in mano" all'utente).
+    if (f.placed) {
+      setSlots(prev => prev.map(s =>
+        s.occupatoDa === key ? { ...s, occupatoDa: null, corretto: false } : s
+      ));
+      setPool(prev => prev.map(p =>
+        p.key === key ? { ...p, placed: false } : p
+      ));
+    }
+  }, [fase]);
 
   // ── Window listeners attivi solo durante drag ─────────────────────────────
   useEffect(() => {
@@ -299,11 +308,8 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
       setDragPos({ x: ev.clientX, y: ev.clientY + FINGER_OFFSET_Y });
       const nearest = findNearestSlot(ev.clientX, ev.clientY + FINGER_OFFSET_Y);
       if (nearest && nearest.dist <= snapRadius) {
-        const slot = slotsRef.current.find(s => s.key === nearest.key);
-        if (slot && !slot.occupatoDa) {
-          setHoverSlotKey(nearest.key);
-          return;
-        }
+        setHoverSlotKey(nearest.key);  // hover anche su slot occupati (sostituzione)
+        return;
       }
       setHoverSlotKey(null);
     };
@@ -338,56 +344,43 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
       // drop: trova slot più vicino
       const dropY = ev.clientY + FINGER_OFFSET_Y;
       const nearest = findNearestSlot(ev.clientX, dropY);
-      totalDropsRef.current += 1;
 
+      // Drop fuori da ogni slot → fragment torna al pool (no errore conteggiato).
       if (!nearest || nearest.dist > snapRadius) {
-        erroriMosaicoCorrenteRef.current += 1;
-        flashWrong(draggedKey);
-        return;
+        return;  // il fragment è già unplaced dal pointerdown / non era placed
       }
 
       const targetSlot = slotsRef.current.find(s => s.key === nearest.key);
       if (!targetSlot) return;
 
-      if (targetSlot.occupatoDa) {
-        erroriMosaicoCorrenteRef.current += 1;
-        flashWrong(draggedKey);
-        return;
-      }
-
-      // match per equivalenza visiva: colore + shape (+ rotazione se shape non-solid)
+      // Calcola match visivo
       const fc = fragment.cell;
       const sc = targetSlot.cell;
       const sameColor = fc.color === sc.color && fc.color2 === sc.color2;
       const sameShape = fc.shape === sc.shape;
-      // per shape "solid" la rotazione è invisibile → sempre ok;
-      // per shape diagonal la rotazione del frammento deve essere 0
       const rotationOk = sc.shape === "solid" ? true : fragment.rotation === 0;
+      const isMatch = sameColor && sameShape && rotationOk;
 
-      if (!sameColor || !sameShape || !rotationOk) {
-        erroriMosaicoCorrenteRef.current += 1;
-        flashWrong(draggedKey);
-        return;
+      // Se lo slot era già occupato da un ALTRO fragment, quello torna al pool.
+      const previousOccupant = targetSlot.occupatoDa;
+      if (previousOccupant && previousOccupant !== draggedKey) {
+        setPool(prev => prev.map(p =>
+          p.key === previousOccupant ? { ...p, placed: false } : p
+        ));
       }
 
-      // SUCCESSO
-      correctDropsRef.current += 1;
-      let mosaicoCompleto = false;
-      setSlots(prev => {
-        const next = prev.map(s =>
-          s.key === targetSlot.key ? { ...s, occupatoDa: draggedKey } : s
-        );
-        // check completamento mosaico via stato NUOVO degli slot
-        mosaicoCompleto = next.every(s => s.occupatoDa !== null);
-        return next;
-      });
+      // Aggiorna slot e pool. Nessun feedback visivo sull'errore: lo stato
+      // .corretto è interno, l'utente non sa se ha sbagliato.
+      // La detection "tutti slot occupati → termina sessione" è gestita da
+      // un useEffect su `slots` (più affidabile dei callback di setSlots).
+      setSlots(prev => prev.map(s =>
+        s.key === targetSlot.key
+          ? { ...s, occupatoDa: draggedKey, corretto: isMatch }
+          : s
+      ));
       setPool(prev => prev.map(p =>
         p.key === draggedKey ? { ...p, placed: true } : p
       ));
-
-      if (mosaicoCompleto) {
-        setTimeout(() => completeMosaic(), 180);
-      }
     };
 
     const onCancel = (ev: PointerEvent) => onUp(ev);
@@ -400,7 +393,7 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
     };
-  }, [dragKey, config.cellSizePx, config.rotazioneAttiva, findNearestSlot, flashWrong, completeMosaic]);
+  }, [dragKey, config.cellSizePx, config.rotazioneAttiva, findNearestSlot, terminaSessione]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -414,8 +407,91 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
   const draggingFragment = dragKey ? pool.find(p => p.key === dragKey) : null;
   const visiblePool = pool.filter(p => !p.placed);
 
+  // ── Vista PREVIEW: schermata clean dedicata, solo modello + countdown ───
+  if (fase === "preview") {
+    const secondiRimasti = Math.max(0, Math.ceil((1 - previewElapsedPct) * (config.previewMs / 1000)));
+    return (
+      <AtelierBackground style={{ minHeight: 540, borderRadius: 12, padding: "1.2rem 1rem" }}>
+        <div style={{
+          display: "flex", flexDirection: "column", alignItems: "center",
+          justifyContent: "center", gap: "1.2rem", minHeight: 500,
+        }}>
+          <div style={{
+            fontSize: "0.72rem", fontWeight: 800, color: "#6B4F2A",
+            letterSpacing: "0.10em",
+          }}>
+            MEMORIZZA IL MODELLO
+          </div>
+
+          <h2 style={{
+            fontSize: "1.25rem", fontWeight: 900, color: "#3A2614",
+            margin: 0, textAlign: "center",
+          }}>
+            {currentMosaic.nome}
+          </h2>
+
+          <div style={{
+            padding: 14,
+            background: "rgba(255, 248, 230, 0.85)",
+            border: "2px solid #8B5A2B",
+            borderRadius: 10,
+            boxShadow: "0 6px 18px rgba(110,72,32,0.25)",
+          }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${currentMosaic.cols}, ${cellPx}px)`,
+                gridTemplateRows: `repeat(${currentMosaic.rows}, ${cellPx}px)`,
+                gap: BOARD_GAP_PX,
+              }}
+            >
+              {currentMosaic.cells.map((c) => (
+                <div
+                  key={`${c.col}-${c.row}`}
+                  style={{ gridColumn: c.col + 1, gridRow: c.row + 1 }}
+                >
+                  <MosaicCellRenderer cell={c} sizePx={cellPx} highlight="placed" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Countdown */}
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+            width: "100%", maxWidth: 320,
+          }}>
+            <div style={{
+              width: "100%", height: 10, borderRadius: 999,
+              background: "rgba(110,72,32,0.18)",
+              overflow: "hidden",
+            }}>
+              <div style={{
+                width: `${Math.round((1 - previewElapsedPct) * 100)}%`,
+                height: "100%",
+                background: "#8B5A2B",
+                transition: "width 80ms linear",
+              }} />
+            </div>
+            <div style={{ fontSize: "0.95rem", color: "#6B4F2A", fontWeight: 700 }}>
+              {secondiRimasti}s
+            </div>
+          </div>
+
+          <p style={{
+            fontSize: "0.84rem", color: "#6B4F2A",
+            textAlign: "center", margin: 0, maxWidth: 320, lineHeight: 1.4,
+          }}>
+            Guarda con attenzione: tra poco dovrai ricostruirlo a memoria.
+          </p>
+        </div>
+      </AtelierBackground>
+    );
+  }
+  // ── (Fine vista preview — segue la vista playing) ───────────────────────
+
   return (
-    <AtelierBackground style={{ minHeight: 540, borderRadius: 12, padding: "0.8rem 0.6rem 1.1rem" }}>
+    <AtelierBackground style={{ borderRadius: 12, padding: "0.8rem 0.6rem 0.8rem" }}>
       <div
         ref={stageRef}
         style={{
@@ -428,45 +504,23 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
           gap: "0.7rem",
         }}
       >
-        {/* ── Header: anteprima + mosaico # ───────────────────────────────── */}
+        {/* ── Header: nome + numero mosaico ───────────────────────────────── */}
         <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
+          display: "flex", alignItems: "center", justifyContent: "center",
           width: "100%", maxWidth: 380, padding: "0.3rem 0.4rem",
+          gap: "0.8rem",
         }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-            <span style={{
-              fontSize: "0.66rem", fontWeight: 700, color: "#6B4F2A",
-              letterSpacing: "0.06em",
-            }}>
-              {fase === "preview" ? "MEMORIZZA" : "DA MEMORIA"}
-            </span>
-            {fase === "preview" ? (
-              <MosaicPreview mosaic={currentMosaic} sizePx={88} />
-            ) : (
-              <div
-                style={{
-                  width: 88, height: 88,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  background: "rgba(58,38,20,0.18)",
-                  border: "1.5px dashed #8B5A2B",
-                  borderRadius: 6,
-                  fontSize: "1.8rem", color: "#8B5A2B",
-                }}
-                aria-label="Modello nascosto"
-              >
-                ?
-              </div>
-            )}
-          </div>
-
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
             fontSize: "0.78rem", color: "#3F2E1C",
           }}>
-            <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>{currentMosaic.nome}</span>
-            <span style={{ fontSize: "0.72rem", color: "#6B4F2A" }}>
-              Mosaico #{mosaicIndex + 1}
+            <span style={{
+              fontSize: "0.66rem", fontWeight: 700, color: "#6B4F2A",
+              letterSpacing: "0.08em",
+            }}>
+              RICOSTRUISCI A MEMORIA
             </span>
+            <span style={{ fontWeight: 700, fontSize: "1rem" }}>{currentMosaic.nome}</span>
             {config.rotazioneAttiva && (
               <span style={{
                 marginTop: 4, padding: "2px 8px",
@@ -500,7 +554,8 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
               const filled = slot.occupatoDa
                 ? pool.find(p => p.key === slot.occupatoDa)
                 : null;
-              const isHover = hoverSlotKey === slot.key && !slot.occupatoDa;
+              const isHover = hoverSlotKey === slot.key;
+              const isDraggingThis = filled && dragKey === filled.key;
               return (
                 <div
                   key={slot.key}
@@ -516,7 +571,23 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
                   }}
                 >
                   {filled ? (
-                    <MosaicCellRenderer cell={slot.cell} sizePx={cellPx} highlight="placed" />
+                    <div
+                      onPointerDown={(e) => handlePointerDown(e, filled.key)}
+                      style={{
+                        width: cellPx, height: cellPx,
+                        cursor: "grab",
+                        touchAction: "none",
+                        opacity: isDraggingThis ? 0 : 1,
+                        pointerEvents: isDraggingThis ? "none" : "auto",
+                      }}
+                    >
+                      <MosaicCellRenderer
+                        cell={filled.cell}
+                        sizePx={cellPx}
+                        rotation={filled.rotation}
+                        highlight="placed"
+                      />
+                    </div>
                   ) : (
                     <div
                       style={{
@@ -539,100 +610,24 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
             })}
           </div>
 
-          {showLucida && <LucidaturaOverlay width={boardWidth + 20} height={boardHeight + 20} />}
-
-          {/* Overlay preview: mostra il mosaico completo per previewMs ms */}
-          {fase === "preview" && (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.7rem",
-                background: "rgba(255, 248, 230, 0.96)",
-                border: "2px solid #8B5A2B",
-                borderRadius: 8,
-                padding: "0.6rem",
-                zIndex: 5,
-              }}
-            >
-              <div style={{
-                fontSize: "0.72rem", fontWeight: 800, color: "#6B4F2A",
-                letterSpacing: "0.08em",
-              }}>
-                MEMORIZZA IL MODELLO
-              </div>
-
-              {/* Anteprima del mosaico, ridimensionata per stare nel board */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: `repeat(${currentMosaic.cols}, ${cellPx}px)`,
-                  gridTemplateRows: `repeat(${currentMosaic.rows}, ${cellPx}px)`,
-                  gap: BOARD_GAP_PX,
-                }}
-              >
-                {currentMosaic.cells.map((c) => (
-                  <div
-                    key={`${c.col}-${c.row}`}
-                    style={{ gridColumn: c.col + 1, gridRow: c.row + 1 }}
-                  >
-                    <MosaicCellRenderer cell={c} sizePx={cellPx} highlight="placed" />
-                  </div>
-                ))}
-              </div>
-
-              {/* Barra countdown */}
-              <div style={{
-                width: "85%", height: 8, borderRadius: 999,
-                background: "rgba(110,72,32,0.18)",
-                overflow: "hidden",
-              }}>
-                <div style={{
-                  width: `${Math.round((1 - previewElapsedPct) * 100)}%`,
-                  height: "100%",
-                  background: "#8B5A2B",
-                  transition: "width 80ms linear",
-                }} />
-              </div>
-              <div style={{ fontSize: "0.78rem", color: "#6B4F2A" }}>
-                {Math.max(0, Math.ceil((1 - previewElapsedPct) * (config.previewMs / 1000)))}s
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ── Pool frammenti ──────────────────────────────────────────────── */}
         <div
           style={{
             width: "100%", maxWidth: 380,
-            minHeight: cellPx + 16,
-            padding: "0.55rem",
+            padding: "0.4rem",
             background: "rgba(255, 248, 230, 0.55)",
             border: "1.5px solid #C6A476",
             borderRadius: 8,
-            display: "flex",
+            display: visiblePool.length > 0 ? "flex" : "none",
             flexWrap: "wrap",
             justifyContent: "center",
             gap: POOL_GAP_PX,
-            maxHeight: (cellPx + POOL_GAP_PX) * POOL_ROWS_MAX + 14,
-            overflowY: "auto",
-            opacity: fase === "preview" ? 0.35 : 1,
-            pointerEvents: fase === "preview" ? "none" : "auto",
-            transition: "opacity 200ms",
           }}
         >
-          {visiblePool.length === 0 && !showLucida && (
-            <div style={{ fontSize: "0.85rem", color: "#6B4F2A", padding: "0.5rem" }}>
-              Mosaico completato!
-            </div>
-          )}
           {visiblePool.map((f) => {
             const isDragging = dragKey === f.key;
-            const isWrong = wrongFlash === f.key;
             return (
               <div
                 key={f.key}
@@ -649,7 +644,7 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
                   cell={f.cell}
                   sizePx={cellPx}
                   rotation={f.rotation}
-                  highlight={isWrong ? "wrong" : "none"}
+                  highlight="none"
                 />
               </div>
             );

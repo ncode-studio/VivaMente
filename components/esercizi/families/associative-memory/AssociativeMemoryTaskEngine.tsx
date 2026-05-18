@@ -183,7 +183,7 @@ export function AssociativeMemoryTaskEngine({
   return (
     <TrialFlow<StimoloAM, RispostaAM>
       tLimMs={null}
-      trialValutativi={config.trialsPerSession}
+      trialValutativi={null}
       microProgressione={microProgressione}
       generaStimolo={generaStimolo}
       renderStimolo={renderStimolo}

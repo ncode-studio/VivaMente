@@ -7,7 +7,7 @@ export interface SynonymAntonymLevelConfig {
   trialsPerSession: number;
 }
 
-export const SESSION_TIMER_MS = 60_000;
+export const SESSION_TIMER_MS = 90_000;
 
 export const SYNONYM_ANTONYM_LEVELS: readonly SynonymAntonymLevelConfig[] = [
   { livello:  1, tLimMs: 5000, difficoltà: "bassa", trialsPerSession: 14 },

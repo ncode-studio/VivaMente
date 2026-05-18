@@ -34,15 +34,21 @@ export interface CasalingaLevelConfig {
   nCambiamenti: number;
   /** Tipi di modifica permessi per il livello. */
   modificheAmmesse: readonly TipoModifica[];
-  /** Durata della fase di memorizzazione in ms. */
+  /** Durata della fase di memorizzazione in ms (ignorata se memoManuale=true). */
   memoMs: number;
+  /**
+   * Se true, niente countdown automatico: la fase di memorizzazione termina
+   * solo quando l'utente preme "Sono pronto". La candela non viene mostrata.
+   * Usato sui primi livelli per ridurre l'ansia da tempo.
+   */
+  memoManuale?: boolean;
 }
 
 export const CASALINGA_LEVELS: readonly CasalingaLevelConfig[] = [
   // Curva: si fa crescere UNA variabile per volta (oggetti / superfici / cambiamenti / tempo).
   // Meccanica: si toccano SOLO gli oggetti che sono cambiati. Gli spazi vuoti
   // non sono cliccabili (niente "removed" — solo moved / swapped / flipped).
-  { livello:  1, nOggetti:  3, superfici: ["piano"],                       slotPerSuperficie: 4, nCambiamenti: 1, modificheAmmesse: ["moved"],                          memoMs: 15_000 },
+  { livello:  1, nOggetti:  3, superfici: ["piano"],                       slotPerSuperficie: 4, nCambiamenti: 1, modificheAmmesse: ["moved"],                          memoMs: 15_000, memoManuale: true },
   { livello:  2, nOggetti:  4, superfici: ["piano"],                       slotPerSuperficie: 5, nCambiamenti: 1, modificheAmmesse: ["moved"],                          memoMs: 14_000 },
   { livello:  3, nOggetti:  4, superfici: ["piano"],                       slotPerSuperficie: 5, nCambiamenti: 1, modificheAmmesse: ["moved", "swapped"],               memoMs: 13_000 },
   // L4: introduce la 2ª superficie ma resta a 1 solo cambiamento.

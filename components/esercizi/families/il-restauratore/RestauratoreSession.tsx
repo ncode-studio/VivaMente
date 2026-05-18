@@ -76,7 +76,7 @@ export function RestauratoreSession({
 
   const [falsiAllarmi, setFalsiAllarmi] = useState<number>(0);
   const [counterBumpKey, setCounterBumpKey] = useState<number>(0);
-  const [hintIds, setHintIds] = useState<Set<string>>(new Set());
+  const noHints = useMemo(() => new Set<string>(), []);
 
   const accCumRef = useRef(0);
   const totFoundRef = useRef(0);
@@ -97,7 +97,6 @@ export function RestauratoreSession({
     setFase("gioco");
     setFound(new Set());
     setFalsiAllarmi(0);
-    setHintIds(new Set());
   }, []); // eslint-disable-line
 
   // ── Fine sessione su tempo scaduto (fallback) ────────────────────────────
@@ -123,16 +122,17 @@ export function RestauratoreSession({
   }, [tempoScaduto, fineSessione]);
 
   // ── Click su un punto del dipinto (in viewBox coords) ────────────────────
-  const handleClick = useCallback((side: "A" | "B", xVB: number, yVB: number) => {
+  const handleClick = useCallback((_side: "A" | "B", xVB: number, yVB: number) => {
     if (faseRef.current !== "gioco") return;
     const s = sceneRef.current;
     if (!s) return;
-    // trova la differenza più vicina su questo lato, non ancora trovata
+    // Solo il dipinto "Da restaurare" (lato B) è interattivo.
+    // Trova la differenza più vicina sul lato B, non ancora trovata.
     let bestId: string | null = null;
     let bestDist = HIT_RADIUS;
     for (const d of s.differences) {
       if (foundRef.current.has(d.elementId)) continue;
-      const c = side === "A" ? d.centerA : d.centerB;
+      const c = d.centerB;
       if (!c) continue;
       const dx = c.x - xVB;
       const dy = c.y - yVB;
@@ -204,25 +204,10 @@ export function RestauratoreSession({
       setScene(generaTrialScene(configRef.current, rng.current));
       setFound(new Set());
       setFalsiAllarmi(0);
-      setHintIds(new Set());
-      setFase("gioco");
+        setFase("gioco");
     }, 700);
     return () => clearTimeout(t);
   }, [fase]);
-
-  // ── Suggerimento (rivela 1 differenza non trovata) ───────────────────────
-  const usaSuggerimento = useCallback(() => {
-    if (faseRef.current !== "gioco") return;
-    const s = sceneRef.current;
-    if (!s) return;
-    const nonTrovate = s.differences.filter((d) => !foundRef.current.has(d.elementId));
-    if (nonTrovate.length === 0) return;
-    const target = nonTrovate[Math.floor(rng.current() * nonTrovate.length)];
-    // Penalità: conta come falso allarme
-    setFalsiAllarmi((n) => n + 1);
-    setHintIds(new Set([target.elementId]));
-    setTimeout(() => setHintIds(new Set()), 2800);
-  }, []);
 
   const totale = scene?.differences.length ?? 0;
   const restaurato = fase === "restauro" || fase === "isi";
@@ -329,85 +314,66 @@ export function RestauratoreSession({
               textTransform: "uppercase",
               textAlign: "center",
             }}>
-              Originale
+              Originale · riferimento
             </p>
             <PaintingView
               background={scene.background}
               elements={scene.elementsA}
               differences={scene.differences}
               foundOnThisSide={found}
-              hintIds={hintIds}
+              hintIds={noHints}
               side="A"
               restaurato={restaurato}
-              onClickPoint={(x, y) => handleClick("A", x, y)}
-              ariaLabel="Dipinto originale"
+              onClickPoint={() => {}}
+              interactive={false}
+              ariaLabel="Dipinto originale di riferimento (non interattivo)"
             />
           </div>
           <div>
             <p style={{
               margin: "0 0 0.3rem 0",
-              fontSize: "0.7rem",
+              fontSize: "0.72rem",
               letterSpacing: "0.16em",
-              color: PAL.inkSoft,
+              color: PAL.ink,
               fontWeight: 700,
               textTransform: "uppercase",
               textAlign: "center",
             }}>
-              Da restaurare
+              Da restaurare · tocca qui
             </p>
             <PaintingView
               background={scene.background}
               elements={scene.elementsB}
               differences={scene.differences}
               foundOnThisSide={found}
-              hintIds={hintIds}
+              hintIds={noHints}
               side="B"
               restaurato={restaurato}
               onClickPoint={(x, y) => handleClick("B", x, y)}
+              interactive={fase === "gioco"}
               ariaLabel="Dipinto da restaurare"
             />
           </div>
         </div>
       )}
 
-      {/* Footer: suggerimento + falsi allarmi */}
+      {/* Footer: contatore tocchi a vuoto */}
       <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "0.6rem",
-        padding: "0.6rem 0.75rem 0.85rem 0.75rem",
+        padding: "0.55rem 0.75rem 0.75rem 0.75rem",
         background: PAL.bg,
         borderTop: "1px solid rgba(76,52,28,0.12)",
       }}>
         <p style={{
           margin: 0,
-          flex: 1,
           fontSize: "0.78rem",
           color: PAL.inkSoft,
           lineHeight: 1.35,
+          textAlign: "center",
         }}>
           {falsiAllarmi > 0
             ? <>Tocchi a vuoto: <strong style={{ color: PAL.hint }}>{falsiAllarmi}</strong></>
-            : <>Tocca sui dipinti dove vedi qualcosa di diverso.</>}
+            : <>Tocca il dipinto da restaurare dove vedi qualcosa di diverso.</>}
         </p>
-        <button
-          onClick={usaSuggerimento}
-          disabled={fase !== "gioco"}
-          style={{
-            all: "unset",
-            padding: "0.55rem 0.9rem",
-            borderRadius: "0.4rem",
-            background: fase !== "gioco" ? "rgba(58,42,24,0.2)" : "#FBF4E8",
-            border: `1px solid ${PAL.frame}`,
-            color: PAL.ink,
-            fontWeight: 700,
-            fontSize: "0.82rem",
-            cursor: fase !== "gioco" ? "not-allowed" : "pointer",
-            textAlign: "center",
-          }}
-        >
-          Suggerimento
-        </button>
       </div>
     </div>
   );

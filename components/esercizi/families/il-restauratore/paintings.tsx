@@ -122,43 +122,134 @@ function pickDifferentColor(current: string, type: VisualType, rng: () => number
 
 // ─── Template scenes ─────────────────────────────────────────────────────────
 
+// Filter texture pergamena/tela invecchiata, applicabile come overlay leggero.
+const CANVAS_TEXTURE_DEFS = (
+  <>
+    <filter id="canvas-grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves={2} seed={7} />
+      <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.08 0" />
+      <feComposite in2="SourceGraphic" operator="in" />
+    </filter>
+    <filter id="patina" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves={2} seed={3} />
+      <feColorMatrix values="0 0 0 0 0.45  0 0 0 0 0.32  0 0 0 0 0.18  0 0 0 0.18 0" />
+    </filter>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="75%">
+      <stop offset="60%" stopColor="#000" stopOpacity={0} />
+      <stop offset="100%" stopColor="#000" stopOpacity={0.32} />
+    </radialGradient>
+  </>
+);
+
 const NATURA_MORTA_BG = (
   <>
-    {/* tavolo */}
-    <rect x={0} y={105} width={200} height={45} fill="#7A4F2A" />
-    <rect x={0} y={105} width={200} height={3}  fill="#A66D38" />
+    <defs>
+      {CANVAS_TEXTURE_DEFS}
+      <linearGradient id="nm-wall" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stopColor="#D7C18B" />
+        <stop offset="55%"  stopColor="#C9AE74" />
+        <stop offset="100%" stopColor="#A88955" />
+      </linearGradient>
+      <linearGradient id="nm-tavolo" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stopColor="#8E5B30" />
+        <stop offset="100%" stopColor="#4F3017" />
+      </linearGradient>
+      <linearGradient id="nm-drappo" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stopColor="#7C2A2A" />
+        <stop offset="100%" stopColor="#3A1212" />
+      </linearGradient>
+    </defs>
     {/* parete */}
-    <rect x={0} y={0} width={200} height={105} fill="#D9C49A" />
-    <rect x={0} y={102} width={200} height={3} fill="#B89968" opacity={0.5} />
+    <rect x={0} y={0} width={200} height={108} fill="url(#nm-wall)" />
+    {/* finestra a sinistra (luce dal lato) */}
+    <rect x={6} y={14} width={28} height={42} fill="#E8D9A2" opacity={0.55} />
+    <rect x={6} y={14} width={28} height={42} fill="none" stroke="#6B4A22" strokeWidth={1.2} />
+    <line x1={20} y1={14} x2={20} y2={56} stroke="#6B4A22" strokeWidth={1.0} />
+    <line x1={6}  y1={35} x2={34} y2={35} stroke="#6B4A22" strokeWidth={1.0} />
+    {/* tavolo */}
+    <rect x={0} y={106} width={200} height={44} fill="url(#nm-tavolo)" />
+    {/* bordo tavolo */}
+    <rect x={0} y={104} width={200} height={3.5} fill="#B07843" />
+    <rect x={0} y={107.5} width={200} height={1} fill="#3A2410" opacity={0.5} />
+    {/* drappo che cade dal tavolo */}
+    <path d="M 0 110 Q 18 116 28 130 L 28 150 L 0 150 Z" fill="url(#nm-drappo)" />
+    <path d="M 0 110 Q 18 116 28 130" stroke="#5A1818" strokeWidth={0.6} fill="none" opacity={0.6} />
+    {/* patina */}
+    <rect x={0} y={0} width={200} height={150} fill="url(#vignette)" pointerEvents="none" />
   </>
 );
 
 const PAESAGGIO_BG = (
   <>
-    {/* cielo */}
     <defs>
+      {CANVAS_TEXTURE_DEFS}
       <linearGradient id="sky-grad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stopColor="#C6D7E8" />
-        <stop offset="60%"  stopColor="#E8D4B0" />
-        <stop offset="100%" stopColor="#F0DDB8" />
+        <stop offset="0%"   stopColor="#C3D5E2" />
+        <stop offset="55%"  stopColor="#E8D2A6" />
+        <stop offset="100%" stopColor="#F0DDB0" />
+      </linearGradient>
+      <linearGradient id="terra" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stopColor="#9C7E48" />
+        <stop offset="100%" stopColor="#5F4824" />
+      </linearGradient>
+      <linearGradient id="mare-lontano" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stopColor="#9CB2BD" />
+        <stop offset="100%" stopColor="#7A98AB" />
       </linearGradient>
     </defs>
-    <rect x={0} y={0} width={200} height={110} fill="url(#sky-grad)" />
-    {/* terreno base */}
-    <rect x={0} y={108} width={200} height={42} fill="#7A6238" />
-    <ellipse cx={100} cy={112} rx={140} ry={10} fill="#8E7546" />
+    {/* cielo */}
+    <rect x={0} y={0} width={200} height={112} fill="url(#sky-grad)" />
+    {/* mare/lago lontano */}
+    <rect x={0} y={92}  width={200} height={16} fill="url(#mare-lontano)" opacity={0.55} />
+    {/* riflessi orizzontali sul mare */}
+    <line x1={20} y1={97}  x2={70} y2={97}  stroke="#FFFFFF" strokeWidth={0.4} opacity={0.55} />
+    <line x1={100} y1={100} x2={150} y2={100} stroke="#FFFFFF" strokeWidth={0.4} opacity={0.5} />
+    {/* montagne all'orizzonte */}
+    <path d="M 0 96 L 30 78 L 55 92 L 90 70 L 120 88 L 155 76 L 200 94 L 200 100 L 0 100 Z" fill="#7A7C8E" opacity={0.55} />
+    {/* prato in primo piano */}
+    <rect x={0} y={108} width={200} height={42} fill="url(#terra)" />
+    <ellipse cx={100} cy={112} rx={140} ry={9} fill="#7E6536" opacity={0.7} />
+    {/* ciuffi d'erba */}
+    {[14, 42, 88, 124, 162, 188].map((cx, i) => (
+      <g key={i} transform={`translate(${cx} 132)`} opacity={0.7}>
+        <line x1={-2} y1={0} x2={-2} y2={-3} stroke="#3E5520" strokeWidth={0.5} />
+        <line x1={0}  y1={0} x2={0}  y2={-4} stroke="#3E5520" strokeWidth={0.5} />
+        <line x1={2}  y1={0} x2={2}  y2={-3} stroke="#3E5520" strokeWidth={0.5} />
+      </g>
+    ))}
+    {/* vignette */}
+    <rect x={0} y={0} width={200} height={150} fill="url(#vignette)" pointerEvents="none" />
   </>
 );
 
 const RITRATTO_BG = (
   <>
     <defs>
-      <radialGradient id="portrait-grad" cx="50%" cy="50%" r="70%">
-        <stop offset="0%"   stopColor="#5A3422" />
-        <stop offset="100%" stopColor="#2A1A10" />
+      {CANVAS_TEXTURE_DEFS}
+      <radialGradient id="portrait-grad" cx="48%" cy="42%" r="78%">
+        <stop offset="0%"   stopColor="#6B3F26" />
+        <stop offset="55%"  stopColor="#3B2114" />
+        <stop offset="100%" stopColor="#1A0E07" />
       </radialGradient>
+      <linearGradient id="portrait-table" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stopColor="#5A2D1E" />
+        <stop offset="100%" stopColor="#2B130B" />
+      </linearGradient>
     </defs>
     <rect x={0} y={0} width={200} height={150} fill="url(#portrait-grad)" />
+    {/* drappo dietro la figura */}
+    <path d="M 0 0 L 200 0 L 200 60 Q 100 100 0 60 Z" fill="#3A1A12" opacity={0.6} />
+    {/* tavolino in basso */}
+    <rect x={0} y={140} width={200} height={10} fill="url(#portrait-table)" />
+    {/* finestra a destra con paesaggio sfumato (cenno di sfondo rinascimentale) */}
+    <rect x={158} y={22} width={32} height={52} fill="#5C7080" opacity={0.85} />
+    <rect x={158} y={22} width={32} height={52} fill="none" stroke="#1A0E07" strokeWidth={1.2} />
+    <line x1={174} y1={22} x2={174} y2={74} stroke="#1A0E07" strokeWidth={0.8} />
+    <line x1={158} y1={48} x2={190} y2={48} stroke="#1A0E07" strokeWidth={0.8} />
+    {/* colline dietro la finestra */}
+    <path d="M 158 60 Q 168 50 178 58 Q 184 52 190 60 L 190 74 L 158 74 Z" fill="#3A4A38" opacity={0.7} />
+    {/* vignette */}
+    <rect x={0} y={0} width={200} height={150} fill="url(#vignette)" pointerEvents="none" />
   </>
 );
 
@@ -175,18 +266,21 @@ function natura_morta(): Template {
     id: "natura_morta",
     background: NATURA_MORTA_BG,
     baseElements: [
-      { id: "vase",    state: { visualType: "vase",    x:  60, y:  88, size: 22, rotation: 0, color: "#B0623F", present: true } },
-      { id: "apple",   state: { visualType: "apple",   x: 110, y: 100, size: 10, rotation: 0, color: "#C0392B", present: true } },
-      { id: "pear",    state: { visualType: "pear",    x: 132, y:  98, size: 10, rotation: 0, color: "#B7C45A", present: true } },
-      { id: "grape",   state: { visualType: "grape",   x:  92, y: 100, size:  9, rotation: 0, color: "#5D3A6B", present: true } },
-      { id: "leaf",    state: { visualType: "leaf",    x: 152, y:  96, size:  8, rotation: -15, color: "#3F6B2E", present: true } },
-      { id: "candle",  state: { visualType: "candle",  x:  30, y:  82, size: 14, rotation: 0, color: "#E5D5A1", present: true } },
-      { id: "book",    state: { visualType: "book",    x: 165, y: 100, size: 16, rotation: 8, color: "#4E3621", present: true } },
+      // composizione caravaggesca: vaso al centro, frutta in primo piano, candela laterale
+      { id: "vase",    state: { visualType: "vase",    x:  68, y:  88, size: 24, rotation: 0,   color: "#B0623F", present: true } },
+      { id: "candle",  state: { visualType: "candle",  x:  26, y:  78, size: 15, rotation: 0,   color: "#E5D5A1", present: true } },
+      { id: "book",    state: { visualType: "book",    x: 162, y: 101, size: 18, rotation: 8,   color: "#4E3621", present: true } },
+      { id: "apple",   state: { visualType: "apple",   x: 116, y: 102, size: 11, rotation: 0,   color: "#C0392B", present: true } },
+      { id: "pear",    state: { visualType: "pear",    x: 138, y: 100, size: 11, rotation: 0,   color: "#B7C45A", present: true } },
+      { id: "grape",   state: { visualType: "grape",   x:  98, y: 104, size: 10, rotation: 0,   color: "#5D3A6B", present: true } },
+      { id: "leaf",    state: { visualType: "leaf",    x: 154, y:  97, size:  9, rotation: -15, color: "#3F6B2E", present: true } },
+      { id: "lemon",   state: { visualType: "lemon",   x:  82, y: 104, size:  9, rotation: 0,   color: "#E1B643", present: true } },
     ],
     optionalElements: [
-      { id: "lemon",   state: { visualType: "lemon",   x:  76, y: 102, size:  8, rotation: 0, color: "#E1B643", present: true } },
-      { id: "plum",    state: { visualType: "plum",    x: 122, y: 102, size:  8, rotation: 0, color: "#5B2D45", present: true } },
-      { id: "leaf2",   state: { visualType: "leaf",    x:  44, y: 100, size:  7, rotation: 25, color: "#557A38", present: true } },
+      { id: "plum",    state: { visualType: "plum",    x: 126, y: 108, size:  8, rotation: 0,   color: "#5B2D45", present: true } },
+      { id: "leaf2",   state: { visualType: "leaf",    x:  46, y: 102, size:  7, rotation: 25,  color: "#557A38", present: true } },
+      { id: "grape2",  state: { visualType: "grape",   x:  72, y: 110, size:  8, rotation: 0,   color: "#7B4F8C", present: true } },
+      { id: "apple2",  state: { visualType: "apple",   x: 178, y: 110, size:  9, rotation: 0,   color: "#A93226", present: true } },
     ],
   };
 }
@@ -196,20 +290,24 @@ function paesaggio(): Template {
     id: "paesaggio",
     background: PAESAGGIO_BG,
     baseElements: [
-      { id: "sun",     state: { visualType: "sun",   x: 150, y:  30, size: 14, rotation: 0, color: "#E8A33C", present: true } },
-      { id: "cloud1",  state: { visualType: "cloud", x:  40, y:  28, size: 18, rotation: 0, color: "#F2E9D5", present: true } },
-      { id: "cloud2",  state: { visualType: "cloud", x:  95, y:  20, size: 14, rotation: 0, color: "#E8D9B8", present: true } },
-      { id: "hill1",   state: { visualType: "hill",  x:  45, y: 100, size: 38, rotation: 0, color: "#5B7A3B", present: true } },
-      { id: "hill2",   state: { visualType: "hill",  x: 135, y: 105, size: 50, rotation: 0, color: "#446028", present: true } },
-      { id: "tree1",   state: { visualType: "tree",  x:  25, y:  98, size: 12, rotation: 0, color: "#33561F", present: true } },
-      { id: "tree2",   state: { visualType: "tree",  x: 170, y: 100, size: 11, rotation: 0, color: "#48721F", present: true } },
-      { id: "house",   state: { visualType: "house", x: 100, y: 102, size: 14, rotation: 0, color: "#D9A063", present: true } },
+      { id: "sun",     state: { visualType: "sun",   x: 152, y:  28, size: 15, rotation: 0, color: "#E8A33C", present: true } },
+      { id: "cloud1",  state: { visualType: "cloud", x:  38, y:  26, size: 19, rotation: 0, color: "#F2E9D5", present: true } },
+      { id: "cloud2",  state: { visualType: "cloud", x:  96, y:  18, size: 15, rotation: 0, color: "#E8D9B8", present: true } },
+      { id: "hill1",   state: { visualType: "hill",  x:  42, y: 102, size: 40, rotation: 0, color: "#5B7A3B", present: true } },
+      { id: "hill2",   state: { visualType: "hill",  x: 138, y: 104, size: 52, rotation: 0, color: "#446028", present: true } },
+      { id: "tree1",   state: { visualType: "tree",  x:  22, y: 100, size: 13, rotation: 0, color: "#33561F", present: true } },
+      { id: "tree2",   state: { visualType: "tree",  x: 172, y: 102, size: 12, rotation: 0, color: "#48721F", present: true } },
+      { id: "tree3",   state: { visualType: "tree",  x:  62, y: 106, size:  9, rotation: 0, color: "#3A5F1F", present: true } },
+      { id: "house",   state: { visualType: "house", x: 102, y: 104, size: 15, rotation: 0, color: "#D9A063", present: true } },
+      { id: "bird1",   state: { visualType: "bird",  x:  74, y:  46, size:  6, rotation: 0, color: "#2E2418", present: true } },
+      { id: "path",    state: { visualType: "path",  x: 100, y: 132, size: 36, rotation: 0, color: "#B89364", present: true } },
     ],
     optionalElements: [
-      { id: "bird1",   state: { visualType: "bird",  x:  70, y:  45, size:  5, rotation: 0, color: "#2E2418", present: true } },
-      { id: "bird2",   state: { visualType: "bird",  x:  85, y:  50, size:  4, rotation: 0, color: "#2E2418", present: true } },
-      { id: "bush",    state: { visualType: "bush",  x:  65, y: 112, size:  8, rotation: 0, color: "#48721F", present: true } },
-      { id: "path",    state: { visualType: "path",  x: 100, y: 130, size: 30, rotation: 0, color: "#B89364", present: true } },
+      { id: "bird2",   state: { visualType: "bird",  x:  92, y:  52, size:  5, rotation: 0, color: "#2E2418", present: true } },
+      { id: "bird3",   state: { visualType: "bird",  x: 124, y:  44, size:  5, rotation: 0, color: "#2E2418", present: true } },
+      { id: "bush1",   state: { visualType: "bush",  x:  78, y: 124, size:  8, rotation: 0, color: "#48721F", present: true } },
+      { id: "bush2",   state: { visualType: "bush",  x: 154, y: 124, size:  7, rotation: 0, color: "#3A5C18", present: true } },
+      { id: "cloud3",  state: { visualType: "cloud", x: 162, y:  56, size: 12, rotation: 0, color: "#E8D9B8", present: true } },
     ],
   };
 }
@@ -219,17 +317,18 @@ function ritratto(): Template {
     id: "ritratto",
     background: RITRATTO_BG,
     baseElements: [
-      { id: "drape",    state: { visualType: "drape",    x: 100, y: 130, size: 80, rotation: 0, color: "#6B2B2B", present: true } },
-      { id: "collar",   state: { visualType: "collar",   x: 100, y: 110, size: 35, rotation: 0, color: "#EDE2C8", present: true } },
-      { id: "face",     state: { visualType: "face",     x: 100, y:  70, size: 22, rotation: 0, color: "#E8C19A", present: true } },
-      { id: "hair",     state: { visualType: "hair",     x: 100, y:  55, size: 28, rotation: 0, color: "#3B2412", present: true } },
-      { id: "hat",      state: { visualType: "hat",      x: 100, y:  40, size: 30, rotation: 0, color: "#2A1A0F", present: true } },
-      { id: "necklace", state: { visualType: "necklace", x: 100, y:  95, size: 16, rotation: 0, color: "#D9A437", present: true } },
+      { id: "drape",    state: { visualType: "drape",    x: 100, y: 132, size: 90, rotation: 0, color: "#6B2B2B", present: true } },
+      { id: "collar",   state: { visualType: "collar",   x: 100, y: 110, size: 36, rotation: 0, color: "#EDE2C8", present: true } },
+      { id: "face",     state: { visualType: "face",     x: 100, y:  72, size: 22, rotation: 0, color: "#E8C19A", present: true } },
+      { id: "hair",     state: { visualType: "hair",     x: 100, y:  56, size: 30, rotation: 0, color: "#3B2412", present: true } },
+      { id: "hat",      state: { visualType: "hat",      x: 100, y:  40, size: 32, rotation: 0, color: "#2A1A0F", present: true } },
+      { id: "necklace", state: { visualType: "necklace", x: 100, y:  96, size: 18, rotation: 0, color: "#D9A437", present: true } },
       { id: "earring",  state: { visualType: "earring",  x: 122, y:  74, size:  4, rotation: 0, color: "#E8B848", present: true } },
+      { id: "brooch",   state: { visualType: "brooch",   x:  92, y: 108, size:  5, rotation: 0, color: "#A93226", present: true } },
     ],
     optionalElements: [
-      { id: "brooch",   state: { visualType: "brooch",   x:  92, y: 108, size:  5, rotation: 0, color: "#A93226", present: true } },
       { id: "earring2", state: { visualType: "earring",  x:  78, y:  74, size:  4, rotation: 0, color: "#E8B848", present: true } },
+      { id: "brooch2",  state: { visualType: "brooch",   x: 108, y: 110, size:  4, rotation: 0, color: "#5D3A6B", present: true } },
     ],
   };
 }
@@ -358,6 +457,7 @@ function ElementShape({ s }: { s: ElementState }) {
     case "vase":
       return (
         <g transform={t}>
+          {/* corpo del vaso */}
           <path
             d={`M -${s.size * 0.5} ${s.size * 0.7}
                 Q -${s.size * 0.85} 0 -${s.size * 0.45} -${s.size * 0.6}
@@ -365,19 +465,51 @@ function ElementShape({ s }: { s: ElementState }) {
                 Q  ${s.size * 0.85} 0  ${s.size * 0.5} ${s.size * 0.7}
                 Z`}
             fill={s.color}
-            stroke={PAL.frameDark}
+            stroke={shade(s.color, -0.5)}
             strokeWidth={0.5}
           />
-          <ellipse cx={0} cy={-s.size * 0.6} rx={s.size * 0.45} ry={s.size * 0.12} fill={shade(s.color, -0.3)} />
+          {/* lucentezza laterale */}
+          <path
+            d={`M -${s.size * 0.32} -${s.size * 0.5}
+                Q -${s.size * 0.62} 0 -${s.size * 0.3} ${s.size * 0.55}`}
+            stroke={shade(s.color, 0.35)}
+            strokeWidth={1.3}
+            fill="none"
+            opacity={0.45}
+          />
+          {/* ombra opposta */}
+          <path
+            d={`M ${s.size * 0.45} -${s.size * 0.4}
+                Q ${s.size * 0.75} 0 ${s.size * 0.35} ${s.size * 0.55}`}
+            stroke={shade(s.color, -0.45)}
+            strokeWidth={1.2}
+            fill="none"
+            opacity={0.55}
+          />
+          {/* fascia decorativa */}
+          <line x1={-s.size * 0.55} y1={-s.size * 0.05} x2={s.size * 0.55} y2={-s.size * 0.05} stroke={shade(s.color, -0.55)} strokeWidth={0.4} opacity={0.7} />
+          {/* bocca */}
+          <ellipse cx={0} cy={-s.size * 0.6} rx={s.size * 0.45} ry={s.size * 0.13} fill={shade(s.color, -0.45)} />
+          <ellipse cx={0} cy={-s.size * 0.62} rx={s.size * 0.42} ry={s.size * 0.09} fill={shade(s.color, -0.65)} />
         </g>
       );
     case "apple":
     case "plum":
       return (
         <g transform={t}>
-          <circle cx={0} cy={0} r={s.size * 0.6} fill={s.color} />
-          <ellipse cx={-s.size * 0.18} cy={-s.size * 0.2} rx={s.size * 0.18} ry={s.size * 0.12} fill={shade(s.color, 0.35)} opacity={0.55} />
-          <path d={`M 0 -${s.size * 0.55} q ${s.size * 0.25} -${s.size * 0.3} ${s.size * 0.45} -${s.size * 0.1}`} stroke="#3F6B2E" strokeWidth={0.8} fill="none" />
+          {/* ombra a terra */}
+          <ellipse cx={s.size * 0.15} cy={s.size * 0.6} rx={s.size * 0.6} ry={s.size * 0.16} fill="#000" opacity={0.22} />
+          {/* corpo */}
+          <circle cx={0} cy={0} r={s.size * 0.62} fill={s.color} />
+          {/* gradiente lato in ombra */}
+          <path d={`M ${s.size * 0.62} 0 A ${s.size * 0.62} ${s.size * 0.62} 0 0 1 0 ${s.size * 0.62} A ${s.size * 0.5} ${s.size * 0.5} 0 0 0 ${s.size * 0.62} 0 Z`} fill={shade(s.color, -0.35)} opacity={0.55} />
+          {/* highlight */}
+          <ellipse cx={-s.size * 0.22} cy={-s.size * 0.25} rx={s.size * 0.18} ry={s.size * 0.12} fill={shade(s.color, 0.45)} opacity={0.7} />
+          <ellipse cx={-s.size * 0.25} cy={-s.size * 0.28} rx={s.size * 0.08} ry={s.size * 0.05} fill="#FFFFFF" opacity={0.7} />
+          {/* picciolo */}
+          <path d={`M 0 -${s.size * 0.6} l ${s.size * 0.1} -${s.size * 0.15}`} stroke="#3F2818" strokeWidth={1} fill="none" strokeLinecap="round" />
+          {/* foglia */}
+          <path d={`M ${s.size * 0.05} -${s.size * 0.65} q ${s.size * 0.3} -${s.size * 0.18} ${s.size * 0.4} ${s.size * 0.05} q -${s.size * 0.2} ${s.size * 0.05} -${s.size * 0.4} -${s.size * 0.05} Z`} fill="#3F6B2E" />
         </g>
       );
     case "pear":
@@ -435,8 +567,13 @@ function ElementShape({ s }: { s: ElementState }) {
     case "sun":
       return (
         <g transform={t}>
-          <circle cx={0} cy={0} r={s.size * 0.8} fill={shade(s.color, 0.25)} opacity={0.4} />
+          {/* aureola esterna */}
+          <circle cx={0} cy={0} r={s.size * 1.0} fill={shade(s.color, 0.4)} opacity={0.25} />
+          <circle cx={0} cy={0} r={s.size * 0.8} fill={shade(s.color, 0.25)} opacity={0.45} />
+          {/* disco */}
           <circle cx={0} cy={0} r={s.size * 0.55} fill={s.color} />
+          {/* nucleo luminoso */}
+          <circle cx={-s.size * 0.1} cy={-s.size * 0.1} r={s.size * 0.28} fill={shade(s.color, 0.4)} opacity={0.7} />
         </g>
       );
     case "moon":
@@ -464,10 +601,17 @@ function ElementShape({ s }: { s: ElementState }) {
     case "tree":
       return (
         <g transform={t}>
-          <rect x={-s.size * 0.12} y={-s.size * 0.1} width={s.size * 0.24} height={s.size * 0.7} fill="#5A3A1F" />
-          <circle cx={0} cy={-s.size * 0.5} r={s.size * 0.7} fill={s.color} />
-          <circle cx={-s.size * 0.4} cy={-s.size * 0.25} r={s.size * 0.4} fill={shade(s.color, -0.15)} />
-          <circle cx={s.size * 0.4}  cy={-s.size * 0.3} r={s.size * 0.4} fill={shade(s.color, 0.15)} />
+          {/* ombra alla base */}
+          <ellipse cx={s.size * 0.2} cy={s.size * 0.6} rx={s.size * 0.5} ry={s.size * 0.12} fill="#000" opacity={0.28} />
+          {/* tronco con texture */}
+          <rect x={-s.size * 0.13} y={-s.size * 0.1} width={s.size * 0.26} height={s.size * 0.75} fill="#5A3A1F" />
+          <rect x={-s.size * 0.13} y={-s.size * 0.1} width={s.size * 0.08} height={s.size * 0.75} fill="#3D2611" opacity={0.6} />
+          {/* chioma multilivello */}
+          <circle cx={-s.size * 0.4} cy={-s.size * 0.3}  r={s.size * 0.45} fill={shade(s.color, -0.2)} />
+          <circle cx={s.size * 0.4}  cy={-s.size * 0.35} r={s.size * 0.42} fill={shade(s.color, -0.1)} />
+          <circle cx={0}              cy={-s.size * 0.55} r={s.size * 0.55} fill={s.color} />
+          <circle cx={-s.size * 0.15} cy={-s.size * 0.7}  r={s.size * 0.38} fill={shade(s.color, 0.18)} />
+          <circle cx={s.size * 0.25}  cy={-s.size * 0.7}  r={s.size * 0.32} fill={shade(s.color, 0.25)} />
         </g>
       );
     case "bush":
@@ -481,10 +625,25 @@ function ElementShape({ s }: { s: ElementState }) {
     case "house":
       return (
         <g transform={t}>
-          <rect x={-s.size * 0.5} y={-s.size * 0.1} width={s.size} height={s.size * 0.7} fill={s.color} stroke={shade(s.color, -0.4)} strokeWidth={0.4} />
-          <polygon points={`${-s.size * 0.6},${-s.size * 0.1} ${s.size * 0.6},${-s.size * 0.1} 0,${-s.size * 0.7}`} fill={shade(s.color, -0.3)} stroke={shade(s.color, -0.5)} strokeWidth={0.4} />
-          <rect x={-s.size * 0.12} y={s.size * 0.25} width={s.size * 0.24} height={s.size * 0.35} fill={shade(s.color, -0.5)} />
-          <rect x={-s.size * 0.4} y={s.size * 0.05} width={s.size * 0.2} height={s.size * 0.2} fill="#E8D8A0" />
+          {/* corpo casa colonica */}
+          <rect x={-s.size * 0.55} y={-s.size * 0.1} width={s.size * 1.1} height={s.size * 0.75} fill={s.color} stroke={shade(s.color, -0.45)} strokeWidth={0.5} />
+          {/* tetto coppi */}
+          <polygon points={`${-s.size * 0.7},${-s.size * 0.1} ${s.size * 0.7},${-s.size * 0.1} ${s.size * 0.45},${-s.size * 0.55} ${-s.size * 0.45},${-s.size * 0.55}`} fill="#8C3A2A" stroke="#3E1A12" strokeWidth={0.5} />
+          {/* righe coppi */}
+          {[-0.5, -0.3, -0.1, 0.1, 0.3, 0.5].map((p, i) => (
+            <line key={i} x1={p * s.size * 0.95} y1={-s.size * 0.55} x2={p * s.size * 0.65} y2={-s.size * 0.1} stroke="#5A1F12" strokeWidth={0.3} opacity={0.65} />
+          ))}
+          {/* porta arcata */}
+          <path d={`M -${s.size * 0.13} ${s.size * 0.65}
+                    L -${s.size * 0.13} ${s.size * 0.18}
+                    Q 0 ${s.size * 0.05} ${s.size * 0.13} ${s.size * 0.18}
+                    L ${s.size * 0.13} ${s.size * 0.65} Z`}
+                fill={shade(s.color, -0.55)} />
+          {/* finestre con persiane */}
+          <rect x={-s.size * 0.42} y={s.size * 0.05} width={s.size * 0.18} height={s.size * 0.2} fill="#E8D8A0" stroke="#3E1A12" strokeWidth={0.3} />
+          <line x1={-s.size * 0.33} y1={s.size * 0.05} x2={-s.size * 0.33} y2={s.size * 0.25} stroke="#3E1A12" strokeWidth={0.3} />
+          <rect x={ s.size * 0.24} y={s.size * 0.05} width={s.size * 0.18} height={s.size * 0.2} fill="#E8D8A0" stroke="#3E1A12" strokeWidth={0.3} />
+          <line x1={ s.size * 0.33} y1={s.size * 0.05} x2={ s.size * 0.33} y2={s.size * 0.25} stroke="#3E1A12" strokeWidth={0.3} />
         </g>
       );
     case "bird":
@@ -508,17 +667,32 @@ function ElementShape({ s }: { s: ElementState }) {
     case "face":
       return (
         <g transform={t}>
+          {/* collo */}
+          <rect x={-s.size * 0.18} y={s.size * 0.85} width={s.size * 0.36} height={s.size * 0.35} fill={shade(s.color, -0.1)} />
+          {/* viso */}
           <ellipse cx={0} cy={0} rx={s.size * 0.75} ry={s.size} fill={s.color} />
+          {/* ombra laterale */}
+          <ellipse cx={s.size * 0.25} cy={0} rx={s.size * 0.5} ry={s.size * 0.95} fill={shade(s.color, -0.25)} opacity={0.45} />
+          {/* guance rosate */}
+          <ellipse cx={-s.size * 0.42} cy={s.size * 0.15} rx={s.size * 0.18} ry={s.size * 0.12} fill="#D88B6B" opacity={0.5} />
+          <ellipse cx={ s.size * 0.42} cy={s.size * 0.15} rx={s.size * 0.18} ry={s.size * 0.12} fill="#D88B6B" opacity={0.5} />
           {/* sopracciglia */}
-          <path d={`M -${s.size * 0.3} -${s.size * 0.3} q ${s.size * 0.15} -${s.size * 0.08} ${s.size * 0.3} 0`} stroke="#3B2412" strokeWidth={0.5} fill="none" />
-          <path d={`M  ${s.size * 0.0} -${s.size * 0.3} q ${s.size * 0.15} -${s.size * 0.08} ${s.size * 0.3} 0`} stroke="#3B2412" strokeWidth={0.5} fill="none" />
-          {/* occhi */}
-          <ellipse cx={-s.size * 0.2} cy={-s.size * 0.15} rx={s.size * 0.07} ry={s.size * 0.05} fill="#2A1A10" />
-          <ellipse cx={ s.size * 0.2} cy={-s.size * 0.15} rx={s.size * 0.07} ry={s.size * 0.05} fill="#2A1A10" />
+          <path d={`M -${s.size * 0.32} -${s.size * 0.32} q ${s.size * 0.16} -${s.size * 0.08} ${s.size * 0.3} 0`} stroke="#2B180A" strokeWidth={0.7} fill="none" strokeLinecap="round" />
+          <path d={`M  ${s.size * 0.02} -${s.size * 0.32} q ${s.size * 0.16} -${s.size * 0.08} ${s.size * 0.3} 0`} stroke="#2B180A" strokeWidth={0.7} fill="none" strokeLinecap="round" />
+          {/* occhi: sclera + iride scura */}
+          <ellipse cx={-s.size * 0.2} cy={-s.size * 0.14} rx={s.size * 0.1} ry={s.size * 0.065} fill="#F4ECD8" />
+          <ellipse cx={ s.size * 0.2} cy={-s.size * 0.14} rx={s.size * 0.1} ry={s.size * 0.065} fill="#F4ECD8" />
+          <circle cx={-s.size * 0.2} cy={-s.size * 0.13} r={s.size * 0.05} fill="#3A2412" />
+          <circle cx={ s.size * 0.2} cy={-s.size * 0.13} r={s.size * 0.05} fill="#3A2412" />
+          <circle cx={-s.size * 0.18} cy={-s.size * 0.14} r={s.size * 0.018} fill="#FFFFFF" />
+          <circle cx={ s.size * 0.22} cy={-s.size * 0.14} r={s.size * 0.018} fill="#FFFFFF" />
           {/* naso */}
-          <path d={`M 0 -${s.size * 0.05} q -${s.size * 0.05} ${s.size * 0.25} ${s.size * 0.05} ${s.size * 0.3}`} stroke={shade(s.color, -0.3)} strokeWidth={0.5} fill="none" />
-          {/* labbra */}
-          <path d={`M -${s.size * 0.18} ${s.size * 0.45} q ${s.size * 0.18} ${s.size * 0.08} ${s.size * 0.36} 0`} stroke="#8C3A2A" strokeWidth={0.7} fill="none" />
+          <path d={`M 0 -${s.size * 0.04} q -${s.size * 0.07} ${s.size * 0.25} ${s.size * 0.04} ${s.size * 0.32}`} stroke={shade(s.color, -0.35)} strokeWidth={0.6} fill="none" />
+          {/* labbra rinascimentali */}
+          <path d={`M -${s.size * 0.2} ${s.size * 0.45}
+                    q ${s.size * 0.1} ${s.size * 0.06} ${s.size * 0.2} 0
+                    q ${s.size * 0.1} -${s.size * 0.06} ${s.size * 0.2} 0`} stroke="#7A2A22" strokeWidth={0.8} fill="none" strokeLinecap="round" />
+          <path d={`M -${s.size * 0.18} ${s.size * 0.5} q ${s.size * 0.18} ${s.size * 0.06} ${s.size * 0.36} 0`} stroke="#A03A2E" strokeWidth={1.4} fill="none" opacity={0.6} strokeLinecap="round" />
         </g>
       );
     case "hair":
@@ -640,13 +814,16 @@ interface PaintingViewProps {
   /** Hint flash temporaneo (id elemento → side). */
   hintIds: Set<string>;
   onClickPoint: (xVB: number, yVB: number) => void;
+  /** Se false, il dipinto non risponde al click (cursore default). */
+  interactive?: boolean;
   ariaLabel: string;
 }
 
 export function PaintingView({
-  background, elements, foundOnThisSide, differences, side, restaurato, hintIds, onClickPoint, ariaLabel,
+  background, elements, foundOnThisSide, differences, side, restaurato, hintIds, onClickPoint, interactive = true, ariaLabel,
 }: PaintingViewProps) {
   const handleClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!interactive) return;
     const svg = e.currentTarget;
     const pt = svg.createSVGPoint();
     pt.x = e.clientX;
@@ -662,16 +839,36 @@ export function PaintingView({
     <div
       style={{
         position: "relative",
-        border: `4px solid ${PAL.frame}`,
         borderRadius: 4,
         boxShadow: restaurato
-          ? `0 0 0 2px ${PAL.shimmer}, 0 0 18px rgba(242,209,136,0.7)`
-          : `inset 0 0 8px rgba(0,0,0,0.18), 0 2px 4px rgba(0,0,0,0.18)`,
+          ? `0 0 0 2px ${PAL.shimmer}, 0 0 22px rgba(242,209,136,0.75)`
+          : `inset 0 0 0 2px ${PAL.frame}, inset 0 0 0 5px ${PAL.frameDark}, inset 0 0 0 7px ${PAL.shimmer}, inset 0 0 12px rgba(0,0,0,0.32), 0 3px 6px rgba(0,0,0,0.28)`,
         background: PAL.frameDark,
-        padding: 2,
+        padding: 8,
         transition: "box-shadow 600ms ease",
       }}
     >
+      {/* angoli ornamentali */}
+      {[
+        { top: 3,    left: 3    },
+        { top: 3,    right: 3   },
+        { bottom: 3, left: 3    },
+        { bottom: 3, right: 3   },
+      ].map((pos, i) => (
+        <span
+          key={i}
+          style={{
+            position: "absolute",
+            width: 8, height: 8,
+            background: `radial-gradient(circle at 30% 30%, ${PAL.shimmer}, ${PAL.frame})`,
+            borderRadius: 2,
+            border: `1px solid ${PAL.frameDark}`,
+            ...pos,
+            pointerEvents: "none",
+            zIndex: 2,
+          }}
+        />
+      ))}
       <svg
         viewBox="0 0 200 150"
         role="img"
@@ -681,10 +878,11 @@ export function PaintingView({
           display: "block",
           width: "100%",
           height: "auto",
-          cursor: "pointer",
+          cursor: interactive ? "pointer" : "default",
           filter: restaurato ? "saturate(1.18) brightness(1.06)" : undefined,
           transition: "filter 600ms ease",
           touchAction: "manipulation",
+          opacity: interactive || restaurato ? 1 : 0.96,
         }}
       >
         {background}
