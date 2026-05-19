@@ -95,7 +95,7 @@ export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Prop
     if (!tempoScaduto || completatoRef.current) return;
     completatoRef.current = true;
     const p = paroleRef.current;
-    onRispostaRef.current({ parole: p, score: p.length });
+    onRispostaRef.current({ parole: p, errori: erroriRef.current, score: p.length });
   }, [tempoScaduto]);
 
   // ── Aggiungi parola ───────────────────────────────────────────────────────
