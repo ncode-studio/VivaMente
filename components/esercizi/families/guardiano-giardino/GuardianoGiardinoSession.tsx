@@ -272,7 +272,10 @@ export function GuardianoGiardinoSession({ config, tempoScaduto, onReady, onComp
 
     onCompleteRef.current({
       accuratezzaValutativa: acc,
-      scoreGrezzo:           farfalleTot > 0 ? Math.round((farfalleHit / farfalleTot) * 100) : 0,
+      // Score allineato all'accuratezza globale: i tap su distruttori
+      // (uccellino/ape/libellula/coccinella) abbassano lo score, prima
+      // restavano "invisibili" e l'utente vedeva 100% pur sbagliando molto.
+      scoreGrezzo:           Math.round(acc * 100),
       metriche: {
         farfalle_spawned:    farfalleTot,
         farfalle_hit:        farfalleHit,

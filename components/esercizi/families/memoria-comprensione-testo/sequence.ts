@@ -42,10 +42,19 @@ function shuffle<T>(arr: T[], rng: () => number): T[] {
   return a;
 }
 
-export function creaMCTPoolRef(rng: () => number): MCTPoolRef {
+export function creaMCTPoolRef(rng: () => number, variante?: MCTVariante): MCTPoolRef {
+  // Split del pool tra varianti: fattuale prende i testi a indice pari,
+  // inferenziale i dispari. Questo evita che lo stesso testo appaia in
+  // entrambi gli esercizi (fattuale e inferenziale erano percepiti come
+  // duplicati). Quando variante è undefined (callers legacy), pool intero.
   const bands: MCTPoolRef["bands"] = {};
   for (const n of [3, 4, 5, 6]) {
-    const filtered = [...MC_TESTI].filter((t) => t.nFrasi === n);
+    const all = [...MC_TESTI].filter((t) => t.nFrasi === n);
+    const filtered = variante === "fattuale"
+      ? all.filter((_, i) => i % 2 === 0)
+      : variante === "inferenziale"
+      ? all.filter((_, i) => i % 2 === 1)
+      : all;
     bands[n] = { shuffled: shuffle(filtered, rng), idx: 0 };
   }
   return { bands };

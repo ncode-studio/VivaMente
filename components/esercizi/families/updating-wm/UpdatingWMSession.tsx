@@ -173,6 +173,18 @@ export function UpdatingWMSession({ stimolo, onRisposta }: Props) {
   }, [fase]);
 
   // ── Render: CUE ────────────────────────────────────────────────────────────
+  // Per la variante numeri, la regola viene mostrata SOLO all'inizio
+  // dell'esercizio o quando cambia (mostraRegola viene settato dall'engine).
+  // Se mostraRegola è false e siamo in cue, saltiamo direttamente.
+  if (
+    fase === "cue" &&
+    stimolo.variante === "numeri" &&
+    stimolo.mostraRegola === false
+  ) {
+    // Avanza subito a sequenza
+    setTimeout(() => setFase("sequenza"), 0);
+    return null;
+  }
   if (fase === "cue") {
     const testo = stimolo.variante === "numeri" ? stimolo.regola : stimolo.domanda;
     return (

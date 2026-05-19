@@ -180,15 +180,13 @@ export function GoNogoSemanticoTaskEngine({
   // come parte fissa — ogni stimolo mostra l'etichetta sopra la parola.
   // Alternativa pulita: wrapper div fuori da TrialFlow con position sticky.
 
+  // L'etichetta della categoria target NON viene mostrata durante gli
+  // stimoli (fix #26): l'utente deve memorizzarla dal tutorial e
+  // mantenerla in working memory. Restava un reminder a schermo che
+  // banalizzava la condizione "Go".
   const renderStimoloConHeader = useCallback(
     (props: { stimolo: StimoloSemantico; onRisposta: (r: GoNogoSemanticoRisposta) => void }) => (
       <div className="flex flex-col items-center w-full gap-0">
-        {/* Etichetta categoria fissa in cima */}
-        <div className="w-full flex justify-center py-3 bg-blue-50 border-b border-blue-100">
-          <span className="text-base font-semibold text-blue-700">
-            Tocca solo: <strong>{coppia.etichetta}</strong>
-          </span>
-        </div>
         <GoNogoSemanticoStimulus {...props} disabilitato={false} etichetta={coppia.etichetta} />
       </div>
     ),

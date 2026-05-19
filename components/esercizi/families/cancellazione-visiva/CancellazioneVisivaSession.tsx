@@ -18,12 +18,20 @@ type Props = {
   tempoScaduto: boolean;
 };
 
+// Tempo di preview del target (target visibile, griglia nascosta).
+const PREVIEW_MS = 2500;
+// Mini-timer per trial dopo che la griglia compare. Ogni trial deve
+// chiudersi entro questa finestra: rende esplicita la pressione temporale.
+const TRIAL_MS = 12_000;
+
 export function CancellazioneVisivaSession({
   stimolo,
   onRisposta,
   tempoScaduto,
 }: Props) {
   const [toccate, setToccate]  = useState<Set<number>>(() => new Set());
+  const [fase, setFase]        = useState<"preview" | "play">("preview");
+  const [trialMsLeft, setTrialMsLeft] = useState(TRIAL_MS);
   const completatoRef          = useRef(false);
   const onRispostaRef          = useRef(onRisposta);
   useLayoutEffect(() => { onRispostaRef.current = onRisposta; });
@@ -39,8 +47,38 @@ export function CancellazioneVisivaSession({
   useEffect(() => {
     completatoRef.current = false;
     setToccate(new Set());
+    setFase("preview");
+    setTrialMsLeft(TRIAL_MS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stimolo]);
+
+  // ── Fase preview → play ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (fase !== "preview") return;
+    const id = setTimeout(() => setFase("play"), PREVIEW_MS);
+    return () => clearTimeout(id);
+  }, [fase]);
+
+  // ── Mini-timer trial in fase play ─────────────────────────────────────────
+  useEffect(() => {
+    if (fase !== "play" || completatoRef.current) return;
+    const start = performance.now();
+    const id = setInterval(() => {
+      const left = Math.max(0, TRIAL_MS - (performance.now() - start));
+      setTrialMsLeft(left);
+      if (left <= 0) {
+        clearInterval(id);
+        if (!completatoRef.current) {
+          completatoRef.current = true;
+          setToccate(prev => {
+            onRispostaRef.current({ toccate: Array.from(prev) });
+            return prev;
+          });
+        }
+      }
+    }, 200);
+    return () => clearInterval(id);
+  }, [fase]);
 
   // ── Toggle cella ────────────────────────────────────────────────────────────
   const handleToggle = useCallback((i: number) => {
@@ -73,33 +111,66 @@ export function CancellazioneVisivaSession({
     : stimolo.colonne <= 5 ? "4.2rem"
     : "3.5rem";
 
+  // ── Preview: target grande al centro, niente griglia ──────────────────────
+  if (fase === "preview") {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 px-4 py-10"
+        style={{ minHeight: "60vh" }}>
+        <p style={{
+          fontSize: "0.75rem", color: "#92400E",
+          fontWeight: 700, letterSpacing: "0.1em",
+        }}>
+          MEMORIZZA IL TARGET
+        </p>
+        <div style={{
+          fontSize: "6rem", lineHeight: 1, padding: "1rem 2rem",
+          backgroundColor: "#FEF3C7",
+          border: "3px solid #FCD34D",
+          borderRadius: "1.5rem",
+        }}>
+          {stimolo.target}
+        </div>
+        <p style={{ fontSize: "0.85rem", color: "#64748B" }}>
+          Dovrai toccare tutti i {stimolo.target} nella griglia che apparirà
+        </p>
+      </div>
+    );
+  }
+
+  const trialPct = (trialMsLeft / TRIAL_MS) * 100;
+  const barColor = trialPct > 50 ? "#22C55E" : trialPct > 25 ? "#F59E0B" : "#EF4444";
+
   return (
     <div className="flex flex-col gap-4 px-4 py-4">
 
-      {/* Banner target */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: "0.75rem",
-        padding: "0.75rem 1.25rem",
-        backgroundColor: "#FEF3C7",
-        borderRadius: "1rem",
-        border: "2px solid #FCD34D",
-      }}>
-        <span style={{
-          fontSize: "0.65rem", color: "#92400E",
-          fontWeight: 700, letterSpacing: "0.08em", flexShrink: 0,
+      {/* Mini-timer trial (target NON visibile, è memorizzato) */}
+      <div style={{ width: "100%", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <div style={{
+          flex: 1, height: 8, borderRadius: 4,
+          backgroundColor: "#E2E8F0", overflow: "hidden",
         }}>
-          TROVA TUTTI
-        </span>
-        <span style={{ fontSize: "2.4rem", lineHeight: 1, flexShrink: 0 }}>
-          {stimolo.target}
-        </span>
+          <div style={{
+            height: "100%", width: `${trialPct}%`,
+            backgroundColor: barColor,
+            transition: "width 0.2s linear",
+          }} />
+        </div>
         <span style={{
-          fontSize: "0.7rem", color: "#B45309",
-          fontWeight: 600, marginLeft: "auto",
+          fontSize: "0.85rem", fontWeight: 700,
+          color: trialPct < 25 ? "#EF4444" : "#475569",
+          minWidth: "2.5rem", textAlign: "right",
         }}>
-          trovati: {toccate.size}
+          {Math.ceil(trialMsLeft / 1000)}s
         </span>
       </div>
+
+      {/* Contatore trovati (target nascosto a memoria) */}
+      <p style={{
+        textAlign: "center", fontSize: "0.75rem",
+        color: "#64748B", fontWeight: 600,
+      }}>
+        Trovati: <span style={{ color: "#1E3A5F", fontSize: "1rem" }}>{toccate.size}</span>
+      </p>
 
       {/* Griglia */}
       <div style={{

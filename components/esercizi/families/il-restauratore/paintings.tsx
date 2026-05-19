@@ -113,11 +113,39 @@ const COLOR_SWAPS: Record<string, readonly string[]> = {
   brooch:   ["#A93226", "#D9A437", "#5D3A6B"],
 };
 
+/** Distanza euclidea RGB. Più alta = più visibile la differenza di colore. */
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ];
+}
+function colorDistance(a: string, b: string): number {
+  const [ar, ag, ab] = hexToRgb(a);
+  const [br, bg, bb] = hexToRgb(b);
+  return Math.sqrt((ar - br) ** 2 + (ag - bg) ** 2 + (ab - bb) ** 2);
+}
+
 function pickDifferentColor(current: string, type: VisualType, rng: () => number): string {
   const palette = COLOR_SWAPS[type] ?? [PAL.ink];
   const others = palette.filter((c) => c.toLowerCase() !== current.toLowerCase());
   if (others.length === 0) return current;
-  return pickOne(others, rng);
+  // Seleziona dal sottoinsieme dei colori che sono "ben distanti" dal corrente
+  // (soglia 70 nello spazio RGB ≈ differenza chiaramente percepibile).
+  // Se nessuno raggiunge la soglia, fallback al colore più distante.
+  const MIN_DIST = 70;
+  const distinti = others.filter(c => colorDistance(c, current) >= MIN_DIST);
+  if (distinti.length > 0) return pickOne(distinti, rng);
+  // Fallback: ritorna il colore più distante del pool.
+  let best = others[0];
+  let bestD = colorDistance(best, current);
+  for (const c of others) {
+    const d = colorDistance(c, current);
+    if (d > bestD) { best = c; bestD = d; }
+  }
+  return best;
 }
 
 // ─── Template scenes ─────────────────────────────────────────────────────────

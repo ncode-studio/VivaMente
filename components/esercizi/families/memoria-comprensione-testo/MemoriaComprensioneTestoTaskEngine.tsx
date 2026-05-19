@@ -39,7 +39,18 @@ export function MemoriaComprensioneTestoTaskEngine({
 
   const config  = getMCTLevel(livello);
   const rngRef  = useRef<() => number>(Math.random);
-  const poolRef = useRef(creaMCTPoolRef(rngRef.current));
+  // Lazy init: il pool viene creato UNA sola volta al primo render e poi
+  // sopravvive ai re-render (useRef pattern, ma senza ricostruire l'oggetto
+  // ad ogni render — l'invocazione precedente con argomento diretto creava
+  // un nuovo pool ad ogni render, scartato da useRef ma comunque allocato).
+  const poolRef = useRef<ReturnType<typeof creaMCTPoolRef> | null>(null);
+  if (poolRef.current === null) {
+    poolRef.current = creaMCTPoolRef(rngRef.current, variante);
+  }
+  // Anti-duplicazione esplicita: tiene traccia dei testi già usati in questa
+  // sessione (chiave = testo). Se generaStimoloMCT restituisce un duplicato
+  // (es. dopo un re-mount inatteso), forziamo un secondo pescaggio.
+  const seenTestiRef = useRef<Set<string>>(new Set());
 
   // ── Micro-progressione su nDomande ────────────────────────────────────────
 
@@ -60,14 +71,33 @@ export function MemoriaComprensioneTestoTaskEngine({
         ? Math.max(config.nDomande, ctx.valoreCorrente)
         : config.nDomande;
 
-      return generaStimoloMCT(
+      // Pesca fino a un testo non ancora visto in questa sessione.
+      // Limite di tentativi = dimensione banda per evitare loop infiniti
+      // se il pool è esaurito.
+      const pool = poolRef.current!;
+      const bandSize = pool.bands[config.nFrasi]?.shuffled.length ?? 1;
+      let stim = generaStimoloMCT(
         config.nFrasi,
         nDomande,
         config.nOpzioni,
         variante,
-        poolRef.current,
+        pool,
         rngRef.current,
       );
+      let tentativi = 0;
+      while (seenTestiRef.current.has(stim.testo) && tentativi < bandSize) {
+        stim = generaStimoloMCT(
+          config.nFrasi,
+          nDomande,
+          config.nOpzioni,
+          variante,
+          pool,
+          rngRef.current,
+        );
+        tentativi++;
+      }
+      seenTestiRef.current.add(stim.testo);
+      return stim;
     },
     [config, variante],
   );

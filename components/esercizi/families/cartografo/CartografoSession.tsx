@@ -132,7 +132,7 @@ export function CartografoSession({
   // ── PRESENTAZIONE percorso ─────────────────────────────────────────────────
   if (fase === "presentazione") {
     return (
-      <div className="w-full max-w-5xl mx-auto px-4 py-4 grid md:grid-cols-2 gap-6">
+      <div className="w-full max-w-5xl mx-auto px-4 py-4 flex flex-col gap-6">
         <div className="bg-amber-50/70 rounded-3xl p-3 border-2 border-amber-200 shadow">
           <MapView map={map} start={trial.route.start} />
           <div className="text-center mt-2 text-stone-700 text-base">

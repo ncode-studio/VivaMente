@@ -144,6 +144,26 @@ export default function EsercizioPage() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Effect B-bis: blocca browser back / gesture mentre l'esercizio è attivo
+  // Pusha uno stato sentinella nella history e intercetta popstate per
+  // riannullarlo. L'utente può uscire SOLO usando il bottone della UI
+  // (che è già disabilitato nello stesso intervallo).
+  useEffect(() => {
+    if (stato !== "running" && stato !== "time-up") return;
+    if (typeof window === "undefined") return;
+    const guard = "vm_ex_lock_" + Date.now();
+    window.history.pushState({ guard }, "");
+    const onPop = () => {
+      // L'utente ha provato a tornare indietro: ri-pusha lo stato per
+      // mantenerlo sulla pagina.
+      window.history.pushState({ guard }, "");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+    };
+  }, [stato]);
+
   // ── Effect C: overflow per stato gioco + reset su rientro in intro ──────────
   useEffect(() => {
     if (stato === "running" || stato === "time-up") {

@@ -48,8 +48,8 @@ export const CASALINGA_LEVELS: readonly CasalingaLevelConfig[] = [
   // Curva: si fa crescere UNA variabile per volta (oggetti / superfici / cambiamenti / tempo).
   // Meccanica: si toccano SOLO gli oggetti che sono cambiati. Gli spazi vuoti
   // non sono cliccabili (niente "removed" — solo moved / swapped / flipped).
-  { livello:  1, nOggetti:  3, superfici: ["piano"],                       slotPerSuperficie: 4, nCambiamenti: 1, modificheAmmesse: ["moved"],                          memoMs: 15_000, memoManuale: true },
-  { livello:  2, nOggetti:  4, superfici: ["piano"],                       slotPerSuperficie: 5, nCambiamenti: 1, modificheAmmesse: ["moved"],                          memoMs: 14_000 },
+  { livello:  1, nOggetti:  3, superfici: ["piano"],                       slotPerSuperficie: 4, nCambiamenti: 1, modificheAmmesse: ["moved"],                          memoMs:  8_000, memoManuale: true },
+  { livello:  2, nOggetti:  4, superfici: ["piano"],                       slotPerSuperficie: 5, nCambiamenti: 1, modificheAmmesse: ["moved"],                          memoMs:  9_000 },
   { livello:  3, nOggetti:  4, superfici: ["piano"],                       slotPerSuperficie: 5, nCambiamenti: 1, modificheAmmesse: ["moved", "swapped"],               memoMs: 13_000 },
   // L4: introduce la 2ª superficie ma resta a 1 solo cambiamento.
   { livello:  4, nOggetti:  5, superfici: ["mensola", "piano"],            slotPerSuperficie: 4, nCambiamenti: 1, modificheAmmesse: ["moved", "swapped"],               memoMs: 13_000 },

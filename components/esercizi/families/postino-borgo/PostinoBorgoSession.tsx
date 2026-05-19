@@ -59,7 +59,7 @@ interface TrialState {
 
 const CELL_PX = 86;          // dimensione visiva della cella della griglia
 const CELL_GAP = 4;          // gap tra celle
-const STEP_MS = 380;         // velocità di animazione del postino
+const STEP_MS = 520;         // velocità di animazione del postino (era 380, troppo veloce per le transizioni SVG)
 
 function eq(a: NodeId, b: NodeId)         { return a.row === b.row && a.col === b.col; }
 function nkey(n: NodeId)                  { return `${n.row},${n.col}`; }
@@ -416,13 +416,14 @@ export function PostinoBorgoSession({
               scalinate (zig-zag). Sovrapposti alla griglia. */}
           {renderEdgeMarkers(edges, cellXY)}
 
-          {/* Postino animato: usiamo CSS transform sul <g> per beneficiare
-              della transizione tra una cella e l'altra. */}
+          {/* Postino animato: transform SVG nativo via attribute per garantire
+              che ogni cella del percorso venga effettivamente attraversata.
+              CSS transform su <g> SVG ha supporto incoerente — l'attributo
+              transform è universale. La transizione visiva si ottiene via
+              animation key sul prevNodo. */}
           <g
-            style={{
-              transform: `translate(${cellXY(postinoNodo).x + CELL_PX/2 - 18}px,${cellXY(postinoNodo).y + CELL_PX/2 - 18}px)`,
-              transition: `transform ${STEP_MS}ms ease-in-out`,
-            }}
+            transform={`translate(${cellXY(postinoNodo).x + CELL_PX/2 - 18},${cellXY(postinoNodo).y + CELL_PX/2 - 18})`}
+            style={{ transition: `transform ${STEP_MS - 40}ms linear` }}
           >
             <PostinoSprite size={36} flip={animStep > 0 &&
               animStep < trial.path.length &&

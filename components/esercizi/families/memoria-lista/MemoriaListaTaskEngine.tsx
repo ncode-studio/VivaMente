@@ -74,6 +74,17 @@ export function MemoriaListaTaskEngine({
           ? Math.min(nItems * 3, 24)
           : config.nFoil;
 
+      // Timer recall: 20s per riconoscimento parole/immagini, 40s per la
+      // rievocazione (richiede scrittura/recall libera). null = no timer
+      // per i livelli più alti dove l'utente decide il proprio tempo.
+      const recallTimerMs = isRievocazioneParole || isRievocazioneImmagini
+        ? 40_000
+        : 20_000;
+
+      // Recall in ordine di presentazione per le varianti immagini
+      // (riconoscimento e rievocazione). Per parole resta libero.
+      const requireOrder = variante === "immagini" && !isRievocazioneParole;
+
       return generaStimoloML(
         nItems,
         nFoil,
@@ -82,6 +93,8 @@ export function MemoriaListaTaskEngine({
         config.delayMs,
         poolRef.current,
         rngRef.current,
+        recallTimerMs,
+        requireOrder,
       );
     },
     [config, variante, isRievocazioneParole, isRievocazioneImmagini],
@@ -92,6 +105,11 @@ export function MemoriaListaTaskEngine({
   const valutaRisposta = useCallback(
     (stimolo: StimoloML, risposta: RispostaML | null): boolean => {
       if (!risposta) return false;
+      // Se richiesto l'ordine, confronto posizionale stretto.
+      if (stimolo.requireOrder) {
+        if (risposta.selezionati.length !== stimolo.items.length) return false;
+        return stimolo.items.every((it, i) => risposta.selezionati[i] === it.id);
+      }
       const sel       = new Set(risposta.selezionati);
       const targetIds = new Set(stimolo.items.map((i) => i.id));
       return (

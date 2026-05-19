@@ -18,6 +18,7 @@ import {
   useState,
 } from "react";
 import type { StimoloVF, RispostaVF } from "./sequence";
+import { hasWordlist, isInWordlist } from "./wordlists";
 
 type Props = {
   stimolo:      StimoloVF;
@@ -25,18 +26,28 @@ type Props = {
   tempoScaduto: boolean;
 };
 
-type EsitoInput = "ok" | "duplicata" | "lettera_errata" | "troppo_corta" | null;
+type EsitoInput =
+  | "ok"
+  | "duplicata"
+  | "lettera_errata"
+  | "troppo_corta"
+  | "non_riconosciuta"
+  | "non_valida"
+  | null;
 
 export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Props) {
   const [input,      setInput]      = useState("");
   const [parole,     setParole]     = useState<string[]>([]);
   const [msRimasti,  setMsRimasti]  = useState(stimolo.tLimMs);
   const [esito,      setEsito]      = useState<EsitoInput>(null);
+  // Per fluenza alternata: indice categoria corrente (0 = cat1, 1 = cat2).
+  const [catTurno,   setCatTurno]   = useState(0);
 
   const completatoRef  = useRef(false);
   const startTimeRef   = useRef(Date.now());
   const paroleRef      = useRef<string[]>([]);
   const usateRef       = useRef<Set<string>>(new Set());
+  const erroriRef      = useRef(0);
   const stimoloRef     = useRef(stimolo);
   const onRispostaRef  = useRef(onRisposta);
   const inputRef       = useRef<HTMLInputElement>(null);
@@ -50,6 +61,7 @@ export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Prop
     startTimeRef.current  = Date.now();
     paroleRef.current     = [];
     usateRef.current      = new Set();
+    erroriRef.current     = 0;
     setInput("");
     setParole([]);
     setMsRimasti(stimolo.tLimMs);
@@ -70,7 +82,7 @@ export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Prop
         if (!completatoRef.current) {
           completatoRef.current = true;
           const p = paroleRef.current;
-          onRispostaRef.current({ parole: p, score: p.length });
+          onRispostaRef.current({ parole: p, errori: erroriRef.current, score: p.length });
         }
       }
     }, 200);
@@ -93,7 +105,8 @@ export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Prop
     const parola = input.trim();
     if (!parola) return;
 
-    if (parola.length < 2) {
+    if (parola.length < 3) {
+      // troppo corta: non conta come errore, è solo un nudge UX
       setEsito("troppo_corta"); setInput(""); return;
     }
 
@@ -101,6 +114,16 @@ export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Prop
       .replace(/[àáâãäå]/g, "a").replace(/[èéêë]/g, "e")
       .replace(/[ìíîï]/g, "i").replace(/[òóôõö]/g, "o")
       .replace(/[ùúûü]/g, "u");
+
+    // Sanity filter: solo lettere (a-z), almeno una vocale, non tutte
+    // uguali — blocca "zzzzz", "qwerty", "123" senza richiedere wordlist.
+    const soloLettere = /^[a-z]+$/.test(norm);
+    const haVocale    = /[aeiou]/.test(norm);
+    const tutteUguali = norm.length > 0 && norm.split("").every(c => c === norm[0]);
+    if (!soloLettere || !haVocale || tutteUguali) {
+      erroriRef.current++;
+      setEsito("non_valida"); setInput(""); return;
+    }
 
     if (usateRef.current.has(norm)) {
       setEsito("duplicata"); setInput(""); return;
@@ -112,7 +135,20 @@ export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Prop
         .replace(/[ìíîï]/g, "i").replace(/[òóôõö]/g, "o")
         .replace(/[ùúûü]/g, "u");
       if (!norm.startsWith(letteraNorm)) {
+        erroriRef.current++;
         setEsito("lettera_errata"); setInput(""); return;
+      }
+    } else if (s.variante === "semantica" && hasWordlist(s.categoriaId)) {
+      if (!isInWordlist(s.categoriaId, norm)) {
+        erroriRef.current++;
+        setEsito("non_riconosciuta"); setInput(""); return;
+      }
+    } else if (s.variante === "alternata") {
+      // Categoria attesa per questo turno.
+      const catIdAttesa = catTurno === 0 ? s.categoriaId : (s.categoria2Id ?? s.categoriaId);
+      if (hasWordlist(catIdAttesa) && !isInWordlist(catIdAttesa, norm)) {
+        erroriRef.current++;
+        setEsito("non_riconosciuta"); setInput(""); return;
       }
     }
 
@@ -123,8 +159,11 @@ export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Prop
     setParole(newParole);
     setEsito("ok");
     setInput("");
+    if (s.variante === "alternata") {
+      setCatTurno((t) => (t + 1) % 2);
+    }
     setTimeout(() => inputRef.current?.focus(), 20);
-  }, [input]);
+  }, [input, catTurno]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -144,12 +183,18 @@ export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Prop
   const secsLeft  = Math.ceil(msRimasti / 1000);
   const barColor  = pct > 0.5 ? "#22C55E" : pct > 0.25 ? "#F59E0B" : "#EF4444";
   const isSemantica = stimolo.variante === "semantica";
+  const isAlternata = stimolo.variante === "alternata";
+  const categoriaAttuale = isAlternata && catTurno === 1 && stimolo.categoria2
+    ? stimolo.categoria2
+    : stimolo.categoria;
 
   const esitoMsg: Record<NonNullable<EsitoInput>, string> = {
-    ok:            "✓ Aggiunta!",
-    duplicata:     "Già inserita",
-    lettera_errata:`Deve iniziare con ${stimolo.categoria}`,
-    troppo_corta:  "Parola troppo corta",
+    ok:               "✓ Aggiunta!",
+    duplicata:        "Già inserita",
+    lettera_errata:   `Deve iniziare con ${stimolo.categoria}`,
+    troppo_corta:     "Parola troppo corta",
+    non_riconosciuta: "Non riconosciuta in questa categoria",
+    non_valida:       "Parola non valida",
   };
 
   return (
@@ -158,20 +203,33 @@ export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Prop
       {/* Badge variante */}
       <p style={{
         fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.08em",
-        color: isSemantica ? "#0369A1" : "#7C3AED",
+        color: isAlternata ? "#15803D" : isSemantica ? "#0369A1" : "#7C3AED",
       }}>
-        {isSemantica ? "FLUENZA SEMANTICA" : "FLUENZA FONEMICA"}
+        {isAlternata ? "FLUENZA ALTERNATA"
+          : isSemantica ? "FLUENZA SEMANTICA" : "FLUENZA FONEMICA"}
       </p>
 
       {/* Categoria / Lettera */}
       <div style={{
         width: "100%", borderRadius: "1.25rem",
-        backgroundColor: isSemantica ? "#F0F9FF" : "#F5F3FF",
-        border: `2px solid ${isSemantica ? "#BAE6FD" : "#DDD6FE"}`,
+        backgroundColor: isAlternata ? "#F0FDF4" : isSemantica ? "#F0F9FF" : "#F5F3FF",
+        border: `2px solid ${isAlternata ? "#BBF7D0" : isSemantica ? "#BAE6FD" : "#DDD6FE"}`,
         padding: "1rem 1.25rem",
         display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem",
       }}>
-        {isSemantica ? (
+        {isAlternata ? (
+          <>
+            <p style={{ fontSize: "0.75rem", color: "#15803D", fontWeight: 600 }}>
+              Ora scrivi
+            </p>
+            <p style={{ fontSize: "1.3rem", fontWeight: 800, color: "#14532D" }}>
+              {categoriaAttuale}
+            </p>
+            <p style={{ fontSize: "0.7rem", color: "#15803D", fontWeight: 600 }}>
+              poi alterna con: <strong>{catTurno === 0 ? stimolo.categoria2 : stimolo.categoria}</strong> — in {secsLeft}s
+            </p>
+          </>
+        ) : isSemantica ? (
           <>
             <p style={{ fontSize: "0.75rem", color: "#0369A1", fontWeight: 600 }}>
               Scrivi quanti più

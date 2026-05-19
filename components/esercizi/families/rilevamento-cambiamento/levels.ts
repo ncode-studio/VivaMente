@@ -22,7 +22,7 @@
  * Timeout per trial: 18s — dopo l'utente passa al prossimo stimolo.
  */
 
-export const RILEVAMENTO_SESSION_TIMER_MS = 90_000;
+export const RILEVAMENTO_SESSION_TIMER_MS = 60_000;
 
 export type TipoChange = "inter" | "intra";
 

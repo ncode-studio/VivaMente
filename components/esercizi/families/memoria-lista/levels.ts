@@ -21,8 +21,8 @@ export interface MLLevelConfig {
 }
 
 export const ML_LEVELS: readonly MLLevelConfig[] = [
-  { livello:  1, nItems: 4, speedMs: 2000, delayMs:  10_000, nFoil: 4, trialsPerSession: 5 },
-  { livello:  2, nItems: 4, speedMs: 2000, delayMs:  10_000, nFoil: 4, trialsPerSession: 5 },
+  { livello:  1, nItems: 3, speedMs: 2000, delayMs:  10_000, nFoil: 3, trialsPerSession: 4 },
+  { livello:  2, nItems: 3, speedMs: 2000, delayMs:  10_000, nFoil: 3, trialsPerSession: 4 },
   { livello:  3, nItems: 5, speedMs: 1800, delayMs:  10_000, nFoil: 4, trialsPerSession: 4 },
   { livello:  4, nItems: 5, speedMs: 1800, delayMs:  10_000, nFoil: 4, trialsPerSession: 4 },
   { livello:  5, nItems: 6, speedMs: 1600, delayMs:  20_000, nFoil: 6, trialsPerSession: 4 },

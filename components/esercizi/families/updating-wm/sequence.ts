@@ -42,6 +42,10 @@ export interface StimoloUWM_N {
   rispostaAttesa: string;
   speedMs:        number;
   regola:         string;
+  /** True solo se la regola è cambiata rispetto al trial precedente
+   *  (o se è il primo trial della sessione). Quando false, la session
+   *  salta la fase di cue: la regola si memorizza e si riusa. */
+  mostraRegola?:  boolean;
 }
 
 export type StimoloUWM = StimoloUWM_PI | StimoloUWM_N;

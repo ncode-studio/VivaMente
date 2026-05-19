@@ -107,14 +107,30 @@ export function MemoriaProspetticaTaskEngine({
 
   const onCompleteWrapped = useCallback(
     (risultato: SessionResult) => {
-      const m        = risultato.metriche;
-      const totali   = m.finestre_totali   ?? 0;
-      const corrette = m.finestre_corrette ?? 0;
-      const accuratezzaClinica = totali > 0 ? corrette / totali : 0;
+      const m = risultato.metriche;
+      // Hit: finestre prospettiche corrette + parole-target tappate.
+      const finestreTot = m.finestre_totali            ?? 0;
+      const finestreOk  = m.finestre_corrette          ?? 0;
+      const distrTot    = m.distrattori_target_totali  ?? 0;
+      const distrOk     = m.distrattori_target_tappati ?? 0;
+      // False alarm: clic Ricordami fuori finestra + clic categoria su
+      // parole NON della categoria. Entrambi sono errori veri e devono
+      // pesare sull'accuratezza (fix: prima erano ignorati e il punteggio
+      // risultava 100% anche con tutti i clic categoria sbagliati).
+      const ricordamiFA = m.ricordami_falsi_tap    ?? 0;
+      const distrFA     = m.distrattori_falsi_tap  ?? 0;
+      const falseAlarms = ricordamiFA + distrFA;
+
+      const hits   = finestreOk + distrOk;
+      const totali = finestreTot + distrTot;
+      // Penalty model: ogni false alarm costa mezzo hit. Clamp [0,1].
+      const rawAcc = totali > 0 ? (hits - 0.5 * falseAlarms) / totali : 0;
+      const acc    = Math.max(0, Math.min(1, rawAcc));
+
       onComplete({
         ...risultato,
-        accuratezzaValutativa: accuratezzaClinica,
-        scoreGrezzo:           Math.round(accuratezzaClinica * 100),
+        accuratezzaValutativa: acc,
+        scoreGrezzo:           Math.round(acc * 100),
       });
     },
     [onComplete],

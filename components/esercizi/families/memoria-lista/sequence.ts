@@ -21,6 +21,11 @@ export interface StimoloML {
   griglia: MLWordItem[];  // N target + M foil, mescolati per il riconoscimento
   speedMs: number;
   delayMs: number;
+  /** Timer per la fase di recognition in ms. null = niente timer. */
+  recallTimerMs?: number | null;
+  /** Se true, l'utente deve toccare gli item nell'ordine di presentazione
+   *  (serial recall). Click in ordine sbagliato = errore. */
+  requireOrder?: boolean;
 }
 
 export type RispostaML = {
@@ -73,6 +78,8 @@ export function generaStimoloML(
   delayMs:  number,
   poolRef:  MLPoolRef,
   rng:      () => number,
+  recallTimerMs?: number | null,
+  requireOrder?: boolean,
 ): StimoloML {
   const total   = Math.min(nItems + nFoil, ML_ITEMS.length);
   const all     = nextItems(total, poolRef, rng);
@@ -80,5 +87,9 @@ export function generaStimoloML(
   const foils   = all.slice(nItems);
   const griglia = shuffle([...items, ...foils], rng);
 
-  return { variante, items, griglia, speedMs, delayMs };
+  return {
+    variante, items, griglia, speedMs, delayMs,
+    recallTimerMs: recallTimerMs ?? null,
+    requireOrder:  requireOrder ?? false,
+  };
 }

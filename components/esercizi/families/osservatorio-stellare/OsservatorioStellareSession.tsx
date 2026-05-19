@@ -18,6 +18,7 @@ import type { SessionResult } from "@/lib/exercise-types";
 import {
   OS_AMBIENT_STARS,
   OS_GAME_H_PX,
+  OS_SESSION_TIMER_MS,
   type OsservatorioLevelConfig,
 } from "./levels";
 
@@ -161,6 +162,21 @@ export function OsservatorioStellareSession({
   // Programmazione prossimo target.
   const nextSpawnAtRef  = useRef<number>(0);
 
+  /**
+   * Micro-progressione intra-livello: durante la sessione la finestra-target
+   * si accorcia e il gap si allunga linearmente, in modo che la vigilanza
+   * diventi via via più impegnativa anche al lv1.
+   * progress 0 → 1 sull'intera durata sessione.
+   */
+  const dynParams = (now: number) => {
+    const progress = Math.min(1, Math.max(0, (now - startedAtRef.current) / OS_SESSION_TIMER_MS));
+    const cfg = configRef.current;
+    return {
+      windowMs: cfg.targetWindowMs * (1.35 - 0.35 * progress), // 1.35x → 1x
+      gapMs:    cfg.targetGapMs    * (0.75 + 0.30 * progress), // 0.75x → 1.05x
+    };
+  };
+
   // ── Avvio ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     onReady();
@@ -182,6 +198,8 @@ export function OsservatorioStellareSession({
       const cfg = configRef.current;
       const cur = targetRef.current;
 
+      const { windowMs, gapMs } = dynParams(now);
+
       if (cur) {
         // Target attivo: controlla se è scaduto.
         if (now >= cur.endAt) {
@@ -189,11 +207,19 @@ export function OsservatorioStellareSession({
           setTarget(null);
           // gap variabile ±20% per evitare pattern prevedibili
           const jitter = rand(0.8, 1.2);
-          nextSpawnAtRef.current = now + cfg.targetGapMs * jitter;
+          nextSpawnAtRef.current = now + gapMs * jitter;
         }
       } else {
         // Nessun target: vedi se è ora di farne apparire uno.
         if (now >= nextSpawnAtRef.current) {
+          // Evita di spawnare se manca così poco tempo che il target non
+          // farebbe in tempo ad essere mostrato per intero (evita "miss
+          // fantasma" che falsificano l'accuratezza).
+          const remaining = OS_SESSION_TIMER_MS - (now - startedAtRef.current);
+          if (remaining < windowMs * 0.6) {
+            // niente spawn nel finale: aspetta il time-up.
+            return;
+          }
           const stars = starsRef.current;
           if (stars.length > 0) {
             const pick = stars[Math.floor(Math.random() * stars.length)];
@@ -201,11 +227,13 @@ export function OsservatorioStellareSession({
             setTarget({
               starId:  pick.id,
               startAt: now,
-              endAt:   now + cfg.targetWindowMs,
+              endAt:   now + windowMs,
             });
           }
         }
       }
+      // suppress unused warning
+      void cfg;
 
       // Pulisci burst vecchi
       setBursts((prev) => prev.filter((b) => now - b.at < 700));
@@ -219,7 +247,13 @@ export function OsservatorioStellareSession({
     if (completedRef.current) return;
     completedRef.current = true;
 
-    const tot   = totaleTargetRef.current;
+    // Se al momento del time-up c'è ancora un target "in volo" non scaduto
+    // e non cliccato, non includerlo nel totale: l'utente non ha avuto la
+    // finestra completa per rispondere. Questo elimina il bug per cui
+    // cliccando ogni target l'accuratezza non arrivava al 100%.
+    const targetPending = targetRef.current !== null
+      && Date.now() < targetRef.current.endAt;
+    const tot   = Math.max(0, totaleTargetRef.current - (targetPending ? 1 : 0));
     const hit   = hitRef.current;
     const fa    = falseAlarmRef.current;
     const hitRate = tot > 0 ? hit / tot : 0;
@@ -268,8 +302,8 @@ export function OsservatorioStellareSession({
         { id: nextBurstIdRef.current++, xPct: star.xPct, yPct: star.yPct, at: now },
       ]);
       setTarget(null);
-      const cfg = configRef.current;
-      nextSpawnAtRef.current = now + cfg.targetGapMs * rand(0.85, 1.15);
+      const { gapMs } = dynParams(now);
+      nextSpawnAtRef.current = now + gapMs * rand(0.85, 1.15);
     } else {
       // FALSE ALARM
       falseAlarmRef.current++;

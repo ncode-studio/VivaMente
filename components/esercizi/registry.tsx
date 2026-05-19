@@ -29,7 +29,6 @@ import { MemoriaListaTaskEngine } from "./families/memoria-lista/MemoriaListaTas
 import { MemoriaComprensioneTestoTaskEngine } from "./families/memoria-comprensione-testo/MemoriaComprensioneTestoTaskEngine";
 import { MemoriaComprensioneTestoMLTTaskEngine } from "./families/memoria-comprensione-testo/MemoriaComprensioneTestoMLTTaskEngine";
 import { OrdineNarrativoTaskEngine } from "./families/memoria-comprensione-testo/OrdineNarrativoTaskEngine";
-import { PathTracingTaskEngine } from "./families/path-tracing/PathTracingTaskEngine";
 import { VerbalFluencyTaskEngine } from "./families/verbal-fluency/VerbalFluencyTaskEngine";
 import { CancellazioneVisivaTaskEngine } from "./families/cancellazione-visiva/CancellazioneVisivaTaskEngine";
 import { CV_SESSION_TIMER_MS } from "./families/cancellazione-visiva/levels";
@@ -63,6 +62,7 @@ import { RestauratoreTaskEngine } from "./families/il-restauratore/RestauratoreT
 import { PostinoBorgoTaskEngine } from "./families/postino-borgo/PostinoBorgoTaskEngine";
 import { IlNaturalistaTaskEngine } from "./families/il-naturalista/IlNaturalistaTaskEngine";
 import { NATURALISTA_SESSION_TIMER_MS } from "./families/il-naturalista/levels";
+import { SpesaTaskEngine } from "./families/spesa/SpesaTaskEngine";
 
 // ── Wrapper inline per Recall Grid MBT (discrimina stimulusType) ─────────────
 
@@ -137,11 +137,7 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     getSessionDurationMs: () => SIMON_TIMER_MS,
   },
 
-  // ── Famiglia 3: Odd One Out — 2 varianti (Modello A — timer-based) ──────
-  odd_one_out_numeri_lettere: {
-    Engine: OddOneOutTaskEngine,
-    getSessionDurationMs: () => ODD_ONE_OUT_TIMER_MS,
-  },
+  // ── Famiglia 3: Odd One Out — variante immagini (numeri/lettere rimosso) ──
   odd_one_out_immagini: {
     Engine: OddOneOutTaskEngine,
     getSessionDurationMs: () => ODD_ONE_OUT_TIMER_MS,
@@ -183,10 +179,12 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     getSessionDurationMs: () => CG_TIMER_MS,
   },
 
-  // ── Famiglia 7: Updating WM — 2 varianti (Modello A — timer 90s) ────────────
+  // ── Famiglia 7: Updating WM ─────────────────────────────────────────────────
+  // updating_wm_parole: Modello B trial-based (no timer di sessione, termina
+  // ai trialsPerSession). updating_wm_numeri: resta Modello A con timer.
   updating_wm_parole: {
     Engine: UpdatingWMTaskEngine,
-    getSessionDurationMs: () => UWM_TIMER_MS,
+    getSessionDurationMs: () => null,
   },
   updating_wm_numeri: {
     Engine: UpdatingWMTaskEngine,
@@ -235,6 +233,10 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     getSessionDurationMs: () => null,
   },
   verbal_fluency_fonemica: {
+    Engine: VerbalFluencyTaskEngine,
+    getSessionDurationMs: () => null,
+  },
+  verbal_fluency_alternata: {
     Engine: VerbalFluencyTaskEngine,
     getSessionDurationMs: () => null,
   },
@@ -341,15 +343,17 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     getSessionDurationMs: () => RILEVAMENTO_SESSION_TIMER_MS,
   },
 
-  // ── Famiglia 22: Path Tracing (Modello B con T.Lim per trial) ───────────────
-  path_tracing: {
-    Engine: PathTracingTaskEngine,
-    getSessionDurationMs: () => null,
-  },
+  // Path Tracing rimosso (#29).
 
   // ── Il Cartografo (visuospaziale · navigazione mentale, Modello B 3 trial) ─
   cartografo: {
     Engine: CartografoTaskEngine,
+    getSessionDurationMs: () => null,
+  },
+
+  // ── Spesa al supermercato (memoria — Modello B) ─────────────────────────────
+  spesa: {
+    Engine: SpesaTaskEngine,
     getSessionDurationMs: () => null,
   },
 
@@ -374,7 +378,7 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   // ── Famiglia 20: Linguaggio e Denominazione — solo Synonym/Antonym ──────────
   synonym_antonym_decision: {
     Engine: LinguaggioDenominazioneTaskEngine,
-    getSessionDurationMs: () => 90_000,
+    getSessionDurationMs: () => 60_000,
   },
 
   // ── Da aggiungere progressivamente (una entry per id JSON del catalogo) ──

@@ -158,10 +158,20 @@ export function IlPostinoSession({ config, tempoScaduto, onReady, onComplete }: 
     const vistiSet = new Set(vistiRef.current);
     const freschi = pool.filter((it) => !sessionSet.has(it.id) && !vistiSet.has(it.id));
     const fuoriSessione = pool.filter((it) => !sessionSet.has(it.id));
-    const candidati =
-      freschi.length > 0       ? freschi       :
-      fuoriSessione.length > 0 ? fuoriSessione :
-                                  pool;
+    let candidati: ItemPostino[];
+    if (freschi.length > 0) {
+      candidati = freschi;
+    } else if (fuoriSessione.length > 0) {
+      candidati = fuoriSessione;
+    } else {
+      // Pool esaurito anche per la sessione: reset di sessionVisti ed
+      // escludi solo l'ultimo item appena visto, per evitare ripetizioni
+      // immediate consecutive.
+      const ultimo = vistiRef.current[vistiRef.current.length - 1];
+      sessionVistiRef.current = new Set();
+      candidati = pool.filter((it) => it.id !== ultimo);
+      if (candidati.length === 0) candidati = [...pool];
+    }
     const item = pick(candidati);
     sessionVistiRef.current.add(item.id);
     vistiRef.current.push(item.id);

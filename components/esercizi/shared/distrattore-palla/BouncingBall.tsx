@@ -70,6 +70,11 @@ export function BouncingBall({
   const [coloreCorrente, setColoreCorrente] = useState<string>(NON_TARGET_COLORS[0]);
   const [tickNow, setTickNow]               = useState(() => performance.now());
   const [mostraIstruzione, setMostraIstruzione] = useState(true);
+  // Burst attivo quando l'utente colpisce un target: la pallina "esplode"
+  // (overlay raggi) e si nasconde brevemente prima di riapparire con un
+  // colore non-target. Rende il distrattore meno passivo.
+  const [burst, setBurst] = useState<{ x: number; y: number; id: number } | null>(null);
+  const burstIdRef = useRef(0);
 
   // ── Loop RAF + timer finale + Go/No-Go (mount-only) ──────────────────────
   useEffect(() => {
@@ -173,9 +178,39 @@ export function BouncingBall({
     if (coloreCorrenteRef.current === TARGET_COLOR) {
       hitsRef.current++;
       tapInWindowRef.current = true;
-    } else {
-      falseAlarmsRef.current++;
+      // Esplosione: burst alla posizione corrente, pallina sparisce ~300ms,
+      // poi rinasce con un colore non-target. La finestra target viene
+      // consumata immediatamente (no doppio hit).
+      setBurst({
+        x: posRef.current.x,
+        y: posRef.current.y,
+        id: burstIdRef.current++,
+      });
+      // Nascondi pallina e cambia colore subito.
+      if (pallaRef.current) {
+        pallaRef.current.style.opacity = "0";
+      }
+      const nonTarget = NON_TARGET_COLORS[Math.floor(Math.random() * NON_TARGET_COLORS.length)];
+      coloreCorrenteRef.current = nonTarget;
+      setColoreCorrente(nonTarget);
+      setTimeout(() => {
+        if (completatoRef.current) return;
+        // Riposiziona random e ri-mostra la pallina.
+        const stage = stageRef.current;
+        if (stage) {
+          const r = PALLA_DIAMETRO_PX / 2;
+          posRef.current.x = r + Math.random() * (stage.clientWidth  - 2 * r);
+          posRef.current.y = r + Math.random() * (stage.clientHeight - 2 * r);
+        }
+        if (pallaRef.current) {
+          pallaRef.current.style.backgroundColor = nonTarget;
+          pallaRef.current.style.opacity = "1";
+        }
+        setBurst(null);
+      }, 320);
+      return;
     }
+    falseAlarmsRef.current++;
     // Scale flash via RAF ref (nessun re-render)
     tapFlashRef.current = true;
     setTimeout(() => { tapFlashRef.current = false; }, 200);
@@ -262,10 +297,34 @@ export function BouncingBall({
             backgroundColor: NON_TARGET_COLORS[0],
             willChange:      "transform",
             pointerEvents:   "none",
-            transition:      "background-color 0.12s ease",
+            transition:      "background-color 0.12s ease, opacity 0.12s ease",
           }}
           aria-hidden="true"
         />
+        {burst && (
+          <div
+            key={burst.id}
+            style={{
+              position: "absolute",
+              left:  burst.x - PALLA_DIAMETRO_PX / 2,
+              top:   burst.y - PALLA_DIAMETRO_PX / 2,
+              width:  PALLA_DIAMETRO_PX,
+              height: PALLA_DIAMETRO_PX,
+              borderRadius: "50%",
+              pointerEvents: "none",
+              background: `radial-gradient(circle, ${TARGET_COLOR} 0%, ${TARGET_COLOR}80 40%, transparent 75%)`,
+              animation: "vm-ball-burst 320ms ease-out forwards",
+            }}
+            aria-hidden="true"
+          />
+        )}
+        <style>{`
+          @keyframes vm-ball-burst {
+            0%   { transform: scale(1);   opacity: 1; }
+            60%  { transform: scale(2.4); opacity: 0.6; }
+            100% { transform: scale(3.5); opacity: 0; }
+          }
+        `}</style>
       </div>
     </div>
   );

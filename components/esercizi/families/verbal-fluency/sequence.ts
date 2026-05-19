@@ -12,18 +12,24 @@
 import { VF_CATEGORIE, type VFCategoria } from "./categorie";
 import type { VFBanda } from "./levels";
 
-export type VFVariante = "semantica" | "fonemica";
+export type VFVariante = "semantica" | "fonemica" | "alternata";
 
 export interface StimoloVF {
   variante:       VFVariante;
   categoria:      string;   // label mostrata ("animali") o lettera ("F")
+  /** Id della categoria semantica (per wordlist). Vuoto in fonemica. */
+  categoriaId:    string;
+  /** Solo per "alternata": seconda categoria con cui alternare. */
+  categoria2?:    string;
+  categoria2Id?:  string;
   scoreThreshold: number;
   tLimMs:         number;
 }
 
 export type RispostaVF = {
-  parole: string[];  // lista parole accettate (dedup + filtrate)
-  score:  number;    // = parole.length
+  parole:  string[];  // lista parole accettate (validate)
+  errori:  number;    // numero parole rigettate dall'utente (non valide / non in categoria)
+  score:   number;    // = parole.length
 } | null;
 
 // ── Pool categorie semantiche senza ripetizione ───────────────────────────────
@@ -73,7 +79,24 @@ export function generaStimoloVF(
         rng,
       );
     }
-    return { variante, categoria: cat.label, scoreThreshold, tLimMs };
+    return { variante, categoria: cat.label, categoriaId: cat.id, scoreThreshold, tLimMs };
+  }
+
+  if (variante === "alternata") {
+    // Due categorie distinte dalla stessa banda. L'utente deve alternare:
+    // parola1 della cat A, parola2 della cat B, parola3 di A...
+    const all = VF_CATEGORIE.filter(c => c.banda === banda);
+    const shuf = shuffle(all, rng);
+    const cat1 = shuf[0];
+    const cat2 = shuf[1] ?? shuf[0];
+    return {
+      variante: "alternata",
+      categoria:    cat1.label,
+      categoriaId:  cat1.id,
+      categoria2:   cat2.label,
+      categoria2Id: cat2.id,
+      scoreThreshold, tLimMs,
+    };
   }
 
   // fonemica: evita di ripetere la lettera usata l'ultima volta
@@ -83,7 +106,7 @@ export function generaStimoloVF(
   const lettera = candidates[Math.floor(rng() * candidates.length)];
   poolRef.fonemica.ultimaLettera = lettera;
 
-  return { variante, categoria: lettera, scoreThreshold, tLimMs };
+  return { variante, categoria: lettera, categoriaId: "", scoreThreshold, tLimMs };
 }
 
 // ── Validazione parola ────────────────────────────────────────────────────────

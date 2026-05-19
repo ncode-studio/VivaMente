@@ -16,7 +16,7 @@
  *   - lv 8–10: 7–8 creature mimetizzate, scene densissime, fino a 3 si muovono
  */
 
-export const NATURALISTA_SESSION_TIMER_MS = 90_000;
+export const NATURALISTA_SESSION_TIMER_MS = 60_000;
 
 /** Tipi di scena disponibili. Ogni livello campiona dal proprio pool. */
 export type SceneKind =
@@ -62,8 +62,8 @@ export const NATURALISTA_LEVELS: readonly NaturalistaLevelConfig[] = [
   // Sprite grandi all'inizio (~130u su 1000), scendono fino a ~62u al lv10:
   // restano sempre leggibili senza zoom. La difficoltà sale via mimetismo,
   // numero, scene dense e movimento.
-  { livello:  1, numCreature: 3, creaturaSizeUnits: 130, clickRadiusUnits: 95, scenePool: ["prato"],                                                  mimetismo: 0.00, numMobili: 0, tLimSceneMs: 26_000, densitaSfondo: 0.15, probOcclusione: 0.00 },
-  { livello:  2, numCreature: 3, creaturaSizeUnits: 118, clickRadiusUnits: 88, scenePool: ["prato", "prato-fiorito"],                                 mimetismo: 0.10, numMobili: 0, tLimSceneMs: 28_000, densitaSfondo: 0.25, probOcclusione: 0.00 },
+  { livello:  1, numCreature: 4, creaturaSizeUnits: 100, clickRadiusUnits: 78, scenePool: ["prato"],                                                  mimetismo: 0.10, numMobili: 0, tLimSceneMs: 18_000, densitaSfondo: 0.40, probOcclusione: 0.10 },
+  { livello:  2, numCreature: 4, creaturaSizeUnits:  92, clickRadiusUnits: 74, scenePool: ["prato", "prato-fiorito"],                                 mimetismo: 0.20, numMobili: 0, tLimSceneMs: 20_000, densitaSfondo: 0.50, probOcclusione: 0.20 },
   { livello:  3, numCreature: 4, creaturaSizeUnits: 108, clickRadiusUnits: 82, scenePool: ["prato-fiorito", "stagno-ninfee", "bosco-rado"],           mimetismo: 0.20, numMobili: 0, tLimSceneMs: 32_000, densitaSfondo: 0.35, probOcclusione: 0.15 },
   { livello:  4, numCreature: 5, creaturaSizeUnits:  98, clickRadiusUnits: 76, scenePool: ["bosco-rado", "stagno-ninfee", "fondale-chiaro"],          mimetismo: 0.30, numMobili: 0, tLimSceneMs: 36_000, densitaSfondo: 0.45, probOcclusione: 0.25 },
   { livello:  5, numCreature: 5, creaturaSizeUnits:  90, clickRadiusUnits: 72, scenePool: ["bosco", "sottobosco-autunnale", "fondale-chiaro", "scogliera-marina"], mimetismo: 0.42, numMobili: 0, tLimSceneMs: 40_000, densitaSfondo: 0.55, probOcclusione: 0.35 },

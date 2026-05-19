@@ -103,6 +103,17 @@ export function TutorialOverlay({ config, onComplete }: TutorialOverlayProps) {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
+  // Palette "atelier vintage" coerente con le famiglie più recenti
+  // (Il Postino, Mosaicista, Restauratore). Tono carta crema + seppia.
+  const BG        = "#F4ECD8";
+  const CARD      = "#FBF5E5";
+  const CARD_EDGE = "#E0CFA5";
+  const INK       = "#3D2914";
+  const INK_SOFT  = "#7A5A38";
+  const ACCENT    = "#7A5A38";
+  const SERIF     = "Georgia, 'Times New Roman', serif";
+  const SANS      = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+
   return (
     <div
       ref={dialogRef}
@@ -113,12 +124,13 @@ export function TutorialOverlay({ config, onComplete }: TutorialOverlayProps) {
         position: "fixed",
         inset: 0,
         zIndex: 50,
-        background: "#ffffff",
+        background: BG,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         overflowY: "auto",
-        padding: "48px 24px 40px",
+        padding: "44px 20px 32px",
+        fontFamily: SANS,
       }}
     >
       <div
@@ -127,27 +139,38 @@ export function TutorialOverlay({ config, onComplete }: TutorialOverlayProps) {
           maxWidth: 480,
           display: "flex",
           flexDirection: "column",
-          gap: 28,
+          gap: 22,
           flexGrow: 1,
         }}
       >
-        {/* ── Titolo (opzionale) ───────────────────────────────────────── */}
+        {/* Eyebrow */}
+        <p style={{
+          margin: 0, fontSize: 11, fontWeight: 700,
+          color: INK_SOFT, letterSpacing: "0.18em",
+          textTransform: "uppercase", textAlign: "center",
+        }}>
+          Come si gioca
+        </p>
+
+        {/* Titolo */}
         {pagina.titolo && (
           <h2
             id={ID_TITOLO}
             style={{
-              fontSize: 22,
-              fontWeight: 800,
-              color: "#1e3a5f",
+              fontSize: 28,
+              fontWeight: 500,
+              color: INK,
               textAlign: "center",
               margin: 0,
+              fontFamily: SERIF,
+              letterSpacing: "-0.005em",
             }}
           >
             {pagina.titolo}
           </h2>
         )}
 
-        {/* ── Indicatore pallini (solo multi-pagina) ────────────────────── */}
+        {/* Indicatore pallini (solo multi-pagina) */}
         {paginaTotali > 1 && (
           <div
             style={{ display: "flex", justifyContent: "center", gap: 8 }}
@@ -157,10 +180,10 @@ export function TutorialOverlay({ config, onComplete }: TutorialOverlayProps) {
               <span
                 key={i}
                 style={{
-                  width: 10,
-                  height: 10,
+                  width: 9,
+                  height: 9,
                   borderRadius: "50%",
-                  background: i === paginaCorrente ? "#1d4ed8" : "#cbd5e1",
+                  background: i === paginaCorrente ? ACCENT : "#D6C9A8",
                   display: "inline-block",
                 }}
               />
@@ -168,62 +191,61 @@ export function TutorialOverlay({ config, onComplete }: TutorialOverlayProps) {
           </div>
         )}
 
-        {/* ── Area demo (opzionale) ─────────────────────────────────────── */}
+        {/* Area demo: cartolina crema */}
         {pagina.demo != null && (
           <div
             style={{
               width: "100%",
-              borderRadius: 16,
-              background: "#f8fafc",
-              padding: "24px 16px",
+              borderRadius: 6,
+              background: CARD,
+              border: `1.5px solid ${CARD_EDGE}`,
+              padding: "20px 16px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              boxShadow: "0 2px 8px rgba(61,41,20,0.10)",
             }}
           >
             {pagina.demo}
           </div>
         )}
 
-        {/* ── Testo istruzioni ──────────────────────────────────────────── */}
-        {/* aria-live="polite": screen reader annuncia il testo al cambio pagina */}
+        {/* Testo istruzioni in serif */}
         <div aria-live="polite">
           <p
             id={ID_TESTO}
             style={{
               fontSize: 17,
-              lineHeight: 1.65,
-              color: "#374151",
+              lineHeight: 1.62,
+              color: INK,
               textAlign: "center",
               margin: 0,
+              fontFamily: SERIF,
             }}
           >
             {pagina.testo}
           </p>
         </div>
 
-        {/* ── Spacer: spinge i pulsanti in fondo ───────────────────────── */}
         <div style={{ flexGrow: 1 }} />
 
-        {/* ── Pulsanti navigazione ──────────────────────────────────────── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-
-          {/* Riga principale: [← Indietro] + [Avanti → / Ho capito — Inizia] */}
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             {paginaCorrente > 0 && (
               <button
                 onClick={indietro}
-                className="outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1d4ed8] focus-visible:outline-offset-[3px]"
                 style={{
-                  padding: "14px 20px",
-                  fontSize: 16,
+                  padding: "13px 18px",
+                  fontSize: 15,
                   fontWeight: 600,
-                  borderRadius: 14,
-                  border: "2px solid #1d4ed8",
+                  borderRadius: 6,
+                  border: `1.5px solid ${INK_SOFT}`,
                   background: "transparent",
-                  color: "#1d4ed8",
+                  color: INK_SOFT,
                   cursor: "pointer",
                   flexShrink: 0,
+                  fontFamily: SANS,
+                  letterSpacing: "0.02em",
                 }}
               >
                 ← Indietro
@@ -233,36 +255,38 @@ export function TutorialOverlay({ config, onComplete }: TutorialOverlayProps) {
             <button
               ref={primarioRef}
               onClick={avanti}
-              className="outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1d4ed8] focus-visible:outline-offset-[3px]"
               style={{
                 flex: 1,
-                padding: "16px 20px",
-                fontSize: isUltima ? 18 : 16,
-                fontWeight: 700,
-                borderRadius: 16,
+                padding: "15px 18px",
+                fontSize: isUltima ? 17 : 15,
+                fontWeight: 600,
+                borderRadius: 6,
                 border: "none",
-                background: "#1d4ed8",
-                color: "#ffffff",
+                background: ACCENT,
+                color: "#FFFFFF",
                 cursor: "pointer",
+                fontFamily: SANS,
+                letterSpacing: "0.02em",
+                boxShadow: "0 1px 3px rgba(61,41,20,0.25)",
               }}
             >
               {isUltima ? "Ho capito — Inizia" : "Avanti →"}
             </button>
           </div>
 
-          {/* Salta: solo su pagine intermedie */}
           {!isUltima && (
             <button
               onClick={onComplete}
-              className="outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#64748b] focus-visible:outline-offset-[3px]"
               style={{
                 background: "none",
                 border: "none",
-                color: "#64748b",
-                fontSize: 15,
+                color: INK_SOFT,
+                fontSize: 13,
                 cursor: "pointer",
-                padding: "8px",
+                padding: "6px",
                 alignSelf: "center",
+                fontFamily: SERIF,
+                letterSpacing: "0.04em",
                 textDecoration: "underline",
                 textUnderlineOffset: 3,
               }}

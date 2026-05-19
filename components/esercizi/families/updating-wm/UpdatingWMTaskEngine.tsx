@@ -75,8 +75,11 @@ export function UpdatingWMTaskEngine({
       if (isNumeri && levelB) {
         const list  = levelB.trasformazioni;
         const trasf = list[trasfIdxRef.current % list.length];
+        const isFirst   = trasfIdxRef.current === 0;
+        const prevTrasf = isFirst ? null : list[(trasfIdxRef.current - 1) % list.length];
         trasfIdxRef.current++;
-        return generaStimoloN(levelB, ctx.valoreCorrente, trasf, rng.current);
+        const stim = generaStimoloN(levelB, ctx.valoreCorrente, trasf, rng.current);
+        return { ...stim, mostraRegola: isFirst || trasf !== prevTrasf };
       }
       if (levelA) {
         return generaStimoloPIInner(

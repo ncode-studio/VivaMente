@@ -58,8 +58,8 @@ export interface MosaicistaLevelConfig {
 
 export const MOSAICISTA_LEVELS: readonly MosaicistaLevelConfig[] = [
   // lv 1–3: geometrici procedurali, frammenti grandi, no rotazione
-  { livello:  1, source: "procedural", fragmentsMin: 4,  fragmentsMax: 4,  rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 12_000, previewMs: 2_500, cellSizePx: 92 },
-  { livello:  2, source: "procedural", fragmentsMin: 4,  fragmentsMax: 6,  rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 14_000, previewMs: 3_000, cellSizePx: 88 },
+  { livello:  1, source: "procedural", fragmentsMin: 4,  fragmentsMax: 4,  rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 12_000, previewMs: 4_500, cellSizePx: 92 },
+  { livello:  2, source: "procedural", fragmentsMin: 4,  fragmentsMax: 6,  rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 14_000, previewMs: 4_500, cellSizePx: 88 },
   { livello:  3, source: "procedural", fragmentsMin: 6,  fragmentsMax: 6,  rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 16_000, previewMs: 3_500, cellSizePx: 84 },
   // lv 4–7: soggetti figurativi curati, frammenti medi
   { livello:  4, source: "curato",     fragmentsMin: 8,  fragmentsMax: 12, rotazioneAttiva: false, rotazioneRatio: 0,    coloriAmbigui: false, tLimMosaicoMs: 18_000, previewMs: 4_000, cellSizePx: 80 },

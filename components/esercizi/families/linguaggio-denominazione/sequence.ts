@@ -29,6 +29,9 @@ export interface LDPoolRef {
   nc_m:  SAItem[]; idxNcM:  number;
   rng: () => number;
   saQueue: SARelazione[];
+  /** Coppie già viste nella sessione (chiave = `${target}|${probe}`).
+   *  Garantisce che la stessa coppia non si ripeta. */
+  visti: Set<string>;
 }
 
 function shuffle<T>(arr: T[], rng: () => number): T[] {
@@ -53,6 +56,7 @@ export function creaPoolRef(rng: () => number): LDPoolRef {
     nc_m:  byRel(POOL_SA_MEDIA as SAItem[], "non_correlato"), idxNcM:  0,
     rng,
     saQueue: [],
+    visti: new Set(),
   };
 }
 
@@ -68,24 +72,38 @@ export function generaSynonymAntonym(
   }
   const relazione = poolRef.saQueue.shift()!;
 
-  let item: SAItem;
-  if (difficoltà === "bassa") {
-    if (relazione === "sinonimo") {
-      item = poolRef.sin_b[poolRef.idxSinB++ % poolRef.sin_b.length];
-    } else if (relazione === "contrario") {
-      item = poolRef.con_b[poolRef.idxConB++ % poolRef.con_b.length];
-    } else {
-      item = poolRef.nc_b[poolRef.idxNcB++ % poolRef.nc_b.length];
+  const pick = (): SAItem => {
+    if (difficoltà === "bassa") {
+      if (relazione === "sinonimo")  return poolRef.sin_b[poolRef.idxSinB++ % poolRef.sin_b.length];
+      if (relazione === "contrario") return poolRef.con_b[poolRef.idxConB++ % poolRef.con_b.length];
+      return poolRef.nc_b[poolRef.idxNcB++ % poolRef.nc_b.length];
     }
-  } else {
-    if (relazione === "sinonimo") {
-      item = poolRef.sin_m[poolRef.idxSinM++ % poolRef.sin_m.length];
-    } else if (relazione === "contrario") {
-      item = poolRef.con_m[poolRef.idxConM++ % poolRef.con_m.length];
-    } else {
-      item = poolRef.nc_m[poolRef.idxNcM++ % poolRef.nc_m.length];
+    if (relazione === "sinonimo")  return poolRef.sin_m[poolRef.idxSinM++ % poolRef.sin_m.length];
+    if (relazione === "contrario") return poolRef.con_m[poolRef.idxConM++ % poolRef.con_m.length];
+    return poolRef.nc_m[poolRef.idxNcM++ % poolRef.nc_m.length];
+  };
+
+  // Dedup: scarta coppie già viste nella sessione. Limite di tentativi =
+  // dimensione del segmento corrente (oltre quel limite il pool è
+  // esaurito e si accetta la ripetizione).
+  const segLen = (() => {
+    if (difficoltà === "bassa") {
+      if (relazione === "sinonimo")  return poolRef.sin_b.length;
+      if (relazione === "contrario") return poolRef.con_b.length;
+      return poolRef.nc_b.length;
     }
+    if (relazione === "sinonimo")  return poolRef.sin_m.length;
+    if (relazione === "contrario") return poolRef.con_m.length;
+    return poolRef.nc_m.length;
+  })();
+
+  let item = pick();
+  let safety = 0;
+  while (poolRef.visti.has(`${item.target}|${item.probe}`) && safety < segLen) {
+    item = pick();
+    safety++;
   }
+  poolRef.visti.add(`${item.target}|${item.probe}`);
 
   return {
     modo: "synonym_antonym",

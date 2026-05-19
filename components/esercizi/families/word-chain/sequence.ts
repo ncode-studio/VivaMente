@@ -105,19 +105,19 @@ export function generaStimoloWC(
   rng:          () => number,
 ): StimoloWC {
   const maxPerCat = distanza === "alta" ? 1 : 2;
-  const totalLetters = ITALIAN_ALPHABET.length; // 21
 
-  // Trova posizioni di partenza valide (tutte le N lettere hanno ≥1 parola)
-  const validStarts: number[] = [];
-  for (let s = 0; s <= totalLetters - nWords; s++) {
-    const ok = ITALIAN_ALPHABET.slice(s, s + nWords).every(
-      (l) => PAROLE_PER_LETTERA[l].length >= 1,
-    );
-    if (ok) validStarts.push(s);
-  }
-
-  const startIdx = validStarts[Math.floor(rng() * validStarts.length)] ?? 0;
-  const sequenza = ITALIAN_ALPHABET.slice(startIdx, startIdx + nWords) as LetteraIT[];
+  // Lettere SCELTE A CASO (non consecutive nell'alfabeto). Riordino poi
+  // alfabeticamente per la sequenza target — l'utente deve ordinare in
+  // ordine alfabetico ma su lettere salteggianti (es. C-G-M-P), il che
+  // è più impegnativo della catena consecutiva (B-C-D-E).
+  const lettereDisponibili = ITALIAN_ALPHABET.filter(
+    (l) => PAROLE_PER_LETTERA[l].length >= 1,
+  );
+  const lettereShuffled = shuffle(lettereDisponibili, rng);
+  const scelte = lettereShuffled.slice(0, nWords);
+  const sequenza = scelte.sort(
+    (a, b) => ITALIAN_ALPHABET.indexOf(a) - ITALIAN_ALPHABET.indexOf(b),
+  ) as LetteraIT[];
 
   // Seleziona una parola per lettera rispettando il vincolo distanza
   const catCount: Record<string, number> = {};

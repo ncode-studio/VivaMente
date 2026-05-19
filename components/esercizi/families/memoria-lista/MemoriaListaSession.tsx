@@ -89,8 +89,54 @@ export function MemoriaListaSession({
     setFase("recognition");
   }, []);
 
+  // ── Timer fase recognition ────────────────────────────────────────────────
+  // Allo scadere si invia automaticamente la risposta con la selezione
+  // corrente (anche vuota), per dare pressione temporale al recall.
+  const [recallMsLeft, setRecallMsLeft] = useState<number | null>(null);
+  useEffect(() => {
+    if (fase !== "recognition") return;
+    const tot = stimoloRef.current.recallTimerMs;
+    if (!tot) return;
+    const start = performance.now();
+    setRecallMsLeft(tot);
+    const id = setInterval(() => {
+      const left = Math.max(0, tot - (performance.now() - start));
+      setRecallMsLeft(left);
+      if (left <= 0) {
+        clearInterval(id);
+        if (!completatoRef.current) {
+          completatoRef.current = true;
+          onRispostaRef.current({ selezionati: selezioneRef.current });
+        }
+      }
+    }, 200);
+    return () => clearInterval(id);
+  }, [fase]);
+
   // ── Toggle selezione ──────────────────────────────────────────────────────
+  // Quando requireOrder=true la selezione è ordinata: si "aggiunge in coda"
+  // se non già presente, si "rimuove" se è l'ultimo. Le altre selezioni
+  // non possono essere de-selezionate singolarmente (per non riordinare).
   const handleToggle = useCallback((id: string) => {
+    const requireOrder = stimoloRef.current.requireOrder === true;
+    if (requireOrder) {
+      const cur = selezioneRef.current;
+      if (cur.includes(id)) {
+        // Toggle solo se è l'ultimo, altrimenti no-op.
+        if (cur[cur.length - 1] === id) {
+          const next = cur.slice(0, -1);
+          selezioneRef.current = next;
+          setSelezione(new Set(next));
+        }
+        return;
+      }
+      // Limita all'attesa: non oltre items.length.
+      if (cur.length >= stimoloRef.current.items.length) return;
+      const next = [...cur, id];
+      selezioneRef.current = next;
+      setSelezione(new Set(next));
+      return;
+    }
     setSelezione(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -147,8 +193,38 @@ export function MemoriaListaSession({
   // ── Render recognition ─────────────────────────────────────────────────────
   const nSel = selezione.size;
 
+  const totRecall = stimolo.recallTimerMs ?? null;
+  const recallPct = totRecall && recallMsLeft !== null
+    ? (recallMsLeft / totRecall) * 100
+    : null;
+  const recallBarColor = recallPct === null ? "#22C55E"
+    : recallPct > 50 ? "#22C55E"
+    : recallPct > 25 ? "#F59E0B" : "#EF4444";
+
   return (
     <div className="flex flex-col items-center gap-4 px-4 py-4">
+      {/* Mini-timer recall */}
+      {totRecall !== null && recallMsLeft !== null && (
+        <div style={{ width: "100%", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <div style={{
+            flex: 1, height: 8, borderRadius: 4,
+            backgroundColor: "#E2E8F0", overflow: "hidden",
+          }}>
+            <div style={{
+              height: "100%", width: `${recallPct}%`,
+              backgroundColor: recallBarColor,
+              transition: "width 0.2s linear",
+            }} />
+          </div>
+          <span style={{
+            fontSize: "0.85rem", fontWeight: 700, color: "#475569",
+            minWidth: "2.5rem", textAlign: "right",
+          }}>
+            {Math.ceil(recallMsLeft / 1000)}s
+          </span>
+        </div>
+      )}
+
       {/* Intestazione */}
       <p style={{ fontSize: "0.7rem", color: "#7C3AED", fontWeight: 700,
         letterSpacing: "0.08em" }}>
@@ -156,7 +232,9 @@ export function MemoriaListaSession({
       </p>
 
       <p style={{ fontSize: "0.8rem", color: "#6D28D9", fontWeight: 600 }}>
-        Tocca {stimolo.variante === "immagini" ? "le immagini" : "le parole"} che hai visto
+        {stimolo.requireOrder
+          ? `Tocca ${stimolo.variante === "immagini" ? "le immagini" : "le parole"} nell'ORDINE in cui sono apparse`
+          : `Tocca ${stimolo.variante === "immagini" ? "le immagini" : "le parole"} che hai visto`}
       </p>
 
       {/* Griglia */}
@@ -169,6 +247,9 @@ export function MemoriaListaSession({
         }}>
           {stimolo.griglia.map((item) => {
             const sel = selezione.has(item.id);
+            const ordine = stimolo.requireOrder
+              ? selezioneRef.current.indexOf(item.id) + 1
+              : 0;
             return (
               <button
                 key={item.id}
@@ -190,7 +271,7 @@ export function MemoriaListaSession({
                   <span style={{
                     position: "absolute", top: 2, right: 5,
                     fontSize: "0.7rem", color: "#16A34A", fontWeight: 800,
-                  }}>✓</span>
+                  }}>{stimolo.requireOrder && ordine > 0 ? ordine : "✓"}</span>
                 )}
               </button>
             );

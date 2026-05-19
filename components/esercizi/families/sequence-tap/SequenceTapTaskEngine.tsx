@@ -68,10 +68,13 @@ export function SequenceTapTaskEngine({
   const mode = useMemo(() => modeFromId(esercizioId), [esercizioId]);
 
   // ── trialsPerSession ───────────────────────────────────────────────────────
-  const trialsPerSession = useMemo(() => {
+  // Rimosso dall'uso: Modello A puro chiude la sessione solo al timer.
+  // Calcolo conservato per analytics futura.
+  const _trialsPerSession = useMemo(() => {
     if (mode === "parole_backward") return getSTBackwardLevel(livello).trialsPerSession;
     return getSTStreamLevel(mode, livello).trialsPerSession;
   }, [mode, livello]);
+  void _trialsPerSession;
 
   // ── microProgressione ──────────────────────────────────────────────────────
   const microProgressione = useMemo((): MicroProgressioneConfig => {
@@ -165,7 +168,11 @@ export function SequenceTapTaskEngine({
   return (
     <TrialFlow<StimoloST, RispostaST>
       tLimMs={null}
-      trialValutativi={trialsPerSession}
+      // Modello A puro: il timer di sessione (registry SESSION_TIMER_MS) è
+      // l'unica condizione di fine. trialsPerSession resta come hint ma non
+      // chiude l'esercizio in anticipo. (Fix: l'esercizio terminava prima
+      // dello scadere del timer.)
+      trialValutativi={null}
       microProgressione={microProgressione}
       generaStimolo={generaStimolo}
       renderStimolo={renderStimolo}

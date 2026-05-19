@@ -101,7 +101,8 @@ export function WordChainTaskEngine({
   return (
     <TrialFlow<StimoloWC, RispostaWC>
       tLimMs={null}
-      trialValutativi={level.trialsPerSession}
+      // Modello A puro: termina solo al timer di sessione.
+      trialValutativi={null}
       microProgressione={microProgressione}
       generaStimolo={generaStimolo}
       renderStimolo={renderStimolo}

@@ -60,8 +60,8 @@ export const FLOOR_TLIM_FALEGNAME = 3500;
 
 export const FALEGNAME_LEVELS: readonly FalegnameLevelConfig[] = [
   // L1–L2: solo lettere intagliate — Cooper & Shepard, paradigma "puro"
-  { livello:  1, tLimMs: 10000, dimensioni: 2, angoloMax:  90, conSpecchio: false, stessoGruppo: false, numVarianti: 0, bandeComplessita: [1],       etichetta: "Lettere · 90°"   },
-  { livello:  2, tLimMs:  9000, dimensioni: 2, angoloMax: 135, conSpecchio: false, stessoGruppo: false, numVarianti: 0, bandeComplessita: [1],       etichetta: "Lettere · 135°"  },
+  { livello:  1, tLimMs:  7000, dimensioni: 2, angoloMax:  90, conSpecchio: false, stessoGruppo: false, numVarianti: 0, bandeComplessita: [1],       etichetta: "Lettere · 90°"   },
+  { livello:  2, tLimMs:  6500, dimensioni: 2, angoloMax: 135, conSpecchio: false, stessoGruppo: false, numVarianti: 0, bandeComplessita: [1],       etichetta: "Lettere · 135°"  },
   // L3: lettere + introduzione near-miss
   { livello:  3, tLimMs:  8500, dimensioni: 2, angoloMax: 180, conSpecchio: false, stessoGruppo: true,  numVarianti: 1, bandeComplessita: [1],       etichetta: "Near-miss"       },
   // L4: passaggio agli utensili — nuovo mondo visivo

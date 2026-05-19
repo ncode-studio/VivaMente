@@ -80,6 +80,12 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
 
   // ── Stato sessione (refs per accumulatori, state per render) ─────────────
   const completedRef = useRef(false);
+  // Accumulatori sull'intera sessione (catena di mosaici).
+  const slotsCorrettiTotRef = useRef(0);
+  const slotsTotaliTotRef   = useRef(0);
+  const mosaiciTotRef       = useRef(0);
+  const mosaiciPerfettiRef  = useRef(0);
+  const tempoMosaiciMsRef   = useRef(0);
 
   const [currentMosaic, setCurrentMosaic] = useState<MosaicDef | null>(null);
   const [pool, setPool] = useState<PoolFragment[]>([]);
@@ -204,59 +210,68 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
 
   // ── Fine sessione ────────────────────────────────────────────────────────
   /**
-   * Chiude la sessione con il risultato calcolato sui slot indicati.
-   * Chiamata sia quando il mosaico è interamente riempito (esauriti i pezzi),
-   * sia quando il timer 60s scade.
+   * Chiude la sessione usando gli accumulatori dell'intera catena di mosaici.
+   * Chiamata SOLO quando il timer di sessione scade.
    */
-  const terminaSessione = useCallback((slotsCorretti: number, slotsTotali: number) => {
+  const terminaSessione = useCallback(() => {
     if (completedRef.current) return;
     completedRef.current = true;
 
-    const tempoSpesoMs = performance.now() - mosaicStartTsRef.current;
-    const perfetto = slotsTotali > 0 && slotsCorretti === slotsTotali;
+    // Includi anche il mosaico in corso (non ancora completato) come parziale.
+    const curSlots = slotsRef.current;
+    const corrCorrenti = curSlots.filter(s => s.corretto).length;
+    const totCorrenti  = curSlots.length;
+
+    const slotsCorretti = slotsCorrettiTotRef.current + corrCorrenti;
+    const slotsTotali   = slotsTotaliTotRef.current   + totCorrenti;
+
     const accuratezzaValutativa = slotsTotali > 0 ? slotsCorretti / slotsTotali : 0;
 
-    let scoreGrezzo: number;
-    if (perfetto) {
-      const speedFactor = Math.max(0, 1 - tempoSpesoMs / config.tLimMosaicoMs);
-      scoreGrezzo = Math.min(100, 60 + Math.round(40 * speedFactor));
-    } else {
-      scoreGrezzo = Math.round((slotsCorretti / Math.max(1, slotsTotali)) * 50);
-    }
+    // Score composito: peso 60% accuratezza, 40% mosaici completati per
+    // unità di tempo (proxy velocità).
+    const accBonus = Math.round(accuratezzaValutativa * 60);
+    const speedBonus = Math.min(40, mosaiciPerfettiRef.current * 8);
+    const scoreGrezzo = Math.min(100, accBonus + speedBonus);
 
     onComplete({
       accuratezzaValutativa,
       scoreGrezzo,
       metriche: {
-        mosaico_perfetto: perfetto ? 1 : 0,
-        slot_corretti: slotsCorretti,
-        slot_totali: slotsTotali,
+        slot_corretti:    slotsCorretti,
+        slot_totali:      slotsTotali,
+        mosaici_completi: mosaiciTotRef.current,
+        mosaici_perfetti: mosaiciPerfettiRef.current,
       },
     });
-  }, [config.tLimMosaicoMs, onComplete]);
+  }, [onComplete]);
 
-  // Trigger di fine sessione su timer scaduto (fallback se l'utente non
-  // riempie completamente il mosaico entro i 60s).
+  // Trigger fine sessione su timer scaduto.
   useEffect(() => {
     if (!tempoScaduto) return;
-    const cur = slotsRef.current;
-    const slotsCorretti = cur.filter(s => s.corretto).length;
-    const slotsTotali = cur.length;
-    terminaSessione(slotsCorretti, slotsTotali);
+    terminaSessione();
   }, [tempoScaduto, terminaSessione]);
 
-  // Trigger di fine sessione quando TUTTI gli slot sono occupati (l'utente
-  // ha esaurito le mosse). Si attiva solo in fase playing dopo qualunque
-  // cambio di stato di `slots` — affidabile anche su drag tra slot.
+  // Trigger encatenamento: quando TUTTI gli slot sono occupati, accumula
+  // i risultati del mosaico corrente e genera il prossimo. Non termina
+  // mai la sessione qui: la sessione termina solo via timer.
   useEffect(() => {
     if (fase !== "playing" || completedRef.current) return;
     if (slots.length === 0) return;
     if (!slots.every(s => s.occupatoDa !== null)) return;
     const corretti = slots.filter(s => s.corretto).length;
     const totali = slots.length;
-    const id = setTimeout(() => terminaSessione(corretti, totali), 500);
+    const id = setTimeout(() => {
+      if (completedRef.current) return;
+      slotsCorrettiTotRef.current += corretti;
+      slotsTotaliTotRef.current   += totali;
+      mosaiciTotRef.current++;
+      if (corretti === totali) mosaiciPerfettiRef.current++;
+      tempoMosaiciMsRef.current += performance.now() - mosaicStartTsRef.current;
+      // Genera il prossimo mosaico (fase tornerà a 'preview' → 'playing').
+      setupMosaic();
+    }, 500);
     return () => clearTimeout(id);
-  }, [slots, fase, terminaSessione]);
+  }, [slots, fase, setupMosaic]);
 
   // ── Drag logic ────────────────────────────────────────────────────────────
 

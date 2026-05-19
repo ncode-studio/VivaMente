@@ -34,7 +34,9 @@ export function VerbalFluencyTaskEngine({
 }: GameEngineProps) {
 
   const variante: VFVariante =
-    esercizioId === "verbal_fluency_fonemica" ? "fonemica" : "semantica";
+    esercizioId === "verbal_fluency_fonemica" ? "fonemica" :
+    esercizioId === "verbal_fluency_alternata" ? "alternata" :
+    "semantica";
 
   const config  = getVFLevel(livello);
   const rngRef  = useRef<() => number>(Math.random);
@@ -91,7 +93,8 @@ export function VerbalFluencyTaskEngine({
       return {
         ...precedenti,
         trial_completati: (precedenti.trial_completati ?? 0) + 1,
-        parole_totali:    (precedenti.parole_totali    ?? 0) + (risposta?.score ?? 0),
+        parole_totali:    (precedenti.parole_totali    ?? 0) + (risposta?.score  ?? 0),
+        errori_totali:    (precedenti.errori_totali    ?? 0) + (risposta?.errori ?? 0),
       };
     },
     [],
