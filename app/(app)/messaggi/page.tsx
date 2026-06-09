@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { COLORS } from "@/lib/design-tokens";
 import { useUserStore } from "@/lib/store";
-import { segnaMessaggioLetto } from "@/lib/sync";
+import { segnaMessaggioLetto, fetchMessaggi } from "@/lib/sync";
 import { ArrowLeft, Check } from "iconoir-react";
 
 const RELAZIONE_STYLE: Record<string, { bg: string; text: string }> = {
@@ -34,11 +34,21 @@ const FILTRO_LABEL: Record<Filtro, string> = {
 
 export default function MessaggiPage() {
   const router = useRouter();
-  const { isGuest, messaggi, segnaMessaggioLettoLocale } = useUserStore();
+  const { isGuest, messaggi, userId, setUser, segnaMessaggioLettoLocale } = useUserStore();
   const [filtro, setFiltro] = useState<Filtro>("tutti");
   const [lettiLocali, setLettiLocali] = useState<Set<string>>(
     () => new Set(messaggi.filter((m) => m.letto).map((m) => m.id))
   );
+
+  // Ricarica i messaggi all'apertura: lo store è popolato solo al login, quindi
+  // i messaggi inviati dai familiari dopo l'accesso non comparirebbero senza
+  // un nuovo login. Qui aggiorniamo allo stato corrente del DB.
+  useEffect(() => {
+    if (isGuest || !userId) return;
+    let annullato = false;
+    fetchMessaggi(userId).then((m) => { if (!annullato) setUser({ messaggi: m }); });
+    return () => { annullato = true; };
+  }, [isGuest, userId, setUser]);
 
   function segnaLetto(id: string) {
     setLettiLocali((prev) => new Set(prev).add(id));
@@ -58,7 +68,7 @@ export default function MessaggiPage() {
   }, [isGuest]);
 
   const messaggiFiltrati = messaggi.filter((msg) => {
-    const letto = lettiLocali.has(msg.id);
+    const letto = msg.letto || lettiLocali.has(msg.id);
     if (filtro === "da_leggere") return !letto;
     if (filtro === "letti") return letto;
     return true;
@@ -105,7 +115,7 @@ export default function MessaggiPage() {
         {/* Lista messaggi — card separate */}
         <div className="flex-1 flex flex-col gap-3 px-4">
           {messaggiFiltrati.map((msg) => {
-            const letto = lettiLocali.has(msg.id);
+            const letto = msg.letto || lettiLocali.has(msg.id);
             const relStyle = RELAZIONE_STYLE[msg.relazione] ?? { bg: COLORS.primaryLight, text: COLORS.primary };
             return (
               <div

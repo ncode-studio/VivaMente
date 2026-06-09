@@ -96,6 +96,7 @@ export default function EsercizioPage() {
   const cc = esercizio ? (CATEGORIA_COLORS[esercizio.categoria_id] ?? null) : null;
   const nomeCat = esercizio ? (NOMI_CAT[esercizio.categoria_id] ?? esercizio.categoria_id) : "";
   const iconaCat = esercizio ? (ICONE_CAT[esercizio.categoria_id] ?? null) : null;
+  const inGioco = stato === "running" || stato === "time-up";
 
   // ── Effect A: mount queries + unmount cleanup ───────────────────────────────
   useEffect(() => {
@@ -144,25 +145,25 @@ export default function EsercizioPage() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Effect B-bis: blocca browser back / gesture mentre l'esercizio è attivo
-  // Pusha uno stato sentinella nella history e intercetta popstate per
-  // riannullarlo. L'utente può uscire SOLO usando il bottone della UI
-  // (che è già disabilitato nello stesso intervallo).
+  // ── Effect B-bis: intercetta il back del browser/gesture durante l'esercizio
+  // Pusha uno stato sentinella nella history; quando l'utente preme indietro
+  // (gesture o tasto fisico), invece di uscire dalla pagina lo riportiamo alla
+  // schermata intro/tutorial. Dipende da `inGioco` (boolean) così non viene
+  // ri-eseguito sulla transizione running→time-up (niente sentinelle doppie).
   useEffect(() => {
-    if (stato !== "running" && stato !== "time-up") return;
+    if (!inGioco) return;
     if (typeof window === "undefined") return;
     const guard = "vm_ex_lock_" + Date.now();
     window.history.pushState({ guard }, "");
     const onPop = () => {
-      // L'utente ha provato a tornare indietro: ri-pusha lo stato per
-      // mantenerlo sulla pagina.
-      window.history.pushState({ guard }, "");
+      // Back durante l'esercizio → torna alla pagina del tutorial (intro).
+      setStato("intro");
     };
     window.addEventListener("popstate", onPop);
     return () => {
       window.removeEventListener("popstate", onPop);
     };
-  }, [stato]);
+  }, [inGioco]);
 
   // ── Effect C: overflow per stato gioco + reset su rientro in intro ──────────
   useEffect(() => {
@@ -344,9 +345,17 @@ export default function EsercizioPage() {
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 px-4 py-4 bg-surface border-b border-border sticky top-0 z-10">
         <button
-          onClick={() => { if (stato !== "running" && stato !== "time-up") router.back(); }}
-          disabled={stato === "running" || stato === "time-up"}
-          className="w-12 h-12 rounded-full flex items-center justify-center text-xl active:scale-95 disabled:opacity-40"
+          onClick={() => {
+            if (inGioco) {
+              // Torna alla pagina del tutorial. history.back() consuma la
+              // sentinella e fa scattare il guard (popstate → stato "intro").
+              window.history.back();
+            } else {
+              router.back();
+            }
+          }}
+          aria-label={inGioco ? "Torna al tutorial" : "Indietro"}
+          className="w-12 h-12 rounded-full flex items-center justify-center text-xl active:scale-95"
           style={{ backgroundColor: COLORS.surfaceAlt, color: COLORS.inkSecondary }}
         >
           ←

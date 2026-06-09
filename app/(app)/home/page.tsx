@@ -234,6 +234,10 @@ export default function HomePage() {
   const tuttiCompletati = eserciziDelGiornoEffettivi.length > 0 && completatiOggi === totaleEsercizi;
 
   function iniziaEsercizioRandom() {
+    // Gli ospiti non hanno esercizi reali (la lista è mock): invece di
+    // mandarli su /esercizi/[id] — che li rimbalza all'onboarding perché
+    // privi di userId — li portiamo alla registrazione per sbloccare.
+    if (isGuest) { router.push("/onboarding/registrati"); return; }
     if (eserciziNonCompletati.length === 0) return;
     const random = eserciziNonCompletati[Math.floor(Math.random() * eserciziNonCompletati.length)];
     router.push(`/esercizi/${random.id}`);
@@ -417,7 +421,7 @@ export default function HomePage() {
 
                   return (
                     <div key={esercizio.id}>
-                      <Link href={esercizio.completato ? "#" : `/esercizi/${esercizio.id}`}>{row}</Link>
+                      <Link href={isGuest ? "/onboarding/registrati" : (esercizio.completato ? "#" : `/esercizi/${esercizio.id}`)}>{row}</Link>
                       {!isLast && <div style={{ height: 1, backgroundColor: COLORS.border }} />}
                     </div>
                   );
