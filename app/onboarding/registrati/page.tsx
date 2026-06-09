@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Btn from "@/components/ui/btn";
-import { useUserStore, type CanalNotifica } from "@/lib/store";
+import { useUserStore } from "@/lib/store";
 import { COLORS } from "@/lib/design-tokens";
 import { Mail, ArrowLeft } from "iconoir-react";
 import StepLines from "@/components/ui/step-lines";
@@ -12,11 +12,6 @@ import { createClient } from "@/lib/supabase/client";
 import { createUserProfile, initUserData } from "@/lib/sync";
 
 const ORE = ["07:00","08:00","09:00","10:00","11:00","12:00","14:00","16:00","18:00","20:00","21:00"];
-const CANALI: { id: CanalNotifica; label: string }[] = [
-  { id: "whatsapp", label: "WhatsApp" },
-  { id: "sms",      label: "SMS" },
-  { id: "email",    label: "Email" },
-];
 
 const inputCls = `w-full min-h-[56px] rounded-md px-4 text-base bg-white text-ink border-2 border-[#E2E8F0]
   focus:outline-none focus:border-[#1891B1] transition-colors placeholder-[#5A5A72]`;
@@ -87,7 +82,6 @@ function OnboardingRegistratiContent() {
   const [email, setEmail]       = useState("");
   const [emailToccata, setEmailToccata] = useState(false);
   const [promemoria, setPromemoria] = useState<"si" | "no" | null>(null);
-  const [canale, setCanale]     = useState<CanalNotifica | null>(null);
   const [orario, setOrario]     = useState("");
   const [step, setStep]         = useState<Step>("form");
   const [codice, setCodice]     = useState("");
@@ -95,7 +89,7 @@ function OnboardingRegistratiContent() {
   const [errore, setErrore]     = useState<string | null>(null);
 
   const vuolePromemoria = promemoria === "si";
-  const canaleScelto = canale ?? "sms";
+  const canaleScelto = "email";
 
   function isEmailValida(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 
@@ -209,12 +203,11 @@ function OnboardingRegistratiContent() {
           {vuolePromemoria && (
             <>
               <div>
-                <label className="text-sm font-bold text-ink-secondary block mb-2">Come vuoi essere avvisato?</label>
-                <ToggleGroup options={CANALI} value={canale} onChange={(v) => setCanale(v as CanalNotifica)} />
-              </div>
-              <div>
                 <label className="text-sm font-bold text-ink-secondary block mb-2">A che ora? *</label>
                 <OrarioSelect value={orario} onChange={setOrario} />
+                <p className="text-xs mt-2" style={{ color: COLORS.inkMuted }}>
+                  Riceverai il promemoria via email all&apos;indirizzo indicato sopra.
+                </p>
               </div>
             </>
           )}

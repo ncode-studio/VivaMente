@@ -87,6 +87,7 @@ function EserciziPageContent() {
       // Pausa attiva → chiedi se interrompere
       setEsercizioTarget(id);
       setMostraConfermaInterruzione(true);
+      setNavNascosta(true);
     } else if (eserciziFattiOggi >= LIMITE_ESERCIZI_GIORNO) {
       setEsercizioTarget(id);
       setMostraPausa(true); setNavNascosta(true);
@@ -299,9 +300,9 @@ function EserciziPageContent() {
       {/* Modal conferma interruzione pausa attiva */}
       {mostraConfermaInterruzione && (
         <div
-          className="fixed inset-0 z-[60] flex items-end justify-center px-4 pb-6"
+          className="fixed inset-0 z-[100] flex items-end justify-center px-4 pb-6"
           style={{ backgroundColor: "rgba(0,0,0,0.35)" }}
-          onClick={() => setMostraConfermaInterruzione(false)}
+          onClick={() => { setMostraConfermaInterruzione(false); setNavNascosta(false); }}
         >
           <div
             className="w-full max-w-lg rounded-2xl px-6 pt-4 pb-6 flex flex-col items-center gap-4"
@@ -319,6 +320,7 @@ function EserciziPageContent() {
               style={{ backgroundColor: COLORS.primary }}
               onClick={() => {
                 setMostraConfermaInterruzione(false);
+                setNavNascosta(false);
                 router.push("/home");
               }}
             >
@@ -330,6 +332,7 @@ function EserciziPageContent() {
               onClick={() => {
                 setPausaAttivaInizio(null);
                 setMostraConfermaInterruzione(false);
+                setNavNascosta(false);
                 if (esercizioTarget) router.push(`/esercizi/${esercizioTarget}`);
               }}
             >

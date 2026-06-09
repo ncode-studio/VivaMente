@@ -187,7 +187,7 @@ function PausaAttivaView({ secondiRimasti }: { secondiRimasti: number }) {
 
 export default function HomePage() {
   const router = useRouter();
-  const { nome, isGuest, streak, messaggi, eserciziDelGiorno, sessioniRecenti, medaglieDefinizioni, pausaAttivaRichiesta, setPausaAttivaRichiesta, pausaAttivaInizio, setPausaAttivaInizio } = useUserStore();
+  const { nome, isGuest, streak, messaggi, eserciziDelGiorno, trendCategorie, medaglieDefinizioni, pausaAttivaRichiesta, setPausaAttivaRichiesta, pausaAttivaInizio, setPausaAttivaInizio } = useUserStore();
   const [mostraPausa, setMostraPausa] = useState(false);
   const [secondiRimasti, setSecondiRimasti] = useState(0);
 
@@ -438,18 +438,18 @@ export default function HomePage() {
               <div className="flex flex-col gap-3">
                 {[...mockCategorie].sort((a, b) => {
                   const TREND_ORDER: Record<string, number> = { calo: 0, stabile: 1, crescita: 2 };
-                  const trendA = sessioniRecenti.find((s) => s.categoria === a.nome)?.trend ?? "stabile";
-                  const trendB = sessioniRecenti.find((s) => s.categoria === b.nome)?.trend ?? "stabile";
+                  const trendA = trendCategorie[a.id] ?? "stabile";
+                  const trendB = trendCategorie[b.id] ?? "stabile";
                   return (TREND_ORDER[trendA] ?? 1) - (TREND_ORDER[trendB] ?? 1);
                 }).map((cat) => {
                   const cc = CATEGORIA_COLORS[cat.id];
-                  const ultimaSessione = sessioniRecenti.find((s) => s.categoria === cat.nome);
+                  const trendKey = trendCategorie[cat.id];
                   const trendConfig = {
                     crescita: { icon: "↑",  label: "In crescita", color: "#16A34A" },
                     stabile:  { icon: "→",  label: "Stabile",     color: COLORS.primary },
                     calo:     { icon: "↓",  label: "In calo",     color: "#DC2626" },
                   };
-                  const trend = ultimaSessione?.trend ? trendConfig[ultimaSessione.trend] : null;
+                  const trend = trendKey ? trendConfig[trendKey] : null;
                   const row = (
                     <div className="flex items-center gap-4 rounded-xl px-4 py-3" style={{ backgroundColor: cc.bg }}>
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: cc.text + "22" }}>

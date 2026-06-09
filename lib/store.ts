@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { EserciziDelGiornoItem, ProgressoGiorno, SessioneRecente, MessaggioReale, MedagliaDefinizione } from "@/lib/sync";
+import type { EserciziDelGiornoItem, ProgressoGiorno, SessioneRecente, MessaggioReale, MedagliaDefinizione, TrendCategoria } from "@/lib/sync";
 
 export type CanalNotifica = "whatsapp" | "sms" | "email";
 
@@ -41,6 +41,9 @@ export interface UserState {
   userLevels: Record<string, number>;
   progressiSettimanali: ProgressoGiorno[];
   sessioniRecenti: SessioneRecente[];
+  // trend per dominio cognitivo (keyed per slug categoria), calcolato sulle
+  // due sessioni più recenti dello stesso dominio
+  trendCategorie: Record<string, TrendCategoria>;
   // flag cross-page: impostato da /esercizi per far aprire PausaAttivaView in /home
   pausaAttivaRichiesta: boolean;
   // timestamp (ms) di inizio pausa attiva — null = nessuna pausa in corso
@@ -73,7 +76,7 @@ export const useUserStore = create<UserStore>((set) => ({
   email: "",
   anno_nascita: 0,
   orario_notifica: "09:00",
-  canale_notifica: "whatsapp",
+  canale_notifica: "email",
   consenso_notifiche: true,
   medaglie: [],
   medaglieDate: {},
@@ -86,6 +89,7 @@ export const useUserStore = create<UserStore>((set) => ({
   userLevels: {},
   progressiSettimanali: [],
   sessioniRecenti: [],
+  trendCategorie: {},
   familiari: [],
   pausaAttivaRichiesta: false,
   pausaAttivaInizio: null,
@@ -104,7 +108,7 @@ export const useUserStore = create<UserStore>((set) => ({
     email: "",
     anno_nascita: 0,
     orario_notifica: "09:00",
-    canale_notifica: "whatsapp",
+    canale_notifica: "email",
     consenso_notifiche: false,
     medaglie: [],
     medaglieDate: {},
@@ -118,6 +122,7 @@ export const useUserStore = create<UserStore>((set) => ({
     userLevels: {},
     progressiSettimanali: [],
     sessioniRecenti: [],
+    trendCategorie: {},
     messaggi: [],
     pausaAttivaRichiesta: false,
     pausaAttivaInizio: null,
