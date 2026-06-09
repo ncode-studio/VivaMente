@@ -9,6 +9,8 @@ import {
   fetchUserLevels,
   fetchProgressiSettimanali,
   fetchSessioniRecenti,
+  fetchTrendCategorie,
+  fetchFamiliari,
   fetchMessaggi,
   fetchMedaglie,
 } from "@/lib/sync";
@@ -29,13 +31,15 @@ export default function UserInit() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [data, eserciziDelGiorno, userLevels, progressiSettimanali, sessioniRecenti, messaggi, medaglieDefinizioni] =
+      const [data, eserciziDelGiorno, userLevels, progressiSettimanali, sessioniRecenti, trendCategorie, familiari, messaggi, medaglieDefinizioni] =
         await Promise.all([
           initUserData(user.id),
           fetchOrCreateEserciziDelGiorno(user.id),
           fetchUserLevels(user.id),
           fetchProgressiSettimanali(user.id),
           fetchSessioniRecenti(user.id),
+          fetchTrendCategorie(user.id),
+          fetchFamiliari(user.id),
           fetchMessaggi(user.id),
           fetchMedaglie(),
         ]);
@@ -52,6 +56,8 @@ export default function UserInit() {
           userLevels,
           progressiSettimanali,
           sessioniRecenti,
+          trendCategorie,
+          familiari,
           messaggi,
           medaglieDefinizioni: medaglieConDate,
           initialized: true,

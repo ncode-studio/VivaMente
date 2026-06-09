@@ -233,10 +233,10 @@ function CardProgressiGiornata({
 // ─── Sezione Andamento ────────────────────────────────────────────────────────
 const CATEGORIE_ANDAMENTO: { id: string; label: string; icona: string }[] = [
   { id: "memoria",       label: "Memoria",       icona: "brain" },
-  { id: "attenzione",    label: "Attenzione",    icona: "eye" },
-  { id: "linguaggio",    label: "Linguaggio",    icona: "message-circle" },
-  { id: "esecutive",     label: "Esecutive",     icona: "zap" },
-  { id: "visuospaziali", label: "Visuospaziali", icona: "grid" },
+  { id: "attenzione",    label: "Attenzione",    icona: "target" },
+  { id: "linguaggio",    label: "Linguaggio",    icona: "chat" },
+  { id: "esecutive",     label: "Esecutive",     icona: "puzzle" },
+  { id: "visuospaziali", label: "Visuospaziali", icona: "eye" },
 ];
 
 function CardAndamento({

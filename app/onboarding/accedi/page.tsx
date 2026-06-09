@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Btn from "@/components/ui/btn";
 import { COLORS } from "@/lib/design-tokens";
@@ -26,8 +26,15 @@ export default function AccediPage() {
   const [step, setStep]       = useState<Step>("form");
   const [loading, setLoading] = useState(false);
   const [errore, setErrore]   = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
 
   const pronto = isEmailValida(email.trim());
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
 
   async function handleInvia() {
     if (!pronto || loading) return;
@@ -38,6 +45,7 @@ export default function AccediPage() {
       const { error } = await supabase.auth.signInWithOtp({ email: email.trim() });
       if (error) throw error;
       setStep("verifica");
+      setCooldown(60);
     } catch (e: unknown) {
       setErrore(e instanceof Error ? e.message : "Errore nell'invio");
     } finally {
@@ -70,10 +78,20 @@ export default function AccediPage() {
   }
 
   async function handleReinvia() {
-    const supabase = createClient();
-    await supabase.auth.signInWithOtp({ email: email.trim() });
-    setCodice("");
+    if (cooldown > 0 || loading) return;
+    setLoading(true);
     setErrore(null);
+    const supabase = createClient();
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email: email.trim() });
+      if (error) throw error;
+      setCodice("");
+      setCooldown(60);
+    } catch (e: unknown) {
+      setErrore(e instanceof Error ? e.message : "Errore nell'invio");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -102,7 +120,7 @@ export default function AccediPage() {
           <div className="flex flex-col items-center gap-3">
             <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1A1A2E" }}>Inserisci il codice</h1>
             <p style={{ fontSize: 17, color: "#5A5A72", lineHeight: 1.6 }}>
-              Abbiamo inviato un codice a 6 cifre a<br />
+              Abbiamo inviato un codice a 8 cifre a<br />
               <strong style={{ color: "#1A1A2E" }}>{email}</strong>
             </p>
           </div>
@@ -137,9 +155,15 @@ export default function AccediPage() {
             </Btn>
             <p style={{ fontSize: 16, color: "#1A1A2E" }}>
               Non hai ricevuto nulla?{" "}
-              <button onClick={handleReinvia} style={{ color: COLORS.primary, fontWeight: 500 }}>
-                Invia di nuovo
-              </button>
+              {cooldown > 0 ? (
+                <span style={{ color: "#5A5A72", fontWeight: 500 }}>
+                  Invia di nuovo tra {cooldown}s
+                </span>
+              ) : (
+                <button onClick={handleReinvia} disabled={loading} style={{ color: COLORS.primary, fontWeight: 500 }}>
+                  Invia di nuovo
+                </button>
+              )}
             </p>
             <button onClick={() => { setStep("form"); setErrore(null); }} style={{ color: COLORS.primary, fontWeight: 500, fontSize: 15 }}>
               ← Cambia email

@@ -9,24 +9,18 @@ import Btn from "@/components/ui/btn";
 import Toggle from "@/components/ui/toggle";
 import Modal from "@/components/ui/modal";
 import AppSelect from "@/components/ui/app-select";
-import { useUserStore, type CanalNotifica, type Familiare } from "@/lib/store";
+import { useUserStore, type Familiare } from "@/lib/store";
 import { giorniDa } from "@/lib/utils";
 import { COLORS } from "@/lib/design-tokens";
-import { AppIcon } from "@/lib/icons";
 import {
   User, CheckCircle, Phone, Mail, Bell, Timer,
-  Group,
+  Group, Copy,
   NavArrowDown, NavArrowUp,
 } from "iconoir-react";
-import { creaInvito } from "@/lib/sync";
+import { creaInvito, salvaProfilo, eliminaFamiliare } from "@/lib/sync";
 
 const ORE = ["07:00","08:00","09:00","10:00","11:00","12:00","14:00","16:00","18:00","20:00","21:00"];
 const _ANNI = Array.from({ length: 61 }, (_, i) => 1990 - i); void _ANNI;
-const CANALI: { id: CanalNotifica; label: string; icona: string }[] = [
-  { id: "whatsapp", label: "WhatsApp", icona: "chat" },
-  { id: "sms",      label: "SMS",      icona: "phone" },
-  { id: "email",    label: "Email",    icona: "mail" },
-];
 
 // ─── Helper: input style ─────────────────────────────────────────────────────
 const inputCls = `w-full min-h-[56px] rounded-md px-4 text-base text-ink bg-background border-2 border-border
@@ -43,30 +37,20 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 // ─── Sezione Informazioni ─────────────────────────────────────────────────────
 function SezioneInfo() {
-  const { nome, cognome, telefono, email, anno_nascita, setUser } = useUserStore();
+  const { nome, cognome, email, anno_nascita, setUser } = useUserStore();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState({ nome, cognome, telefono, email, anno_nascita });
+  const [draft, setDraft] = useState({ nome, cognome, email, anno_nascita });
   const [saved, setSaved] = useState(false);
-  const [showOTP, setShowOTP] = useState(false);
-  const [nuovoTelefono, setNuovoTelefono] = useState("");
-  const [otpStep, setOtpStep] = useState<"phone"|"code"|"done">("phone");
-  const [otpCode, setOtpCode] = useState("");
 
-  function handleSave() {
+  async function handleSave() {
     setUser(draft);
     setEditing(false);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-  }
-
-  function handleOTP() {
-    if (otpStep === "phone" && nuovoTelefono) { setOtpStep("code"); return; }
-    if (otpStep === "code" && otpCode.length >= 4) {
-      setUser({ telefono: nuovoTelefono });
-      setDraft((d) => ({ ...d, telefono: nuovoTelefono }));
-      setOtpStep("done");
-      setTimeout(() => { setShowOTP(false); setOtpStep("phone"); setNuovoTelefono(""); setOtpCode(""); }, 1800);
+    const { userId } = useUserStore.getState();
+    if (userId) {
+      await salvaProfilo(userId, { nome: draft.nome, email: draft.email });
     }
+    setTimeout(() => setSaved(false), 2500);
   }
 
   return (
@@ -75,7 +59,7 @@ function SezioneInfo() {
         <SectionTitle>Le mie informazioni</SectionTitle>
         {!editing ? (
           <button
-            onClick={() => { setDraft({ nome, cognome, telefono, email, anno_nascita }); setEditing(true); }}
+            onClick={() => { setDraft({ nome, cognome, email, anno_nascita }); setEditing(true); }}
             className="text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
             style={{ color: COLORS.primary, backgroundColor: COLORS.primaryLight }}
           >
@@ -111,14 +95,6 @@ function SezioneInfo() {
             : <InfoValue>{nome || "—"}</InfoValue>}
         </InfoField>
 
-        {/* Telefono */}
-        <InfoField
-          label={<><Phone width={14} height={14} strokeWidth={1.5} color={COLORS.inkMuted} /> Telefono</>}
-          editing={false}
-        >
-          <InfoValue>{telefono || "—"}</InfoValue>
-        </InfoField>
-
         {/* Email */}
         <InfoField
           label={<><Mail width={14} height={14} strokeWidth={1.5} color={COLORS.inkMuted} /> Email</>}
@@ -130,42 +106,13 @@ function SezioneInfo() {
             : <InfoValue>{email || <span className="text-ink-muted">non inserita</span>}</InfoValue>}
         </InfoField>
       </div>
-
-      {/* Modal OTP cambio numero */}
-      <Modal open={showOTP} onClose={() => { setShowOTP(false); setOtpStep("phone"); }} title="Cambia numero">
-        {otpStep === "phone" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-base text-ink-secondary">Nuovo numero di telefono</p>
-            <input type="tel" value={nuovoTelefono} onChange={(e) => setNuovoTelefono(e.target.value)}
-              placeholder="+39 333 000 0000" className={inputCls} />
-            <Btn size="lg" onClick={handleOTP} disabled={!nuovoTelefono}>Invia codice SMS →</Btn>
-          </div>
-        )}
-        {otpStep === "code" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-base text-ink-secondary">Codice ricevuto su <strong>{nuovoTelefono}</strong></p>
-            <input type="number" value={otpCode} onChange={(e) => setOtpCode(e.target.value.slice(0, 6))}
-              placeholder="000000"
-              className="w-full min-h-[64px] rounded-md px-4 text-2xl text-center bg-background border-2 border-border focus:outline-none focus:border-primary font-bold tracking-widest" />
-            <Btn size="lg" onClick={handleOTP} disabled={otpCode.length < 4}>Verifica ✓</Btn>
-          </div>
-        )}
-        {otpStep === "done" && (
-          <div className="text-center py-8">
-            <div className="flex justify-center mb-3">
-              <CheckCircle width={56} height={56} strokeWidth={1.5} color={COLORS.success} />
-            </div>
-            <p className="text-xl font-bold" style={{ color: COLORS.success }}>Numero aggiornato!</p>
-          </div>
-        )}
-      </Modal>
     </Card>
   );
 }
 
 // ─── Sezione Notifiche ────────────────────────────────────────────────────────
 function SezioneNotifiche() {
-  const { consenso_notifiche, orario_notifica, canale_notifica, email, setUser } = useUserStore();
+  const { consenso_notifiche, orario_notifica, email, setUser } = useUserStore();
   const [saved, setSaved] = useState(false);
   const [emailDraft, setEmailDraft] = useState("");
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -181,19 +128,17 @@ function SezioneNotifiche() {
     showSaved();
   }
 
-  function handleSelezionaCanale(id: CanalNotifica) {
-    save({ canale_notifica: id });
-    if (id === "email") setEmailDraft("");
-  }
-
-  function handleSalvaEmail() {
+  async function handleSalvaEmail() {
     if (!emailDraft.trim()) return;
-    setUser({ email: emailDraft.trim() });
+    const nuovaEmail = emailDraft.trim();
+    setUser({ email: nuovaEmail });
     showSaved();
+    const { userId } = useUserStore.getState();
+    if (userId) await salvaProfilo(userId, { email: nuovaEmail });
   }
 
-  const mostraInputEmail = canale_notifica === "email" && !email;
-  const mostraEmailSalvata = canale_notifica === "email" && !!email;
+  const mostraInputEmail = !email;
+  const mostraEmailSalvata = !!email;
 
   return (
     <Card padding="md">
@@ -233,40 +178,22 @@ function SezioneNotifiche() {
               />
             </div>
             <div>
-              <p className="text-sm font-semibold text-ink-secondary mb-2">Canale preferito</p>
-              <div className="grid grid-cols-3 gap-2 my-4">
-                {CANALI.map((c) => (
-                  <button key={c.id} onClick={() => handleSelezionaCanale(c.id)}
-                    className="min-h-[60px] py-4 rounded-md flex flex-col items-center justify-center gap-2 text-sm font-semibold border-2 transition-all"
-                    style={{
-                      borderColor: canale_notifica === c.id ? COLORS.primary : COLORS.border,
-                      backgroundColor: canale_notifica === c.id ? `${COLORS.primaryLight}55` : COLORS.surface,
-                      color: canale_notifica === c.id ? COLORS.primary : COLORS.inkMuted,
-                    }}>
-                    <AppIcon
-                      name={c.icona}
-                      size={28}
-                      color={canale_notifica === c.id ? COLORS.primary : COLORS.inkMuted}
-                    />
-                    {c.label}
-                  </button>
-                ))}
-              </div>
+              <p className="text-sm font-semibold text-ink-secondary mb-2">Come ricevi il promemoria</p>
 
               {/* Email già presente — mostra conferma */}
               {mostraEmailSalvata && (
-                <div className="mt-3 flex items-center gap-2 px-3 py-2.5 rounded-lg"
+                <div className="mt-1 flex items-center gap-2 px-3 py-2.5 rounded-lg"
                   style={{ backgroundColor: COLORS.primaryLight }}>
                   <Mail width={14} height={14} strokeWidth={1.5} color={COLORS.primary} />
                   <p className="text-xs font-medium" style={{ color: COLORS.primary }}>
-                    Il promemoria arriverà a <strong>{email}</strong>
+                    Il promemoria arriverà via email a <strong>{email}</strong>
                   </p>
                 </div>
               )}
 
-              {/* Input email se canale=email e nessuna email salvata */}
+              {/* Input email se nessuna email salvata */}
               {mostraInputEmail && (
-                <div className="mt-4 flex flex-col gap-2">
+                <div className="mt-2 flex flex-col gap-2">
                   <p className="text-sm font-medium" style={{ color: COLORS.inkPrimary }}>
                     Inserisci la tua email per ricevere i promemoria
                   </p>
@@ -310,45 +237,54 @@ function SezioneFamiglia() {
   const { familiari, rimuoviFamiliare, isGuest } = useUserStore();
   const [showInvita, setShowInvita] = useState(false);
   const [inviatoOk, setInviatoOk] = useState(false);
-  const [draft, setDraft] = useState({ contatto: "", nome: "", parentela: "" });
+  const [linkInvito, setLinkInvito] = useState("");
+  const [copiato, setCopiato] = useState(false);
+  const [draft, setDraft] = useState({ nome: "", parentela: "" });
   const [confirmRimuovi, setConfirmRimuovi] = useState<string | null>(null);
 
   function resetModal() {
-    setDraft({ contatto: "", nome: "", parentela: "" });
+    setDraft({ nome: "", parentela: "" });
     setInviatoOk(false);
+    setLinkInvito("");
+    setCopiato(false);
   }
 
   async function handleInvia() {
-    if (!draft.contatto || !draft.nome || !draft.parentela) return;
+    if (!draft.nome || !draft.parentela) return;
     const { userId } = useUserStore.getState();
     if (!userId) return;
 
     const token = await creaInvito({
       userId,
       nome: draft.nome,
-      contatto: draft.contatto,
       relazione: draft.parentela,
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? (typeof window !== "undefined" ? window.location.origin : "");
     const link = `${appUrl}/famigliare?token=${token}`;
-    const messaggio = `Ciao ${draft.nome}! Ti invito a seguire i miei progressi su VivaMente e tenermi compagnia nel mio allenamento mentale. Unisciti qui → ${link}`;
-
-    const isEmail = draft.contatto.includes("@");
-    if (isEmail) {
-      window.open(
-        `mailto:${encodeURIComponent(draft.contatto)}?subject=${encodeURIComponent("Ti invito su VivaMente")}&body=${encodeURIComponent(messaggio)}`,
-        "_blank"
-      );
-    } else {
-      window.open(`sms:${draft.contatto}?body=${encodeURIComponent(messaggio)}`, "_blank");
-    }
-
+    setLinkInvito(link);
     setInviatoOk(true);
-    setTimeout(() => { setShowInvita(false); resetModal(); }, 1800);
   }
 
-  const canInvia = draft.contatto.trim() && draft.nome.trim() && draft.parentela;
+  async function copiaLink() {
+    try {
+      await navigator.clipboard.writeText(linkInvito);
+    } catch {
+      // Fallback per browser/contesti senza Clipboard API
+      const ta = document.createElement("textarea");
+      ta.value = linkInvito;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch { /* noop */ }
+      document.body.removeChild(ta);
+    }
+    setCopiato(true);
+    setTimeout(() => setCopiato(false), 2000);
+  }
+
+  const canInvia = draft.nome.trim() && draft.parentela;
 
   return (
     <>
@@ -384,31 +320,51 @@ function SezioneFamiglia() {
       {/* Modal invita */}
       <Modal open={showInvita} onClose={() => { setShowInvita(false); resetModal(); }} title="Invita un familiare">
         {inviatoOk ? (
-          <div className="flex flex-col items-center py-6 gap-3">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: COLORS.successLight }}>
-              <CheckCircle width={32} height={32} strokeWidth={1.5} color={COLORS.success} />
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col items-center gap-3 pt-2">
+              <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: COLORS.successLight }}>
+                <CheckCircle width={32} height={32} strokeWidth={1.5} color={COLORS.success} />
+              </div>
+              <p className="text-base font-bold text-center" style={{ color: COLORS.inkPrimary }}>Invito creato!</p>
+              <p className="text-sm text-center leading-relaxed" style={{ color: COLORS.inkSecondary }}>
+                Copia il link e invialo a <strong>{draft.nome.split(" ")[0] || "loro"}</strong> su WhatsApp, SMS o email.
+              </p>
             </div>
-            <p className="text-base font-bold text-center" style={{ color: COLORS.success }}>Invito inviato!</p>
+
+            {/* Link da copiare */}
+            <div
+              className="rounded-xl px-4 py-3 text-sm break-all"
+              style={{ backgroundColor: COLORS.background, border: `1px solid ${COLORS.border}`, color: COLORS.inkSecondary }}
+            >
+              {linkInvito}
+            </div>
+
+            {/* Bottone copia */}
+            <button
+              onClick={copiaLink}
+              className="w-full py-3 rounded-full text-sm font-bold text-white flex items-center justify-center gap-2 transition-colors"
+              style={{ backgroundColor: copiato ? COLORS.success : COLORS.primary }}
+            >
+              {copiato ? (
+                <><CheckCircle width={18} height={18} strokeWidth={2} color="#FFFFFF" /> Link copiato!</>
+              ) : (
+                <><Copy width={18} height={18} strokeWidth={1.5} color="#FFFFFF" /> Copia link</>
+              )}
+            </button>
+
+            <button
+              onClick={() => { setShowInvita(false); resetModal(); }}
+              className="text-sm font-semibold"
+              style={{ color: COLORS.primary }}
+            >
+              Chiudi
+            </button>
           </div>
         ) : (
           <div className="flex flex-col gap-5">
             <p className="text-sm leading-relaxed" style={{ color: COLORS.inkSecondary }}>
-              Aggiungi un familiare inserendo i dati richiesti
+              Inserisci nome e parentela: creerai un link da inviare tu stesso al familiare.
             </p>
-
-            {/* Contatto */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium" style={{ color: COLORS.inkPrimary }}>
-                Numero telefono o email
-              </label>
-              <input
-                type="text"
-                value={draft.contatto}
-                onChange={(e) => setDraft({ ...draft, contatto: e.target.value })}
-                placeholder="+39 333 000 0000 oppure email@..."
-                className={inputCls}
-              />
-            </div>
 
             {/* Nome */}
             <div className="flex flex-col gap-1.5">
@@ -444,7 +400,7 @@ function SezioneFamiglia() {
               className="w-full py-3 rounded-full text-sm font-bold text-white transition-opacity"
               style={{ backgroundColor: COLORS.primary, opacity: canInvia ? 1 : 0.45 }}
             >
-              Manda invito
+              Crea invito
             </button>
           </div>
         )}
@@ -458,7 +414,14 @@ function SezioneFamiglia() {
             <strong>{familiari.find((f) => f.id === confirmRimuovi)?.nome}</strong>?
             Non potrà più vedere i tuoi progressi.
           </p>
-          <Btn variant="danger" size="lg" onClick={() => { if (confirmRimuovi) rimuoviFamiliare(confirmRimuovi); setConfirmRimuovi(null); }}>
+          <Btn variant="danger" size="lg" onClick={async () => {
+            const id = confirmRimuovi;
+            setConfirmRimuovi(null);
+            if (id) {
+              rimuoviFamiliare(id); // aggiornamento ottimistico dello store
+              await eliminaFamiliare(id);
+            }
+          }}>
             Sì, rimuovi
           </Btn>
           <Btn variant="ghost" size="default" onClick={() => setConfirmRimuovi(null)}>Annulla</Btn>

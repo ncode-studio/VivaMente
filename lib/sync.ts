@@ -60,6 +60,17 @@ export interface SessioneRecente {
   trend: "crescita" | "stabile" | "calo";
 }
 
+export interface FamiliareRecord {
+  id: string;
+  nome: string;
+  relazione: string;
+  telefono: string;
+  collegato_at: string;
+  permessi: { attivita: boolean; medaglie: boolean; progressi: boolean };
+}
+
+export type TrendCategoria = "crescita" | "stabile" | "calo";
+
 export interface ScoreCategoria {
   categoria: string;
   icona: string;
@@ -150,7 +161,7 @@ export async function initUserData(userId: string) {
     email: (profile.email ?? "") as string,
     anno_nascita: (profile.anno_nascita ?? 0) as number,
     orario_notifica: (profile.orario_notifica ?? "09:00") as string,
-    canale_notifica: (profile.canale_notifica ?? "whatsapp") as import("@/lib/store").CanalNotifica,
+    canale_notifica: (profile.canale_notifica ?? "email") as import("@/lib/store").CanalNotifica,
     consenso_notifiche: (profile.consenso_notifiche ?? false) as boolean,
     streak: (profile.current_streak ?? 0) as number,
     lastActivityDate: (profile.last_activity_date ?? null) as string | null,
@@ -708,12 +719,106 @@ export async function fetchDatiProgressi(userId: string): Promise<{
   };
 }
 
+/**
+ * Trend per dominio cognitivo, calcolato confrontando le due sessioni più
+ * recenti DELLO STESSO dominio. Diversamente da fetchSessioniRecenti (ultime 6
+ * sessioni globali), garantisce che ogni dominio abbia il proprio trend anche
+ * quando non rientra nelle sessioni più recenti in assoluto.
+ *
+ * Ritorna una mappa keyed per slug categoria (es. "esecutive"). Le categorie
+ * senza sessioni non compaiono nella mappa.
+ */
+export async function fetchTrendCategorie(userId: string): Promise<Record<string, TrendCategoria>> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("sessioni")
+    .select("categoria_id, score, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  const result: Record<string, TrendCategoria> = {};
+  if (!data) return result;
+
+  for (const cat of CATEGORIE_ORDER) {
+    const catSessions = data.filter((s) => s.categoria_id === cat);
+    if (catSessions.length === 0) continue;
+    const latest = (catSessions[0].score as number) ?? 0;
+    const prev = catSessions.length > 1 ? ((catSessions[1].score as number) ?? 0) : latest;
+    result[cat] = latest > prev ? "crescita" : latest < prev ? "calo" : "stabile";
+  }
+  return result;
+}
+
 // ─── Inviti familiari ─────────────────────────────────────────────────────────
 
+/**
+ * Persiste le modifiche al profilo dell'utente sulla tabella users.
+ * Solo i campi forniti vengono aggiornati.
+ */
+export async function salvaProfilo(
+  userId: string,
+  updates: { nome?: string; telefono?: string; email?: string },
+): Promise<void> {
+  const supabase = createClient();
+  const patch: Record<string, string | null> = {};
+  if (updates.nome !== undefined) patch.nome = updates.nome;
+  if (updates.telefono !== undefined) patch.telefono = updates.telefono || null;
+  if (updates.email !== undefined) patch.email = updates.email || null;
+  if (Object.keys(patch).length === 0) return;
+  await supabase.from("users").update(patch).eq("id", userId);
+}
+
+/**
+ * Familiari collegati al senior. La riga in `familiari` viene creata dalla RPC
+ * get_familiare_dashboard quando il familiare apre la dashboard via token; qui
+ * il senior (autenticato) li legge tramite la policy RLS "Familiari: read own".
+ */
+export async function fetchFamiliari(userId: string): Promise<FamiliareRecord[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("familiari")
+    .select("id, nome, relazione, telefono, collegato_at, permessi")
+    .eq("user_id", userId)
+    .order("collegato_at", { ascending: false });
+
+  return (data ?? []).map((f) => ({
+    id: f.id as string,
+    nome: f.nome as string,
+    relazione: f.relazione as string,
+    telefono: (f.telefono ?? "") as string,
+    collegato_at: f.collegato_at as string,
+    permessi: (f.permessi as FamiliareRecord["permessi"]) ?? { attivita: true, medaglie: true, progressi: true },
+  }));
+}
+
+/**
+ * Rimuove un familiare collegato e invalida i relativi link d'invito.
+ *
+ * Delega all'API route /api/familiari/rimuovi che usa la service_role per
+ * marcare gli inviti come 'expired' (operazione bloccata dalla RLS lato client),
+ * così il link di accesso via token smette di funzionare: la RPC
+ * get_familiare_dashboard scarta gli inviti con status = 'expired'.
+ *
+ * @returns true se l'operazione lato server è andata a buon fine.
+ */
+export async function eliminaFamiliare(familiareId: string): Promise<boolean> {
+  try {
+    const res = await fetch("/api/familiari/rimuovi", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ familiareId }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function creaInvito({
-  userId, nome, contatto, relazione,
+  userId, nome, relazione, contatto = "",
 }: {
-  userId: string; nome: string; contatto: string; relazione: string;
+  userId: string; nome: string; relazione: string; contatto?: string;
 }): Promise<string> {
   const supabase = createClient();
   const token = Math.random().toString(36).slice(2, 10).toUpperCase() +
