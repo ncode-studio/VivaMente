@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { GameEngineProps } from "@/lib/exercise-types";
+import type { ImplementedExerciseId } from "./implemented-ids";
 import { GoNogoTaskEngine } from "./families/go-nogo/GoNogoTaskEngine";
 import { GO_NOGO_TIMER_MS } from "./families/go-nogo/_deroghe";
 import { GoNogoSemanticoTaskEngine, GO_NOGO_SEMANTICO_TIMER_MS } from "./families/go-nogo-semantico/GoNogoSemanticoTaskEngine";
@@ -103,7 +104,10 @@ export interface FamilyEntry {
  * getSessionDurationMs (null per Modello B), aggiungere le entry per
  * tutti gli id JSON in docs/gdd/shared/07-catalog.md.
  */
-export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
+// Tipizzato come Record<ImplementedExerciseId, …>: TypeScript impone che le
+// chiavi qui coincidano 1:1 con IMPLEMENTED_EXERCISE_IDS (implemented-ids.ts),
+// segnalando sia chiavi mancanti sia chiavi in eccesso → niente drift.
+export const ENGINE_REGISTRY: Record<ImplementedExerciseId, FamilyEntry> = {
 
   // ── Famiglia 2: Recall Grid — 3 varianti ──────────────────────────────────
   recall_grid_parole_mbt: {
@@ -416,5 +420,5 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
  * esporre dettagli tecnici all'utente.
  */
 export function getFamily(esercizioId: string): FamilyEntry | null {
-  return ENGINE_REGISTRY[esercizioId] ?? null;
+  return (ENGINE_REGISTRY as Record<string, FamilyEntry>)[esercizioId] ?? null;
 }

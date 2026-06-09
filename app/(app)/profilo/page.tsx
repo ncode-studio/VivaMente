@@ -17,7 +17,7 @@ import {
   Group, Copy,
   NavArrowDown, NavArrowUp,
 } from "iconoir-react";
-import { creaInvito, salvaProfilo, eliminaFamiliare } from "@/lib/sync";
+import { creaInvito, salvaProfilo, eliminaFamiliare, fetchFamiliari } from "@/lib/sync";
 
 const ORE = ["07:00","08:00","09:00","10:00","11:00","12:00","14:00","16:00","18:00","20:00","21:00"];
 const _ANNI = Array.from({ length: 61 }, (_, i) => 1990 - i); void _ANNI;
@@ -234,7 +234,20 @@ const PARENTELE = [
 
 // ─── Sezione Famiglia ─────────────────────────────────────────────────────────
 function SezioneFamiglia() {
-  const { familiari, rimuoviFamiliare, isGuest } = useUserStore();
+  const { familiari, rimuoviFamiliare, isGuest, setUser } = useUserStore();
+
+  // Ricarica i familiari all'apertura: lo store è popolato solo al login, quindi
+  // un familiare che si collega dopo l'accesso (apre il link) non comparirebbe
+  // senza un nuovo login. Qui riallineiamo allo stato corrente del DB.
+  useEffect(() => {
+    if (isGuest) return;
+    const { userId } = useUserStore.getState();
+    if (!userId) return;
+    let annullato = false;
+    fetchFamiliari(userId).then((f) => { if (!annullato) setUser({ familiari: f }); });
+    return () => { annullato = true; };
+  }, [isGuest, setUser]);
+
   const [showInvita, setShowInvita] = useState(false);
   const [inviatoOk, setInviatoOk] = useState(false);
   const [linkInvito, setLinkInvito] = useState("");

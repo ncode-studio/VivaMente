@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { calcolaProgressione, type UserLevelStato, type EventoProgressione } from "@/lib/progression";
+import { IMPLEMENTED_EXERCISE_ID_SET } from "@/components/esercizi/implemented-ids";
 
 // ─── Tipi esportati ───────────────────────────────────────────────────────────
 
@@ -276,7 +277,7 @@ export async function fetchOrCreateEserciziDelGiorno(userId: string): Promise<Es
     .eq("data", oggi);
 
   const rows = (existing && existing.length > 0)
-    ? existing
+    ? await riparaEserciziNonImplementati(supabase, userId, oggi, existing)
     : await createEserciziDelGiornoRegolaaN(supabase, userId, oggi);
 
   // Recupera i nomi dalla tabella esercizi (schema nuovo: campo "nome")
@@ -301,26 +302,19 @@ export async function fetchOrCreateEserciziDelGiorno(userId: string): Promise<Es
   }).filter(Boolean) as EserciziDelGiornoItem[];
 }
 
+type RigaGiorno = { esercizio_id: string; categoria_id: string; completato: boolean };
+
 /**
- * Crea le 5 assegnazioni giornaliere usando la Regola N del GDD.
+ * Carica, per ogni dominio, il pool di esercizi attivi E implementati e lo
+ * storico delle assegnazioni dell'utente (per applicare la Regola N).
  *
- * Regola N (docs/gdd/shared/01-session-rules.md):
- * Un esercizio non può essere riproposto finché non sono stati selezionati
- * tutti gli altri esercizi dello stesso dominio dopo la sua ultima apparizione.
- *
- * Implementazione: per ogni dominio, gli ultimi (N−1) esercizi mostrati formano
- * l'insieme dei "recenti esclusi". L'esercizio da mostrare è scelto a caso
- * tra quelli non presenti nei recenti. Se per qualsiasi motivo tutti risultano
- * recenti (pool ridotto o primo utilizzo), si usa l'intero pool.
- *
- * Query: 2 fetch batch invece di 10 query sequenziali (5 domini × 2 tabelle).
+ * Gli esercizi "in arrivo" / non implementati (id non in ENGINE_REGISTRY) sono
+ * esclusi dal pool: non devono mai essere proposti come esercizio del giorno.
  */
-async function createEserciziDelGiornoRegolaaN(
+async function caricaPoolEStorico(
   supabase: ReturnType<typeof createClient>,
   userId: string,
-  oggi: string
-): Promise<Array<{ esercizio_id: string; categoria_id: string; completato: boolean }>> {
-  // Fetch 1: pool attivo per tutti i domini
+): Promise<{ poolPerDominio: Record<string, string[]>; storicoPerDominio: Record<string, string[]> }> {
   const { data: tuttiEsercizi } = await supabase
     .from("esercizi")
     .select("id, categoria_id")
@@ -328,8 +322,7 @@ async function createEserciziDelGiornoRegolaaN(
     .order("categoria_id", { ascending: true })
     .order("ordine_in_famiglia", { ascending: true });
 
-  // Fetch 2: storico esercizi_del_giorno per questo utente (ultimi 100 entry)
-  // 100 copre l'intera rotazione anche per il dominio con il pool più grande (~20 esercizi)
+  // Storico ultimi 100 entry: copre l'intera rotazione anche per il pool più grande
   const { data: history } = await supabase
     .from("esercizi_del_giorno")
     .select("esercizio_id, categoria_id")
@@ -337,37 +330,64 @@ async function createEserciziDelGiornoRegolaaN(
     .order("data", { ascending: false })
     .limit(100);
 
-  // Raggruppa per dominio
   const poolPerDominio: Record<string, string[]> = {};
   for (const e of (tuttiEsercizi ?? [])) {
+    const id = e.id as string;
+    if (!IMPLEMENTED_EXERCISE_ID_SET.has(id)) continue;
     const cat = e.categoria_id as string;
-    (poolPerDominio[cat] = poolPerDominio[cat] ?? []).push(e.id as string);
+    (poolPerDominio[cat] = poolPerDominio[cat] ?? []).push(id);
   }
 
-  // La storia per dominio è in ordine data DESC (preservato dal limit globale)
   const storicoPerDominio: Record<string, string[]> = {};
   for (const h of (history ?? [])) {
     const cat = h.categoria_id as string;
     (storicoPerDominio[cat] = storicoPerDominio[cat] ?? []).push(h.esercizio_id as string);
   }
 
-  const toInsert = CATEGORIE_ORDER.map((cat) => {
-    const pool = poolPerDominio[cat] ?? [];
-    if (pool.length === 0) {
-      throw new Error(`Nessun esercizio attivo per il dominio "${cat}". Eseguire la migration seed.`);
-    }
+  return { poolPerDominio, storicoPerDominio };
+}
 
-    // Regola N: escludi i (pool.length − 1) esercizi mostrati più di recente
-    const nEsclusi = pool.length - 1;
-    const recenti = new Set((storicoPerDominio[cat] ?? []).slice(0, nEsclusi));
-    const eleggibili = pool.filter(id => !recenti.has(id));
+/**
+ * Sceglie un esercizio per il dominio applicando la Regola N (GDD
+ * shared/01-session-rules.md): esclude i (pool.length − 1) esercizi mostrati
+ * più di recente; se tutti risultano recenti usa l'intero pool.
+ * `escludi` permette di evitare ulteriori id (es. quello attualmente assegnato).
+ */
+function scegliEsercizioDominio(
+  cat: string,
+  poolPerDominio: Record<string, string[]>,
+  storicoPerDominio: Record<string, string[]>,
+  escludi: string[] = [],
+): string {
+  const pool = poolPerDominio[cat] ?? [];
+  if (pool.length === 0) {
+    throw new Error(`Nessun esercizio attivo e implementato per il dominio "${cat}". Verificare seed e ENGINE_REGISTRY.`);
+  }
+  const nEsclusi = pool.length - 1;
+  const recenti = new Set((storicoPerDominio[cat] ?? []).slice(0, nEsclusi));
+  for (const x of escludi) recenti.add(x);
+  const eleggibili = pool.filter((id) => !recenti.has(id));
+  const candidati = eleggibili.length > 0 ? eleggibili : pool;
+  return candidati[Math.floor(Math.random() * candidati.length)];
+}
 
-    // Fallback: se eleggibili è vuoto (pool cambiato o primo giorno) usa tutto il pool
-    const candidati = eleggibili.length > 0 ? eleggibili : pool;
-    const esercizioId = candidati[Math.floor(Math.random() * candidati.length)];
+/**
+ * Crea le 5 assegnazioni giornaliere usando la Regola N del GDD.
+ */
+async function createEserciziDelGiornoRegolaaN(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  oggi: string
+): Promise<RigaGiorno[]> {
+  const { poolPerDominio, storicoPerDominio } = await caricaPoolEStorico(supabase, userId);
 
-    return { user_id: userId, esercizio_id: esercizioId, categoria_id: cat, data: oggi, completato: false };
-  });
+  const toInsert = CATEGORIE_ORDER.map((cat) => ({
+    user_id: userId,
+    esercizio_id: scegliEsercizioDominio(cat, poolPerDominio, storicoPerDominio),
+    categoria_id: cat,
+    data: oggi,
+    completato: false,
+  }));
 
   await supabase
     .from("esercizi_del_giorno")
@@ -378,6 +398,54 @@ async function createEserciziDelGiornoRegolaaN(
     categoria_id: t.categoria_id,
     completato: false,
   }));
+}
+
+/**
+ * Ripara le assegnazioni di OGGI già esistenti: se una riga punta a un
+ * esercizio "in arrivo" / non implementato e non è ancora stata completata,
+ * la ri-seleziona tra gli esercizi implementati del dominio (Regola N) e
+ * aggiorna la riga su DB. Le righe valide o già completate restano intatte.
+ *
+ * Serve a sistemare anche la giornata in corso per gli utenti a cui era già
+ * stato assegnato un esercizio non implementato prima dell'introduzione del filtro.
+ */
+async function riparaEserciziNonImplementati(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  oggi: string,
+  existing: Array<{ esercizio_id: string; categoria_id: string; completato: boolean | null }>,
+): Promise<RigaGiorno[]> {
+  const corrette: RigaGiorno[] = existing.map((r) => ({
+    esercizio_id: r.esercizio_id,
+    categoria_id: r.categoria_id,
+    completato: r.completato ?? false,
+  }));
+
+  const daRiparare = corrette.filter(
+    (r) => !IMPLEMENTED_EXERCISE_ID_SET.has(r.esercizio_id) && !r.completato,
+  );
+  if (daRiparare.length === 0) return corrette;
+
+  const { poolPerDominio, storicoPerDominio } = await caricaPoolEStorico(supabase, userId);
+
+  const aggiornamenti = daRiparare.map((r) => {
+    const nuovoId = scegliEsercizioDominio(r.categoria_id, poolPerDominio, storicoPerDominio);
+    r.esercizio_id = nuovoId; // muta l'oggetto in `corrette`
+    return { categoria_id: r.categoria_id, esercizio_id: nuovoId };
+  });
+
+  await Promise.all(
+    aggiornamenti.map((a) =>
+      supabase
+        .from("esercizi_del_giorno")
+        .update({ esercizio_id: a.esercizio_id })
+        .eq("user_id", userId)
+        .eq("data", oggi)
+        .eq("categoria_id", a.categoria_id),
+    ),
+  );
+
+  return corrette;
 }
 
 export async function marcaEsercizioCompletato(userId: string, esercizioId: string): Promise<void> {

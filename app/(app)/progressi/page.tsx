@@ -934,6 +934,17 @@ function FlameNumerata({ numero, guadagnata, size = 52 }: { numero: number; guad
 
 type Tab = "attivita" | "storico" | "medaglie";
 
+function Caricamento() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div
+        className="w-8 h-8 rounded-full border-4 animate-spin"
+        style={{ borderColor: `${COLORS.primary}40`, borderTopColor: COLORS.primary }}
+      />
+    </div>
+  );
+}
+
 function ProgressiPageContent() {
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>((searchParams.get("tab") as Tab) ?? "attivita");
@@ -947,14 +958,20 @@ function ProgressiPageContent() {
   const [scoreCategorie, setScoreCategorie] = useState<ScoreCategoria[]>([]);
   const [storicoSessioni, setStoricoSessioni] = useState<StoricoGiorno[]>([]);
   const [totaleSettimanaScorsa, setTotaleSettimanaScorsa] = useState(0);
+  const [caricato, setCaricato] = useState(false);
 
   useEffect(() => {
-    if (isGuest || !userId) return;
+    if (isGuest) { setCaricato(true); return; }
+    if (!userId) return; // attende l'inizializzazione dello store
+    let annullato = false;
     fetchDatiProgressi(userId).then((d) => {
+      if (annullato) return;
       setScoreCategorie(d.scoreCategorie);
       setStoricoSessioni(d.storicoSessioni);
       setTotaleSettimanaScorsa(d.totaleSettimanaScorsa);
+      setCaricato(true);
     });
+    return () => { annullato = true; };
   }, [userId, isGuest]);
 
   const totaleSettimana = progressiSettimanali.filter((g) => g.esercizi >= 5).length;
@@ -1013,11 +1030,14 @@ function ProgressiPageContent() {
         {tab === "attivita" && (
           isGuest
             ? <AttivitaTab filtro={filtroGuest} setFiltro={setFiltroGuest} hidePills={true} scoreCategorie={scoreCategorie} />
-            : <AttivitaTab scoreCategorie={scoreCategorie} />
+            : !caricato
+              ? <Caricamento />
+              : <AttivitaTab scoreCategorie={scoreCategorie} />
         )}
 
         {/* ── Tab: Storico ──────────────────────────────────────────── */}
-        {tab === "storico" && (() => {
+        {tab === "storico" && !isGuest && !caricato && <Caricamento />}
+        {tab === "storico" && (isGuest || caricato) && (() => {
           const diff = totaleSettimana - totaleSettimanaScorsa;
           const stato: "meglio" | "stabile" | "peggio" =
             diff > 0 ? "meglio" : diff === 0 ? "stabile" : "peggio";
