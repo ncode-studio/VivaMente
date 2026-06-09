@@ -13,15 +13,27 @@ import {
   fetchFamiliari,
   fetchMessaggi,
   fetchMedaglie,
+  fetchEserciziDelGiornoGuest,
 } from "@/lib/sync";
 
 export default function UserInit() {
-  const { setUser, isGuest } = useUserStore();
+  const { setUser, setGuest, isGuest } = useUserStore();
 
   useEffect(() => {
     // Fetch medaglie definitions per tutti (dati statici pubblici)
     fetchMedaglie().then((defs) => setUser({ medaglieDefinizioni: defs }));
   }, [setUser]);
+
+  // Ospite: carica i 5 esercizi del giorno reali (uno per dominio) così può
+  // provarli senza account. Vengono ripopolati anche dopo un reload.
+  useEffect(() => {
+    if (!isGuest) return;
+    let annullato = false;
+    fetchEserciziDelGiornoGuest().then((eserciziDelGiorno) => {
+      if (!annullato) setUser({ eserciziDelGiorno });
+    });
+    return () => { annullato = true; };
+  }, [isGuest, setUser]);
 
   useEffect(() => {
     if (isGuest) return;
@@ -29,7 +41,14 @@ export default function UserInit() {
     async function init() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        // Nessuna sessione: se è presente il cookie ospite ripristina la
+        // modalità ospite (es. dopo un reload) così i 5 esercizi tornano.
+        if (typeof document !== "undefined" && document.cookie.includes("vm_guest=1")) {
+          setGuest();
+        }
+        return;
+      }
 
       const [data, eserciziDelGiorno, userLevels, progressiSettimanali, sessioniRecenti, trendCategorie, familiari, messaggi, medaglieDefinizioni] =
         await Promise.all([
@@ -68,7 +87,7 @@ export default function UserInit() {
     }
 
     init();
-  }, [isGuest, setUser]);
+  }, [isGuest, setUser, setGuest]);
 
   return null;
 }

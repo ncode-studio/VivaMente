@@ -24,6 +24,9 @@ export type UWMTransform = "+1" | "-1" | "+2" | "-2";
 
 export type UWMModalita = "single" | "updating";
 
+/** Modalità di risposta: scelta multipla (lv 1-2) o digitazione QWERTY (lv 3+). */
+export type UWMRisposta = "mc" | "qwerty";
+
 export interface UWMTabALevel {
   livello:          number;
   modalita:         UWMModalita;
@@ -31,22 +34,23 @@ export interface UWMTabALevel {
   nPerRound:        number;     // 4-5 per single, 3 per updating
   speedMs:          number;
   proprieta:        UWMProprieta[];
+  risposta:         UWMRisposta; // mc solo lv 1-2, poi qwerty
   trialsPerSession: number;
 }
 
 export const SESSION_TIMER_MS = 60_000;
 
 export const UWM_TABA_LEVELS: readonly UWMTabALevel[] = [
-  { livello:  1, modalita: "single",   nRounds: 1, nPerRound: 4, speedMs: 2500, proprieta: ["dimensione"],                       trialsPerSession: 5 },
-  { livello:  2, modalita: "single",   nRounds: 1, nPerRound: 4, speedMs: 2300, proprieta: ["dimensione", "peso"],               trialsPerSession: 5 },
-  { livello:  3, modalita: "single",   nRounds: 1, nPerRound: 5, speedMs: 2000, proprieta: ["dimensione", "peso"],               trialsPerSession: 5 },
-  { livello:  4, modalita: "updating", nRounds: 2, nPerRound: 3, speedMs: 2300, proprieta: ["dimensione", "peso"],               trialsPerSession: 5 },
-  { livello:  5, modalita: "updating", nRounds: 2, nPerRound: 3, speedMs: 2000, proprieta: ["dimensione", "peso", "prezzo"],     trialsPerSession: 5 },
-  { livello:  6, modalita: "updating", nRounds: 2, nPerRound: 3, speedMs: 1800, proprieta: ["dimensione", "peso", "prezzo"],     trialsPerSession: 6 },
-  { livello:  7, modalita: "updating", nRounds: 3, nPerRound: 3, speedMs: 1800, proprieta: ["dimensione", "peso", "prezzo"],     trialsPerSession: 6 },
-  { livello:  8, modalita: "updating", nRounds: 3, nPerRound: 3, speedMs: 1600, proprieta: ["dimensione", "peso", "prezzo"],     trialsPerSession: 6 },
-  { livello:  9, modalita: "updating", nRounds: 4, nPerRound: 3, speedMs: 1600, proprieta: ["dimensione", "peso", "prezzo"],     trialsPerSession: 6 },
-  { livello: 10, modalita: "updating", nRounds: 4, nPerRound: 3, speedMs: 1500, proprieta: ["dimensione", "peso", "prezzo"],     trialsPerSession: 6 },
+  { livello:  1, modalita: "single",   nRounds: 1, nPerRound: 4, speedMs: 2500, proprieta: ["dimensione"],                       risposta: "mc",     trialsPerSession: 5 },
+  { livello:  2, modalita: "single",   nRounds: 1, nPerRound: 4, speedMs: 2300, proprieta: ["dimensione", "peso"],               risposta: "mc",     trialsPerSession: 5 },
+  { livello:  3, modalita: "single",   nRounds: 1, nPerRound: 5, speedMs: 2000, proprieta: ["dimensione", "peso"],               risposta: "qwerty", trialsPerSession: 5 },
+  { livello:  4, modalita: "updating", nRounds: 2, nPerRound: 3, speedMs: 2300, proprieta: ["dimensione", "peso"],               risposta: "qwerty", trialsPerSession: 5 },
+  { livello:  5, modalita: "updating", nRounds: 2, nPerRound: 3, speedMs: 2000, proprieta: ["dimensione", "peso", "prezzo"],     risposta: "qwerty", trialsPerSession: 5 },
+  { livello:  6, modalita: "updating", nRounds: 2, nPerRound: 3, speedMs: 1800, proprieta: ["dimensione", "peso", "prezzo"],     risposta: "qwerty", trialsPerSession: 6 },
+  { livello:  7, modalita: "updating", nRounds: 3, nPerRound: 3, speedMs: 1800, proprieta: ["dimensione", "peso", "prezzo"],     risposta: "qwerty", trialsPerSession: 6 },
+  { livello:  8, modalita: "updating", nRounds: 3, nPerRound: 3, speedMs: 1600, proprieta: ["dimensione", "peso", "prezzo"],     risposta: "qwerty", trialsPerSession: 6 },
+  { livello:  9, modalita: "updating", nRounds: 4, nPerRound: 3, speedMs: 1600, proprieta: ["dimensione", "peso", "prezzo"],     risposta: "qwerty", trialsPerSession: 6 },
+  { livello: 10, modalita: "updating", nRounds: 4, nPerRound: 3, speedMs: 1500, proprieta: ["dimensione", "peso", "prezzo"],     risposta: "qwerty", trialsPerSession: 6 },
 ];
 
 export function getUWMTabALevel(livello: number): UWMTabALevel {
@@ -86,14 +90,11 @@ export function getUWMParoleWarning(
   livelloPrec: number | null,
   livelloCorrente: number,
 ): { titolo: string; testo: string } | null {
-  if (livelloPrec === 1 && livelloCorrente === 2) {
-    return { titolo: "Nuova proprietà", testo: "Le domande possono ora chiederti anche del peso degli oggetti." };
+  if (livelloPrec === 2 && livelloCorrente === 3) {
+    return { titolo: "Cambia il modo di rispondere", testo: "Da questo livello non scegli più tra le opzioni: scrivi tu il nome dell'oggetto con la tastiera." };
   }
   if (livelloPrec === 3 && livelloCorrente === 4) {
     return { titolo: "Modalità aggiornamento", testo: "Da questo livello gli oggetti arrivano in più round. Dopo ogni round ti viene chiesta la risposta considerando TUTTI gli oggetti visti finora, anche quelli dei round precedenti." };
-  }
-  if (livelloPrec === 4 && livelloCorrente === 5) {
-    return { titolo: "Nuova proprietà", testo: "Le domande possono ora chiederti anche del prezzo degli oggetti (più o meno costoso)." };
   }
   return null;
 }

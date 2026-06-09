@@ -237,9 +237,14 @@ function EserciziPageContent() {
             <button
               key={esercizio.id}
               className="text-left w-full"
-              onClick={() => !locked && handleClickEsercizio(esercizio.id, lockedGuest)}
+              onClick={() => {
+                // Lock "giornaliero" (utente registrato): resta inerte.
+                // Lock ospite: cliccabile → handleClickEsercizio porta alla registrazione.
+                if (lockedGiornaliero) return;
+                handleClickEsercizio(esercizio.id, lockedGuest);
+              }}
             >
-              <Card padding="md" className={locked ? "" : "active:scale-[0.98] transition-transform"}>
+              <Card padding="md" className={lockedGiornaliero ? "" : "active:scale-[0.98] transition-transform"}>
                 <div className="flex items-center gap-4">
                   <div
                     className={`w-14 h-14 rounded-md flex items-center justify-center flex-shrink-0 ${locked ? "opacity-40" : ""}`}

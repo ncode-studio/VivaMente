@@ -448,6 +448,43 @@ async function riparaEserciziNonImplementati(
   return corrette;
 }
 
+/**
+ * Esercizi del giorno per l'utente OSPITE: 5 esercizi reali e implementati
+ * (uno per dominio), scelti in modo deterministico (il primo per
+ * ordine_in_famiglia). Nessuna scrittura su DB e nessun userId richiesto —
+ * l'ospite può provarli, ma i risultati non vengono salvati.
+ */
+export async function fetchEserciziDelGiornoGuest(): Promise<EserciziDelGiornoItem[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("esercizi")
+    .select("id, nome, categoria_id")
+    .eq("attivo", true)
+    .order("categoria_id", { ascending: true })
+    .order("ordine_in_famiglia", { ascending: true });
+
+  const perDominio: Record<string, { id: string; nome: string }[]> = {};
+  for (const e of (data ?? [])) {
+    const id = e.id as string;
+    if (!IMPLEMENTED_EXERCISE_ID_SET.has(id)) continue;
+    const cat = e.categoria_id as string;
+    (perDominio[cat] = perDominio[cat] ?? []).push({ id, nome: e.nome as string });
+  }
+
+  return CATEGORIE_ORDER.map((cat) => {
+    const lista = perDominio[cat] ?? [];
+    if (lista.length === 0) return null;
+    const scelto = lista[0];
+    return {
+      id: scelto.id,
+      nome: scelto.nome,
+      categoria_id: cat,
+      completato: false,
+      risultato: null,
+    } as EserciziDelGiornoItem;
+  }).filter(Boolean) as EserciziDelGiornoItem[];
+}
+
 export async function marcaEsercizioCompletato(userId: string, esercizioId: string): Promise<void> {
   const supabase = createClient();
   const oggi = new Date().toISOString().split("T")[0];

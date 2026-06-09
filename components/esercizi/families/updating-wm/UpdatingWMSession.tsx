@@ -20,9 +20,9 @@
  */
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { StimoloUWM, RispostaUWM } from "./sequence";
+import type { StimoloUWM, RispostaUWM, UWMOpzione } from "./sequence";
 
-type Fase = "cue" | "sequenza" | "risposta" | "feedback-round";
+type Fase = "cue" | "sequenza" | "risposta" | "feedback-round" | "ponte";
 
 type Props = {
   stimolo:    StimoloUWM;
@@ -31,6 +31,7 @@ type Props = {
 
 const CUE_MS      = 2000;
 const FEEDBACK_MS = 600;
+const PONTE_MS    = 2800; // durata schermata-ponte tra un gruppo e l'altro
 
 // Layout tastiera QWERTY italiana
 const QWERTY_ROWS: readonly (readonly string[])[] = [
@@ -38,6 +39,10 @@ const QWERTY_ROWS: readonly (readonly string[])[] = [
   ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
   ["Z", "X", "C", "V", "B", "N", "M"],
 ];
+
+// Colori neutri delle card di stimolo (parole = verde, numeri = viola).
+const PAROLE_BG = "#F0FDF4", PAROLE_BORDER = "#BBF7D0", PAROLE_TEXT = "#065F46";
+const NUMERI_BG = "#F5F3FF", NUMERI_BORDER = "#DDD6FE", NUMERI_TEXT = "#3730A3";
 
 // ── Componente principale ──────────────────────────────────────────────────────
 
@@ -47,6 +52,8 @@ export function UpdatingWMSession({ stimolo, onRisposta }: Props) {
   const [seqIdx,      setSeqIdx]      = useState(0);
   const [input,       setInput]       = useState("");
   const [feedback,    setFeedback]    = useState<"ok" | "ko" | null>(null);
+  const [mcSelected,  setMcSelected]  = useState<string | null>(null);
+  const [ponteAvviato, setPonteAvviato] = useState(false); // toggle per animare la barra
 
   const cancelledRef  = useRef(false);
   const submittedRef  = useRef(false);
@@ -92,6 +99,7 @@ export function UpdatingWMSession({ stimolo, onRisposta }: Props) {
     setSeqIdx(0);
     setInput("");
     setFeedback(null);
+    setMcSelected(null);
     setFase("sequenza");
 
     const len = stimolo.variante === "numeri"
@@ -110,6 +118,7 @@ export function UpdatingWMSession({ stimolo, onRisposta }: Props) {
     setSeqIdx(0);
     setInput("");
     setFeedback(null);
+    setMcSelected(null);
 
     const t = setTimeout(() => {
       if (cancelledRef.current) return;
@@ -124,19 +133,20 @@ export function UpdatingWMSession({ stimolo, onRisposta }: Props) {
   }, [stimolo]);
 
   // ── Submit risposta del round corrente ─────────────────────────────────────
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback((valoreEsplicito?: string) => {
     if (fase !== "risposta") return;
-    if (input.length === 0) return;
+    const val = (valoreEsplicito ?? input).trim();
+    if (val.length === 0) return;
     if (submittedRef.current) return;
 
-    risposteRef.current.push(input);
+    risposteRef.current.push(val);
 
     // Valuta correttezza locale per feedback visivo
     let corretto = false;
     if (stimolo.variante === "numeri") {
-      corretto = input === stimolo.rispostaAttesa;
+      corretto = val === stimolo.rispostaAttesa;
     } else {
-      const norm = input.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+      const norm = val.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
       corretto = norm === stimolo.rounds[roundIdx].rispostaAttesa;
     }
     setFeedback(corretto ? "ok" : "ko");
@@ -152,13 +162,16 @@ export function UpdatingWMSession({ stimolo, onRisposta }: Props) {
         onRispostaRef.current(risposteRef.current);
       }, FEEDBACK_MS);
     } else {
+      // Risposta corretta su un gruppo non finale: feedback breve, poi la
+      // schermata-ponte che invita a tenere a mente le parole già viste
+      // (NON le rimostra: aiuto solo verbale, l'allenamento WM resta intatto).
       setFase("feedback-round");
       setTimeout(() => {
         if (cancelledRef.current) return;
-        avviaRound(roundIdx + 1);
+        setFase("ponte");
       }, FEEDBACK_MS);
     }
-  }, [fase, input, roundIdx, stimolo, totRound, avviaRound]);
+  }, [fase, input, roundIdx, stimolo, totRound]);
 
   // ── Input handlers ─────────────────────────────────────────────────────────
   const handleChar = useCallback((c: string) => {
@@ -171,6 +184,17 @@ export function UpdatingWMSession({ stimolo, onRisposta }: Props) {
     if (fase !== "risposta" || submittedRef.current) return;
     setInput((prev) => prev.slice(0, -1));
   }, [fase]);
+
+  // ── Schermata-ponte: avanza da sola dopo PONTE_MS (niente pulsante) ─────────
+  useEffect(() => {
+    if (fase !== "ponte") { setPonteAvviato(false); return; }
+    const raf = setTimeout(() => setPonteAvviato(true), 30); // innesca la barra
+    const t = setTimeout(() => {
+      if (cancelledRef.current) return;
+      avviaRound(roundIdx + 1);
+    }, PONTE_MS);
+    return () => { clearTimeout(raf); clearTimeout(t); };
+  }, [fase, roundIdx, avviaRound]);
 
   // ── Render: CUE ────────────────────────────────────────────────────────────
   // Per la variante numeri, la regola viene mostrata SOLO all'inizio
@@ -214,22 +238,19 @@ export function UpdatingWMSession({ stimolo, onRisposta }: Props) {
     const isNumero = !item?.isParola;
     return (
       <div className="flex flex-col items-center gap-4 px-4 py-8">
-        <p style={{ fontSize: "0.7rem", color: isNumero ? "#7C3AED" : "#059669",
-          fontWeight: 600, letterSpacing: "0.08em" }}>
-          {totRound > 1
-            ? `Round ${roundIdx + 1}/${totRound} — ${seqIdx + 1}/${seqItems.length}`
-            : `${seqIdx + 1} / ${seqItems.length}`}
-        </p>
+        {/* Pallini di avanzamento (sostituiscono il vecchio doppio contatore) */}
+        <ProgressDots total={seqItems.length} done={seqIdx}
+          color={isNumero ? "#7C3AED" : "#059669"} />
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "center",
           width: "100%", minHeight: 160, borderRadius: "1.5rem",
-          backgroundColor: isNumero ? "#F5F3FF" : "#F0FDF4",
-          border: `2px solid ${isNumero ? "#DDD6FE" : "#BBF7D0"}`,
+          backgroundColor: isNumero ? NUMERI_BG : PAROLE_BG,
+          border: `2px solid ${isNumero ? NUMERI_BORDER : PAROLE_BORDER}`,
         }}>
           <p style={{
             fontSize: isNumero ? "5rem" : "2.4rem",
             fontWeight: isNumero ? 900 : 800,
-            color: isNumero ? "#3730A3" : "#065F46",
+            color: isNumero ? NUMERI_TEXT : PAROLE_TEXT,
             textAlign: "center", lineHeight: 1.2,
             padding: isNumero ? 0 : "0 1rem",
           }}>
@@ -261,13 +282,59 @@ export function UpdatingWMSession({ stimolo, onRisposta }: Props) {
     );
   }
 
+  // ── Render: PONTE inter-gruppo ─────────────────────────────────────────────
+  // Tra un gruppo di stimoli e il successivo. Solo testo: invita a trattenere
+  // le parole già viste, senza rimostrarle.
+  if (fase === "ponte") {
+    return (
+      <div className="flex flex-col items-center justify-center gap-6 px-6 py-10"
+        style={{ minHeight: 280 }}>
+        <div style={{
+          display: "flex", flexDirection: "column", alignItems: "center",
+          justifyContent: "center", gap: "0.75rem", width: "100%",
+          minHeight: 150, borderRadius: "1.5rem",
+          backgroundColor: "#FFFBEB", border: "2px solid #FDE68A", padding: "1.5rem",
+        }}>
+          <span style={{ fontSize: "2.4rem", lineHeight: 1 }}>🧠</span>
+          <p style={{ fontSize: "1.3rem", fontWeight: 800, color: "#92400E",
+            textAlign: "center", lineHeight: 1.4 }}>
+            Tieni ancora a mente queste parole.
+          </p>
+        </div>
+        {/* Barra che si svuota: indica che la schermata avanza da sola */}
+        <div style={{ width: "100%", height: 6, borderRadius: 3,
+          backgroundColor: "#FDE68A", overflow: "hidden" }}>
+          <div style={{
+            height: "100%", borderRadius: 3, backgroundColor: "#F59E0B",
+            width: ponteAvviato ? "0%" : "100%",
+            transition: `width ${PONTE_MS}ms linear`,
+          }} />
+        </div>
+      </div>
+    );
+  }
+
   // ── Render: RISPOSTA ───────────────────────────────────────────────────────
   if (stimolo.variante === "numeri") {
     return <NumericKeypadRisposta
       input={input}
       onChar={handleChar}
       onBackspace={handleBackspace}
-      onSubmit={handleSubmit}
+      onSubmit={() => handleSubmit()}
+    />;
+  }
+
+  // Scelta multipla (lv 1-2): sempre single round, opzioni su rounds[0].
+  const opzioniMC = stimolo.risposta === "mc" ? stimolo.rounds[roundIdx].opzioni : undefined;
+  if (opzioniMC) {
+    return <MCRisposta
+      opzioni={opzioniMC}
+      selected={mcSelected}
+      onSelect={(parola) => {
+        if (submittedRef.current) return;
+        setMcSelected(parola);
+        handleSubmit(parola);
+      }}
     />;
   }
 
@@ -275,8 +342,7 @@ export function UpdatingWMSession({ stimolo, onRisposta }: Props) {
     input={input}
     onChar={handleChar}
     onBackspace={handleBackspace}
-    onSubmit={handleSubmit}
-    showRoundLabel={totRound > 1 ? `Round ${roundIdx + 1}/${totRound}` : null}
+    onSubmit={() => handleSubmit()}
   />;
 }
 
@@ -287,7 +353,6 @@ type KeyboardProps = {
   onChar:       (c: string) => void;
   onBackspace:  () => void;
   onSubmit:     () => void;
-  showRoundLabel?: string | null;
 };
 
 const inputBoxStyle: React.CSSProperties = {
@@ -378,16 +443,10 @@ function NumericKeypadRisposta({ input, onChar, onBackspace, onSubmit }: Keyboar
   );
 }
 
-function QwertyKeyboardRisposta({ input, onChar, onBackspace, onSubmit, showRoundLabel }: KeyboardProps) {
+function QwertyKeyboardRisposta({ input, onChar, onBackspace, onSubmit }: KeyboardProps) {
   const submitDisabled = input.length === 0;
   return (
     <div className="flex flex-col items-center gap-3 px-3 py-4">
-      {showRoundLabel && (
-        <p style={{ fontSize: "0.75rem", color: "#059669", fontWeight: 700,
-          letterSpacing: "0.08em", alignSelf: "center" }}>
-          {showRoundLabel}
-        </p>
-      )}
       <div style={inputBoxStyle}>
         {input === "" ? " " : input.toUpperCase()}
       </div>
@@ -424,6 +483,68 @@ function QwertyKeyboardRisposta({ input, onChar, onBackspace, onSubmit, showRoun
         >
           ✓
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Pallini di avanzamento (sostituiscono il contatore "i/n") ───────────────────
+
+function ProgressDots({ total, done, color }: { total: number; done: number; color: string }) {
+  return (
+    <div style={{ display: "flex", gap: "0.35rem", alignItems: "center" }}>
+      {Array.from({ length: total }).map((_, i) => (
+        <span key={i} style={{
+          width: 9, height: 9, borderRadius: "50%",
+          backgroundColor: i <= done ? color : "#E2E8F0",
+          transition: "background-color 150ms",
+        }} />
+      ))}
+    </div>
+  );
+}
+
+// ── Risposta a scelta multipla (lv 1-2) ─────────────────────────────────────────
+
+function MCRisposta({
+  opzioni, selected, onSelect,
+}: {
+  opzioni:  UWMOpzione[];
+  selected: string | null;
+  onSelect: (parola: string) => void;
+}) {
+  const locked = selected !== null;
+  return (
+    <div className="flex flex-col gap-3 px-4 py-4">
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.6rem", width: "100%",
+      }}>
+        {opzioni.map((opt) => {
+          const isSel = selected === opt.parola;
+          return (
+            <button
+              key={opt.parola}
+              onClick={() => onSelect(opt.parola)}
+              disabled={locked}
+              className={!locked ? "active:scale-95" : ""}
+              style={{
+                display: "flex", flexDirection: "column", alignItems: "center",
+                gap: "0.3rem", padding: "1rem 0.5rem", borderRadius: "1rem",
+                border: `2px solid ${isSel ? "#2563EB" : "#D1D5DB"}`,
+                backgroundColor: isSel ? "#DBEAFE" : "#FFFFFF",
+                opacity: locked && !isSel ? 0.5 : 1,
+                cursor: locked ? "default" : "pointer",
+                transition: "opacity 150ms, background-color 150ms",
+              }}
+            >
+              <span style={{ fontSize: "2rem", lineHeight: 1 }}>{opt.emoji}</span>
+              <span style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827",
+                textAlign: "center" }}>
+                {opt.parola}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
