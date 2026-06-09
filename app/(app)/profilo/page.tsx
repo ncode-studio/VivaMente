@@ -13,7 +13,7 @@ import { useUserStore, type Familiare } from "@/lib/store";
 import { giorniDa } from "@/lib/utils";
 import { COLORS } from "@/lib/design-tokens";
 import {
-  User, CheckCircle, Phone, Mail, Bell, Timer,
+  User, CheckCircle, Mail, Bell, Timer,
   Group, Copy,
   NavArrowDown, NavArrowUp,
 } from "iconoir-react";
@@ -455,7 +455,6 @@ function FamiliareCard({ familiare, onRimuovi }: {
   const INFO_ROWS = [
     { icon: <User width={15} height={15} strokeWidth={1.5} color={COLORS.inkMuted} />, label: "Nome",      value: familiare.nome },
     { icon: <Group width={15} height={15} strokeWidth={1.5} color={COLORS.inkMuted} />, label: "Parentela", value: familiare.relazione },
-    { icon: <Phone width={15} height={15} strokeWidth={1.5} color={COLORS.inkMuted} />, label: "Telefono",  value: familiare.telefono },
   ];
 
   return (

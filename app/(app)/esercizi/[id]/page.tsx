@@ -58,7 +58,7 @@ export default function EsercizioPage() {
   const router = useRouter();
 
   const {
-    userId, streak, lastActivityDate, medaglie, eserciziFattiOggi, eserciziDelGiorno,
+    userId, isGuest, streak, lastActivityDate, medaglie, eserciziFattiOggi, eserciziDelGiorno,
     setUser, aggiungiMedaglia, setNavNascosta, marcaEsercizioDelGiornoCompletato,
   } = useUserStore();
 
@@ -102,20 +102,36 @@ export default function EsercizioPage() {
   useEffect(() => {
     mountedRef.current = true;
 
-    if (!userId) { router.replace("/onboarding"); return; }
+    // Né autenticato né ospite → fuori contesto: rimanda all'onboarding.
+    if (!userId && !isGuest) { router.replace("/onboarding"); return; }
 
     (async () => {
       try {
-        const [esercizioData, livelloPrecData, countSessioni, livelliDominio] = await Promise.all([
-          fetchEsercizioById(esercizioId),
+        const esercizioData = await fetchEsercizioById(esercizioId);
+        if (!mountedRef.current) return;
+        if (!esercizioData) { setErroreTipo("not-found"); setStato("error"); return; }
+        if (!getFamily(esercizioData.id)) { setErroreTipo("not-implemented"); setStato("error"); return; }
+
+        // ── OSPITE: può provare solo i 5 esercizi del giorno (senza salvataggio).
+        // Gli altri esercizi (libreria) richiedono la registrazione.
+        if (!userId) {
+          const isGiornaliero = useUserStore.getState().eserciziDelGiorno.some((e) => e.id === esercizioId);
+          if (!isGiornaliero) { router.replace("/onboarding/registrati"); return; }
+          setEsercizio(esercizioData);
+          setLivelloPrec(null);
+          setLivelloDaGiocare(1);   // ospite gioca sempre al livello base
+          setMostraTutorial(true);  // tutorial sempre mostrato
+          setStato("intro");
+          return;
+        }
+
+        // ── UTENTE AUTENTICATO: dati adattivi + storico
+        const [livelloPrecData, countSessioni, livelliDominio] = await Promise.all([
           fetchUltimoLivelloEsercizio(userId, esercizioId),
           contaSessioniPerEsercizio(userId, esercizioId),
           fetchUserLevels(userId),
         ]);
         if (!mountedRef.current) return;
-
-        if (!esercizioData) { setErroreTipo("not-found"); setStato("error"); return; }
-        if (!getFamily(esercizioData.id)) { setErroreTipo("not-implemented"); setStato("error"); return; }
 
         setEsercizio(esercizioData);
         setLivelloPrec(livelloPrecData);
@@ -133,7 +149,7 @@ export default function EsercizioPage() {
       mountedRef.current = false;
       if (timerIdRef.current !== null) { clearInterval(timerIdRef.current); timerIdRef.current = null; }
     };
-  }, [esercizioId, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [esercizioId, userId, isGuest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Effect B: nav + overflow cleanup globale ────────────────────────────────
   useEffect(() => {
@@ -257,6 +273,20 @@ export default function EsercizioPage() {
     setAccSessione(risultato.accuratezzaValutativa);
     setDurataSessione(durata);
     setMetricheSessione(metrichePayload);
+
+    // ── OSPITE: nessun salvataggio su DB. Marca il giornaliero come completato
+    // solo localmente e mostra i risultati con CTA di registrazione.
+    if (!userId) {
+      if (eserciziDelGiorno.some((e) => e.id === eId)) marcaEsercizioDelGiornoCompletato(eId);
+      setMostraTutorial(true);
+      setEventoProgr(null);
+      setLivelloNuovo(null);
+      setStreakNuovo(null);
+      setNuoveMedaglie([]);
+      setStato("results");
+      return;
+    }
+
     setStato("saving");
 
     const oggi = new Date().toISOString().split("T")[0];
@@ -481,20 +511,31 @@ export default function EsercizioPage() {
                 </div>
               </div>
 
-              <div className="bg-surface rounded-2xl p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-xs" style={{ color: COLORS.inkMuted }}>Progressione</p>
-                  <p className="text-base font-bold text-ink">{livLabel}</p>
+              {isGuest ? (
+                <div className="rounded-2xl p-4 flex flex-col gap-2" style={{ backgroundColor: cc?.bg ?? COLORS.primaryLight }}>
+                  <p className="text-sm font-bold" style={{ color: cc?.text ?? COLORS.primary }}>
+                    Stai provando VivaMente come ospite
+                  </p>
+                  <p className="text-xs" style={{ color: COLORS.inkSecondary }}>
+                    Registrati per salvare i tuoi risultati, seguire i progressi e sbloccare tutti gli esercizi.
+                  </p>
                 </div>
-                {streakNuovo !== null && (
-                  <div className="text-right">
-                    <p className="text-xs" style={{ color: COLORS.inkMuted }}>Serie attiva</p>
-                    <p className="text-base font-bold text-ink">
-                      🔥 {streakNuovo} {streakNuovo === 1 ? "giorno" : "giorni"}
-                    </p>
+              ) : (
+                <div className="bg-surface rounded-2xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs" style={{ color: COLORS.inkMuted }}>Progressione</p>
+                    <p className="text-base font-bold text-ink">{livLabel}</p>
                   </div>
-                )}
-              </div>
+                  {streakNuovo !== null && (
+                    <div className="text-right">
+                      <p className="text-xs" style={{ color: COLORS.inkMuted }}>Serie attiva</p>
+                      <p className="text-base font-bold text-ink">
+                        🔥 {streakNuovo} {streakNuovo === 1 ? "giorno" : "giorni"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {nuoveMedaglie.length > 0 && (
                 <div className="rounded-2xl p-4"
@@ -512,6 +553,27 @@ export default function EsercizioPage() {
                   const prossimo = eserciziDelGiorno.find(
                     (e) => !e.completato && e.id !== esercizio!.id,
                   );
+                  if (isGuest) {
+                    return (
+                      <>
+                        {prossimo && (
+                          <Btn size="lg" onClick={() => router.push(`/esercizi/${prossimo.id}`)}>
+                            Prossimo: {prossimo.nome}
+                          </Btn>
+                        )}
+                        <Link href="/onboarding/registrati">
+                          <Btn variant={prossimo ? "outline" : "primary"} size="lg" className="w-full">
+                            Registrati per salvare i progressi
+                          </Btn>
+                        </Link>
+                        {!prossimo && (
+                          <Link href="/home">
+                            <Btn variant="outline" size="lg" className="w-full">Torna alla home</Btn>
+                          </Link>
+                        )}
+                      </>
+                    );
+                  }
                   if (prossimo) {
                     return (
                       <>

@@ -137,10 +137,10 @@ export function UpdatingWMTaskEngine({
               testo:
                 "All'inizio vedrai la domanda (es. «Quale era il più GRANDE?»). " +
                 "Poi appariranno alcuni oggetti, uno alla volta. " +
-                "Dai livelli più alti gli oggetti arrivano in più round: dopo ogni round dovrai " +
-                "digitare il nome dell'oggetto che risponde alla domanda considerando TUTTI " +
-                "gli oggetti visti finora, anche quelli dei round precedenti. " +
-                "Premi ✓ per confermare ogni risposta.",
+                "Ai primi livelli scegli la risposta tra le opzioni; più avanti la scrivi con la tastiera. " +
+                "Dai livelli più alti gli oggetti arrivano in più gruppi: tra un gruppo e l'altro " +
+                "ti ricorderemo di tenere a mente le parole già viste, perché alla fine dovrai " +
+                "rispondere considerando TUTTI gli oggetti, anche quelli dei gruppi precedenti.",
             }],
       }
     : null;

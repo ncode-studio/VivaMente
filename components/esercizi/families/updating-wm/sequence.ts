@@ -13,15 +13,23 @@ import type {
   UWMTabALevel,
   UWMTabBLevel,
   UWMModalita,
+  UWMRisposta,
 } from "./levels";
 
 // ── Tipi stimolo ───────────────────────────────────────────────────────────────
 
 export type UWMDirezione = "massimo" | "minimo";
 
+/** Opzione di risposta a scelta multipla (lv 1-2). */
+export interface UWMOpzione {
+  parola: string;
+  emoji:  string;
+}
+
 export interface UWMRound {
   items:          UWMItem[];    // stimoli mostrati in questo round
   rispostaAttesa: string;       // vincitore cumulativo fino a questo round (normalizzato)
+  opzioni?:       UWMOpzione[]; // 4 opzioni mischiate (solo quando risposta = "mc")
 }
 
 export interface StimoloUWM_PI {
@@ -30,6 +38,7 @@ export interface StimoloUWM_PI {
   proprieta:  UWMProprieta;
   direzione:  UWMDirezione;
   domanda:    string;           // mostrata solo nel cue iniziale
+  risposta:   UWMRisposta;      // "mc" (lv 1-2) o "qwerty" (lv 3+)
   rounds:     UWMRound[];       // 1 round per "single", >=2 per "updating"
   speedMs:    number;
 }
@@ -190,9 +199,22 @@ export function generaStimoloPIInner(
     }
 
     allItems.push(...roundItems);
+
+    // Opzioni MC (solo lv 1-2, sempre single round): vincitore + 3 foil non
+    // presenti nella sequenza (GDD §Risposta MC lv 1-10, qui ristretto a 1-2).
+    let opzioni: UWMOpzione[] | undefined;
+    if (level.risposta === "mc") {
+      const foils = pickFoils(poolRef, 3, usedIds, rng);
+      opzioni = shuffle(
+        [cumWinner, ...foils].map((it) => ({ parola: it.parola, emoji: it.emoji })),
+        rng,
+      );
+    }
+
     rounds.push({
       items: roundItems,
       rispostaAttesa: normalizzaUWM(cumWinner.parola),
+      ...(opzioni ? { opzioni } : {}),
     });
   }
 
@@ -202,9 +224,21 @@ export function generaStimoloPIInner(
     proprieta: prop,
     direzione: dir,
     domanda:   DOMANDE[prop][dir],
+    risposta:  level.risposta,
     rounds,
     speedMs:   level.speedMs,
   };
+}
+
+/** Estrae n foil casuali dal pool, esclusi gli item già usati nel trial. */
+function pickFoils(
+  poolRef: UWMPoolRef,
+  n: number,
+  excludeTrial: Set<string>,
+  rng: () => number,
+): UWMItem[] {
+  const eligible = poolRef.pool.filter((it) => !excludeTrial.has(it.id));
+  return shuffle(eligible, rng).slice(0, n);
 }
 
 // ── Generatore Numeri ──────────────────────────────────────────────────────────
