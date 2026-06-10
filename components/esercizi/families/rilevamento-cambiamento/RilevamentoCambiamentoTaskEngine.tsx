@@ -135,7 +135,7 @@ export function RilevamentoCambiamentoTaskEngine({
     <TrialFlow<StimoloRilevamento, RispostaRilevamento>
       tLimMs={level.tLimMsPerTrial + 500}
       trialValutativi={null}
-      microProgressione={null}
+      microProgressione={microProgressione}
       generaStimolo={generaStimolo}
       renderStimolo={renderStimolo}
       valutaRisposta={valutaRisposta}
