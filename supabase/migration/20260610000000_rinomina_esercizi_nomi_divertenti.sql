@@ -70,3 +70,7 @@ update esercizi set nome = 'Le Parole Giuste — Simili e Contrari'    where id 
 
 -- ── Visuospaziali ───────────────────────────────────────────────────────────
 update esercizi set nome = 'Il Labirinto'                            where id = 'path_tracing';
+
+-- ── Extra (non nel seed ma presenti nel DB) ─────────────────────────────────
+update esercizi set nome = 'Caccia alla Figura'                      where id = 'cancellazione_visiva';
+update esercizi set nome = 'Acchiappa al Volo'                       where id = 'stimoli_cadenti';
