@@ -124,31 +124,56 @@ export interface MicroProgressioneConfig {
   limite?: number;
 }
 
+/**
+ * Riga-istruzione (struttura "Osservatorio Stellare"): un'icona in un cerchio
+ * colorato + un testo breve. Le pagine usano tipicamente 3 righe nell'ordine
+ * "stato base → segnale/target → azione da compiere".
+ */
+export interface TutorialRiga {
+  /** Icona emoji mostrata nel cerchio accentato. */
+  icona: string;
+  /** Testo breve della riga (linguaggio semplice per utenti 60+). */
+  testo: string;
+}
+
 /** Singola pagina del tutorial. */
 export interface TutorialPagina {
-  /** Intestazione opzionale. */
+  /** Intestazione (nome dell'esercizio o titolo della pagina). */
   titolo?: string;
   /**
-   * Testo istruzioni (max 3 righe, linguaggio semplice per utenti 60+).
-   * Responsabilità della famiglia rispettare il limite — testi più lunghi
-   * possono rompere il layout su viewport stretti.
+   * Paragrafo introduttivo BREVE opzionale, mostrato sopra le righe.
+   * Lasciare undefined quando si usano le `righe` (struttura Osservatorio).
+   * Mantenuto per retrocompatibilità con i tutorial non ancora migrati.
    */
-  testo: string;
+  testo?: string;
   /**
-   * Demo opzionale: ReactNode montato da TutorialOverlay nell'area dedicata.
-   * Lo stato interno (es. animazioni) vive nel componente demo tramite hooks.
-   * La famiglia passa <MyDemo /> direttamente — nessuna funzione wrapper necessaria.
+   * Righe-istruzione (struttura Osservatorio): tipicamente 3, nell'ordine
+   * "stato base → segnale → azione". È la forma da preferire.
+   */
+  righe?: TutorialRiga[];
+  /**
+   * Demo/anteprima visiva opzionale: ReactNode montato da TutorialOverlay
+   * nell'area dedicata. Lo stato interno (animazioni) vive nel componente demo.
    */
   demo?: ReactNode;
 }
 
 /**
  * Configurazione del tutorial per la prima sessione e i cambi di meccanica.
+ * Struttura di riferimento: L'Osservatorio Stellare (occhiello "Come si gioca"
+ * → titolo → anteprima → 3 righe-istruzione → CTA), con accento per categoria.
  * see docs/gdd/shared/02-trial-flow.md §Schermata tutorial
  *
- * Caso monopagina (comune): pagine: [{ testo, demo }].
+ * Caso monopagina (comune): pagine: [{ titolo, demo, righe }].
  * TutorialOverlay mostra la navigazione multi-pagina solo se pagine.length > 1.
  */
 export interface TutorialConfig {
   pagine: TutorialPagina[];
+  /**
+   * Colore accento (per categoria): usare CATEGORIA_COLORS[dominio].text.
+   * Default: blu se non specificato.
+   */
+  accent?: string;
+  /** Etichetta della CTA sull'ultima pagina. Default: "Ho capito — Inizia". */
+  ctaLabel?: string;
 }

@@ -14,13 +14,64 @@
  * Timer sessione: 60s (gestito da page.tsx via tempoScaduto).
  */
 
-import { useState, type ReactNode, type CSSProperties } from "react";
-import type { GameEngineProps, SessionResult } from "@/lib/exercise-types";
+import { useState } from "react";
+import type { GameEngineProps, SessionResult, TutorialConfig } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
+import { TutorialOverlay } from "@/components/esercizi/shared/TutorialOverlay";
 import { getGGLevel } from "./levels";
 import { GuardianoGiardinoSession } from "./GuardianoGiardinoSession";
-import { FarfallaSprite, ApeSprite, UccellinoSprite, LibellulaSprite, CoccinellaSprite } from "./sprites";
+import { FarfallaSprite, ApeSprite, UccellinoSprite, LibellulaSprite } from "./sprites";
 
 type Fase = "tutorial" | "sessione";
+
+const ACCENT = CATEGORIA_COLORS.attenzione.text; // Guardiano = dominio Attenzione
+
+// Anteprima: mini giardino con la farfalla evidenziata tra gli altri animali.
+function GiardinoDemo() {
+  return (
+    <div style={{
+      position: "relative", width: "100%", height: 130, borderRadius: "0.75rem",
+      background: "linear-gradient(180deg, #D9DDD3 0%, #C7CCAA 100%)",
+      overflow: "hidden",
+      display: "flex", alignItems: "center", justifyContent: "space-around",
+      padding: "0 0.5rem",
+    }}>
+      <div style={{ opacity: 0.7 }}><ApeSprite size={48} /></div>
+      {/* Farfalla evidenziata */}
+      <div style={{
+        position: "relative",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        width: 70, height: 70, borderRadius: "50%",
+        background: "rgba(255,255,255,0.55)",
+        boxShadow: `0 0 0 3px ${ACCENT}`,
+      }}>
+        <FarfallaSprite size={56} variant={0} />
+      </div>
+      <div style={{ opacity: 0.7 }}><UccellinoSprite size={48} /></div>
+      <div style={{ opacity: 0.7 }}><LibellulaSprite size={48} /></div>
+      <p style={{
+        position: "absolute", bottom: 6, left: 0, right: 0, textAlign: "center", margin: 0,
+        color: ACCENT, fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.04em",
+      }}>
+        ↑ tocca solo la farfalla
+      </p>
+    </div>
+  );
+}
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Comincia!",
+  pagine: [{
+    titolo: "Il Guardiano del Giardino",
+    demo: <GiardinoDemo />,
+    righe: [
+      { icona: "🌿", testo: "Nel giardino volano farfalle e tanti altri animaletti." },
+      { icona: "🦋", testo: "Tocca le farfalle quando le vedi volare." },
+      { icona: "🐝", testo: "Tutti gli altri animali lasciali passare: non toccarli." },
+    ],
+  }],
+};
 
 export function GuardianoGiardinoTaskEngine({
   livello,
@@ -37,70 +88,10 @@ export function GuardianoGiardinoTaskEngine({
 
   if (fase === "tutorial") {
     return (
-      <div style={{
-        display: "flex", flexDirection: "column", alignItems: "center",
-        padding: "1.5rem 1.25rem", gap: "1.1rem",
-      }}>
-        <p style={{
-          fontSize: "0.7rem", fontWeight: 700, color: "#4F6347",
-          letterSpacing: "0.08em", margin: 0,
-        }}>
-          COME SI GIOCA
-        </p>
-
-        <h2 style={{
-          fontSize: "1.25rem", fontWeight: 900, color: "#1F2A1A",
-          textAlign: "center", margin: 0,
-        }}>
-          Il Guardiano del Giardino
-        </h2>
-
-        <p style={{
-          fontSize: "0.92rem", color: "#374151", textAlign: "center",
-          lineHeight: 1.5, margin: 0, maxWidth: 360,
-        }}>
-          Nel giardino volano farfalle e tanti altri animaletti.
-          Il tuo compito è semplice: <strong>tocca solo le farfalle</strong>,
-          lascia in pace tutti gli altri.
-        </p>
-
-        <div style={{
-          display: "flex", flexDirection: "column", gap: "0.7rem",
-          width: "100%", maxWidth: 360,
-        }}>
-          <RigaIstruzione
-            sprite={<FarfallaSprite size={52} variant={0} />}
-            bg="#EDEFE4"
-            border="#C7CCAA"
-            testo="Tocca le farfalle quando le vedi volare."
-          />
-          <RigaIstruzione
-            sprite={<AltriAnimaliComposito />}
-            bg="#E6E2D9"
-            border="#B0A78F"
-            testo="Tutti gli altri animali del giardino: non toccarli, lasciali passare."
-          />
-        </div>
-
-        <p style={{
-          fontSize: "0.78rem", color: "#6B7280", textAlign: "center", margin: 0,
-        }}>
-          Hai un minuto. Prenditi il tempo che serve.
-        </p>
-
-        <button
-          onClick={() => setFase("sessione")}
-          style={{
-            width: "100%", maxWidth: 360, padding: "0.9rem",
-            borderRadius: "0.85rem", border: "none",
-            backgroundColor: "#4F6347", color: "#FFFFFF",
-            fontSize: "1rem", fontWeight: 800, cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(79,99,71,0.35)",
-          }}
-        >
-          Ho capito — Comincia!
-        </button>
-      </div>
+      <TutorialOverlay
+        config={TUTORIAL}
+        onComplete={() => setFase("sessione")}
+      />
     );
   }
 
@@ -113,54 +104,5 @@ export function GuardianoGiardinoTaskEngine({
       onReady={onReady}
       onComplete={onComplete as (r: SessionResult) => void}
     />
-  );
-}
-
-// ── Icona composita "altri animali" ─ griglia 2×2 di mini-sprite ──────────────
-
-function AltriAnimaliComposito() {
-  const cellStyle: CSSProperties = {
-    width: 26, height: 26,
-    display: "flex", alignItems: "center", justifyContent: "center",
-  };
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "26px 26px",
-        gridTemplateRows: "26px 26px",
-        gap: 2,
-      }}
-      aria-hidden
-    >
-      <div style={cellStyle}><ApeSprite        size={28} /></div>
-      <div style={cellStyle}><UccellinoSprite  size={28} /></div>
-      <div style={cellStyle}><LibellulaSprite  size={28} /></div>
-      <div style={cellStyle}><CoccinellaSprite size={28} /></div>
-    </div>
-  );
-}
-
-// ── Riga tutorial ──────────────────────────────────────────────────────────────
-
-function RigaIstruzione({
-  sprite, bg, border, testo,
-}: { sprite: ReactNode; bg: string; border: string; testo: string }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: "0.9rem",
-      padding: "0.6rem 0.85rem", borderRadius: "0.85rem",
-      backgroundColor: bg, border: `1.5px solid ${border}`,
-    }}>
-      <div style={{
-        width: 56, height: 56, flexShrink: 0,
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
-        {sprite}
-      </div>
-      <p style={{ fontSize: "0.88rem", color: "#1F2937", lineHeight: 1.4, margin: 0 }}>
-        {testo}
-      </p>
-    </div>
   );
 }

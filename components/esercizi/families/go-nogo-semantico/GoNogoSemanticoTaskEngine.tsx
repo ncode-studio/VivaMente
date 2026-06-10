@@ -23,6 +23,7 @@ import type {
   MicroProgressioneConfig,
   SessionResult,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import { getGoNogoSemanticoLevel } from "./levels";
 import {
@@ -38,6 +39,8 @@ import { GoNogoSemanticoStimulus, type GoNogoSemanticoRisposta } from "./GoNogoS
 
 const TIMER_MS = 60_000;
 const ISI_MS   = 300;
+
+const ACCENT = CATEGORIA_COLORS.esecutive.text; // Go/No-Go = dominio Esecutive
 
 export const MICRO_PROGRESSIONE_SEMANTICO = {
   delta:    -50,
@@ -82,10 +85,11 @@ export function GoNogoSemanticoTaskEngine({
 
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
+        accent: ACCENT,
+        ctaLabel: "Inizia",
         pagine: [
           {
             titolo: `Il gruppo di oggi: ${coppia.etichetta}`,
-            testo:  `Vedrai apparire una parola alla volta. Premi il pulsante "✓ ${coppia.etichetta}" SOLO se la parola appartiene al gruppo ${coppia.etichetta.toUpperCase()}. Se non appartiene, non fare nulla e aspetta la parola successiva.`,
             demo: (
               <div className="flex flex-col items-center gap-3">
                 <span className="text-4xl font-bold text-gray-900">
@@ -96,10 +100,14 @@ export function GoNogoSemanticoTaskEngine({
                 </span>
               </div>
             ),
+            righe: [
+              { icona: "📖", testo: "Apparirà una parola alla volta. Leggila con calma." },
+              { icona: "✅", testo: `Se la parola è del gruppo ${coppia.etichetta}, premi il pulsante.` },
+              { icona: "👆", testo: "Tocca il pulsante prima che la parola sparisca." },
+            ],
           },
           {
-            titolo: "Non appartiene? Non toccare nulla",
-            testo:  `Se la parola NON appartiene al gruppo ${coppia.etichetta.toUpperCase()}, tieni le mani ferme. Non premere nessun pulsante. Aspetta la parola successiva.`,
+            titolo: "Se non è del gruppo, fermati",
             demo: (
               <div className="flex flex-col items-center gap-3">
                 <span className="text-4xl font-bold text-gray-900">
@@ -110,6 +118,11 @@ export function GoNogoSemanticoTaskEngine({
                 </span>
               </div>
             ),
+            righe: [
+              { icona: "🚫", testo: `Se la parola NON è del gruppo ${coppia.etichetta}, non premere nulla.` },
+              { icona: "🙌", testo: "Tieni le mani ferme e aspetta." },
+              { icona: "➡️", testo: "Arriverà subito la parola successiva." },
+            ],
           },
         ],
       }
@@ -187,10 +200,10 @@ export function GoNogoSemanticoTaskEngine({
   const renderStimoloConHeader = useCallback(
     (props: { stimolo: StimoloSemantico; onRisposta: (r: GoNogoSemanticoRisposta) => void }) => (
       <div className="flex flex-col items-center w-full gap-0">
-        <GoNogoSemanticoStimulus {...props} disabilitato={false} etichetta={coppia.etichetta} />
+        <GoNogoSemanticoStimulus {...props} disabilitato={false} />
       </div>
     ),
-    [coppia.etichetta],
+    [],
   );
 
   // ── Render ──────────────────────────────────────────────────────────────

@@ -17,6 +17,7 @@ import type {
   MicroProgressioneConfig,
   SessionResult,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import { getWCSLevel, getWCSMechanicWarning, WCS_TARGET_FLOOR_MS } from "./levels";
 import {
@@ -28,6 +29,39 @@ import {
   type WCSPoolRef,
 } from "./sequence";
 import { WordChainSwitchingSession } from "./WordChainSwitchingSession";
+
+// ── Tutorial ─────────────────────────────────────────────────────────────────
+// Word Chain Switching = dominio Esecutive (alternanza tra due categorie).
+
+const ACCENT = CATEGORIA_COLORS.esecutive.text;
+
+// Modalità selezione (lv 1-3): le parole sono mostrate, si toccano.
+const TUTORIAL_SELEZIONE: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Comincia",
+  pagine: [{
+    titolo: "Catena di Parole",
+    righe: [
+      { icona: "🔤", testo: "Vedi tante parole di due categorie diverse, per esempio animali e oggetti." },
+      { icona: "🔁", testo: "Tocca le parole alternando le categorie: prima un animale, poi un oggetto, e così via." },
+      { icona: "⚡", testo: "Vai più veloce che puoi. Se sbagli categoria, la parola non conta. Con calma." },
+    ],
+  }],
+};
+
+// Modalità produzione (lv 4+): le parole le scrive l'utente sulla tastiera.
+const TUTORIAL_PRODUZIONE: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Comincia",
+  pagine: [{
+    titolo: "Catena di Parole",
+    righe: [
+      { icona: "💭", testo: "Vedi due categorie, per esempio animali e oggetti. Stavolta le parole le scrivi tu." },
+      { icona: "🔁", testo: "Scrivi una parola alla volta alternando le categorie: prima un animale, poi un oggetto." },
+      { icona: "✓", testo: "Premi il segno di spunta per confermare ogni parola. Vai con il tuo passo." },
+    ],
+  }],
+};
 
 // ── Engine ─────────────────────────────────────────────────────────────────────
 
@@ -132,31 +166,9 @@ export function WordChainSwitchingTaskEngine({
 
   // ── Tutorial ───────────────────────────────────────────────────────────────
   const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: level.modalita === "produzione"
-          ? [{
-              titolo: "Word Chain — Categorie (scrivi tu)",
-              testo:
-                "All'inizio del trial vedrai DUE categorie semantiche (es. ANIMALI e OGGETTI). " +
-                "Devi scrivere parole alternando le due categorie: prima una ANIMALE, poi un OGGETTO, " +
-                "poi di nuovo un ANIMALE, e così via. " +
-                "Usa la tastiera per digitare ogni parola e premi ✓ per confermare. " +
-                "Se la parola non appartiene alla categoria attesa (o non è riconosciuta) viene segnalata e non conta. " +
-                "Non si possono ripetere parole già usate nello stesso trial. " +
-                "Completa la sequenza il più velocemente possibile.",
-            }]
-          : [{
-              titolo: "Word Chain — Categorie",
-              testo:
-                "Vedrai un insieme di parole appartenenti a DUE categorie diverse " +
-                "(es. ANIMALI e OGGETTI). I nomi delle due categorie sono mostrati all'inizio. " +
-                "Tocca le parole alternando le categorie: prima una ANIMALE, poi una OGGETTO, " +
-                "poi di nuovo una ANIMALE, e così via. " +
-                "Le parole NON sono colorate: devi leggerle e capire da sola/o a quale categoria appartengono. " +
-                "Un tocco sulla categoria sbagliata viene segnalato in rosso e non viene contato. " +
-                "Completa la sequenza il più velocemente possibile.",
-            }],
-      }
+    ? level.modalita === "produzione"
+      ? TUTORIAL_PRODUZIONE
+      : TUTORIAL_SELEZIONE
     : null;
 
   // ── Warning ────────────────────────────────────────────────────────────────

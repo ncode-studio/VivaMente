@@ -48,6 +48,17 @@ export const RILEVAMENTO_LEVELS: readonly RilevamentoLevelConfig[] = [
   { livello: 10, nItem: 12, sceneMs: 250, blankMs:  70, tipoChange: "intra", tLimMsPerTrial: 18000 },
 ] as const;
 
+/**
+ * #8 — Micro-progressione intra-livello. Dopo 3 trial valutativi corretti
+ * consecutivi parte un trial bonus con più immagini nella griglia (+2 per
+ * step, fino a +4), che rende la ricerca del cambiamento più impegnativa.
+ * Cap a 16 item (il pool emoji ne ha 36, margine ampio). I trial bonus non
+ * contano per l'accuratezza inter-livello (gestito da TrialFlow).
+ */
+export const RILEVAMENTO_MICRO_DELTA    = 2;
+export const RILEVAMENTO_MICRO_MAX_OVER = 2;
+export const RILEVAMENTO_MICRO_LIMITE   = 16;
+
 export function getRilevamentoLevel(livello: number): RilevamentoLevelConfig {
   return RILEVAMENTO_LEVELS[Math.min(10, Math.max(1, livello)) - 1];
 }

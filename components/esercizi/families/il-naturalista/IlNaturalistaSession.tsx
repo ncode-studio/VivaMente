@@ -1,22 +1,22 @@
 "use client";
 
 /**
- * IlNaturalistaSession — loop di gioco del Naturalista.
+ * IlNaturalistaSession — loop di gioco del Naturalista (#15: ricerca del bersaglio).
  *
  * Per ogni scena:
- *  1. campiona tipologia scena dal pool del livello, evita ripetizione consecutiva
- *  2. genera N creature, posizionate senza sovrapposizioni in area "vivibile"
- *     coerente con l'habitat (prato → suolo, fondale → acqua, ecc.)
- *  3. assegna lento moto (deriva ellittica) a `numMobili` creature dal lv 6
- *  4. l'utente tocca ciascuna entro un raggio generoso intorno al centro sprite
- *  5. quando tutte trovate o scade il tLimSceneMs → scena successiva
+ *  1. campiona tipologia scena dal pool del livello (no ripetizione consecutiva)
+ *  2. sceglie un BERSAGLIO (una specie) e lo mostra come riferimento in alto
+ *  3. riempie la scena di tanti DISTRATTORI (altre specie) + N istanze del target
+ *  4. l'utente tocca le istanze del target; toccare un distrattore = errore
+ *  5. quando tutti i target sono trovati o scade il tLimSceneMs → scena successiva
  *
  * Scoring per scena:
- *   base 30 se tutte trovate
- *   bonus velocità = round(40 * max(0, 1 - tempo / tLim)) se tutte trovate
- *   bonus completezza = round(30 * (foundInScene / numCreature))
- *   scoreGrezzo = media per scena, 0–100.
- * Accuratezza valutativa = creatureTrovate / creatureMostrate (0..1).
+ *   base 30 se tutti i target trovati
+ *   bonus velocità = round(40 * max(0, 1 - tempo / tLim)) se tutti trovati
+ *   bonus completezza = round(30 * (targetTrovati / numTarget))
+ *   penalità = -8 per ogni tocco errato nella scena (floor 0)
+ * Accuratezza valutativa = targetTrovati / (targetMostrati + tocchiErrati) (0..1):
+ *   penalizza sia i bersagli mancati sia i tocchi sui distrattori.
  */
 
 import {
@@ -41,11 +41,11 @@ import {
 interface PlacedCreature {
   id: number;
   kind: CreatureKind;
+  isTarget: boolean;
   x: number;
   y: number;
   rotation: number;
   motion: { rx: number; ry: number; periodMs: number; phase: number } | null;
-  /** Se true, viene disegnata una "foglia di primo piano" sopra parte dello sprite. */
   occlusa: boolean;
   occlusioneSeed: number;
   found: boolean;
@@ -53,15 +53,16 @@ interface PlacedCreature {
 
 interface SceneInstance {
   kind: SceneKind;
+  targetKind: CreatureKind;
   creatures: PlacedCreature[];
 }
 
 // ── Costanti layout ──────────────────────────────────────────────────────────
 
-const MIN_DIST_BETWEEN_CREATURES = 120;
-const SCENE_INTRO_MS = 600;
+const SCENE_INTRO_MS = 900;
 const SCENE_OUTRO_MS = 700;
 const DRAG_TAP_THRESHOLD_PX = 8;
+const WRONG_FLASH_MS = 420;
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -76,9 +77,9 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
 
   // ── accumulatori (ref) ──────────────────────────────────────────────────
   const completedRef = useRef(false);
-  const creatureTrovateRef = useRef(0);
-  const creatureMostrateRef = useRef(0);
-  const tapVuotiRef = useRef(0);
+  const targetTrovatiRef = useRef(0);
+  const targetMostratiRef = useRef(0);
+  const tapErratiRef = useRef(0);
   const scoreTotaleRef = useRef(0);
   const sceneCompleteRef = useRef(0);
 
@@ -87,7 +88,10 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
   const [scena, setScena] = useState<SceneInstance | null>(null);
   const [showIntro, setShowIntro] = useState(true);
   const [showOutro, setShowOutro] = useState(false);
+  const [wrongFlash, setWrongFlash] = useState<{ x: number; y: number; key: number } | null>(null);
+  const wrongFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sceneStartTsRef = useRef(0);
+  const falseAlarmsSceneRef = useRef(0);
   const lastSceneKindRef = useRef<SceneKind | null>(null);
 
   // ── moto creature: tick di rerender per le mobili ───────────────────────
@@ -107,16 +111,16 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
   const areaForScene = useCallback((k: SceneKind): { yMin: number; yMax: number; xMin: number; xMax: number } => {
     switch (k) {
       case "prato":
-      case "prato-fiorito":         return { yMin: 280, yMax: 640, xMin: 80, xMax: 920 };
-      case "prato-alpino":          return { yMin: 360, yMax: 640, xMin: 60, xMax: 940 };
+      case "prato-fiorito":         return { yMin: 240, yMax: 650, xMin: 70, xMax: 930 };
+      case "prato-alpino":          return { yMin: 320, yMax: 650, xMin: 60, xMax: 940 };
       case "bosco-rado":
       case "bosco":
-      case "bosco-fitto":           return { yMin: 180, yMax: 640, xMin: 70, xMax: 930 };
-      case "sottobosco-autunnale":  return { yMin: 250, yMax: 640, xMin: 70, xMax: 930 };
-      case "stagno-ninfee":         return { yMin: 260, yMax: 640, xMin: 80, xMax: 920 };
+      case "bosco-fitto":           return { yMin: 150, yMax: 650, xMin: 60, xMax: 940 };
+      case "sottobosco-autunnale":  return { yMin: 200, yMax: 650, xMin: 60, xMax: 940 };
+      case "stagno-ninfee":         return { yMin: 220, yMax: 650, xMin: 70, xMax: 930 };
       case "fondale-chiaro":
-      case "fondale-fitto":         return { yMin: 130, yMax: 540, xMin: 80, xMax: 920 };
-      case "scogliera-marina":      return { yMin: 540, yMax: 670, xMin: 60, xMax: 940 };
+      case "fondale-fitto":         return { yMin: 110, yMax: 560, xMin: 70, xMax: 930 };
+      case "scogliera-marina":      return { yMin: 380, yMax: 670, xMin: 60, xMax: 940 };
     }
   }, []);
 
@@ -131,29 +135,51 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
     lastSceneKindRef.current = kind;
 
     const habitatPool = HABITAT_POOL[kind] as readonly CreatureKind[];
+    const targetKind = habitatPool[Math.floor(Math.random() * habitatPool.length)];
+    const distractorKinds = habitatPool.filter(k => k !== targetKind);
     const area = areaForScene(kind);
 
-    const placed: PlacedCreature[] = [];
-    const N = config.numCreature;
-    let safety = 0;
-    while (placed.length < N && safety < 600) {
-      safety++;
-      const x = area.xMin + Math.random() * (area.xMax - area.xMin);
-      const y = area.yMin + Math.random() * (area.yMax - area.yMin);
-      const tooClose = placed.some(p => Math.hypot(p.x - x, p.y - y) < MIN_DIST_BETWEEN_CREATURES);
-      if (tooClose) continue;
+    // distanza minima tra centri: abbastanza da isolare il tap su un oggetto,
+    // ma compatta per ottenere una scena affollata.
+    const minDist = Math.max(config.clickRadiusUnits + 6, config.creaturaSizeUnits * 0.7);
 
-      const creatureKind = habitatPool[Math.floor(Math.random() * habitatPool.length)];
-      const willMove = placed.length < config.numMobili;
+    const placed: PlacedCreature[] = [];
+    // Lista di "specie da piazzare": prima i target (garantiti), poi i distrattori.
+    const queue: { kind: CreatureKind; isTarget: boolean }[] = [];
+    for (let i = 0; i < config.numTarget; i++) queue.push({ kind: targetKind, isTarget: true });
+    for (let i = 0; i < config.numDistrattori; i++) {
+      const dk = distractorKinds.length > 0
+        ? distractorKinds[Math.floor(Math.random() * distractorKinds.length)]
+        : targetKind;
+      queue.push({ kind: dk, isTarget: false });
+    }
+
+    let mobiliRestanti = config.numMobili;
+    for (const item of queue) {
+      let safety = 0;
+      let pos: { x: number; y: number } | null = null;
+      while (safety < 400) {
+        safety++;
+        const x = area.xMin + Math.random() * (area.xMax - area.xMin);
+        const y = area.yMin + Math.random() * (area.yMax - area.yMin);
+        const tooClose = placed.some(p => Math.hypot(p.x - x, p.y - y) < minDist);
+        if (!tooClose) { pos = { x, y }; break; }
+      }
+      // se non trova spazio dopo molti tentativi, piazza comunque (scena densa)
+      const x = pos?.x ?? (area.xMin + Math.random() * (area.xMax - area.xMin));
+      const y = pos?.y ?? (area.yMin + Math.random() * (area.yMax - area.yMin));
+      const willMove = mobiliRestanti > 0;
+      if (willMove) mobiliRestanti--;
       placed.push({
         id: placed.length,
-        kind: creatureKind,
+        kind: item.kind,
+        isTarget: item.isTarget,
         x, y,
         rotation: (Math.random() * 30 - 15),
         motion: willMove
           ? {
-            rx: 28 + Math.random() * 28,
-            ry: 14 + Math.random() * 14,
+            rx: 24 + Math.random() * 26,
+            ry: 12 + Math.random() * 14,
             periodMs: 6500 + Math.random() * 3500,
             phase: Math.random() * Math.PI * 2,
           }
@@ -164,8 +190,15 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
       });
     }
 
-    creatureMostrateRef.current += placed.length;
-    setScena({ kind, creatures: placed });
+    // Mescola l'ordine di disegno così i target non sono sempre "sopra".
+    for (let i = placed.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [placed[i], placed[j]] = [placed[j], placed[i]];
+    }
+
+    targetMostratiRef.current += config.numTarget;
+    falseAlarmsSceneRef.current = 0;
+    setScena({ kind, targetKind, creatures: placed });
     sceneStartTsRef.current = performance.now();
     setShowIntro(true);
     setTimeout(() => setShowIntro(false), SCENE_INTRO_MS);
@@ -178,14 +211,20 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => () => {
+    if (wrongFlashTimerRef.current) clearTimeout(wrongFlashTimerRef.current);
+  }, []);
+
   // ── finalizzazione su tempoScaduto ──────────────────────────────────────
   useEffect(() => {
     if (!tempoScaduto || completedRef.current) return;
     completedRef.current = true;
 
-    const trovate = creatureTrovateRef.current;
-    const mostrate = Math.max(1, creatureMostrateRef.current);
-    const accuratezzaValutativa = trovate / mostrate;
+    const trovati = targetTrovatiRef.current;
+    const mostrati = Math.max(1, targetMostratiRef.current);
+    const accuratezzaValutativa = Math.max(0, Math.min(1,
+      trovati / (mostrati + tapErratiRef.current)
+    ));
     const scoreGrezzo = Math.max(0, Math.min(100, Math.round(
       scoreTotaleRef.current / Math.max(1, sceneCompleteRef.current) || 0
     )));
@@ -195,9 +234,9 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
       scoreGrezzo,
       metriche: {
         scene_completate: sceneCompleteRef.current,
-        creature_trovate: trovate,
-        creature_mostrate: creatureMostrateRef.current,
-        tap_vuoti: tapVuotiRef.current,
+        target_trovati: trovati,
+        target_mostrati: targetMostratiRef.current,
+        tap_errati: tapErratiRef.current,
       },
     });
   }, [tempoScaduto, onComplete]);
@@ -206,16 +245,17 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
   const finalizeScene = useCallback(() => {
     if (!scena) return;
     const tempoSpeso = performance.now() - sceneStartTsRef.current;
-    const trovateNellaScena = scena.creatures.filter(c => c.found).length;
-    const N = scena.creatures.length;
+    const trovatiNellaScena = scena.creatures.filter(c => c.isTarget && c.found).length;
+    const N = scena.creatures.filter(c => c.isTarget).length;
 
     let punti = 0;
-    if (trovateNellaScena === N) {
+    if (trovatiNellaScena === N) {
       const speedFactor = Math.max(0, 1 - tempoSpeso / config.tLimSceneMs);
       punti = 30 + Math.round(40 * speedFactor) + 30;
     } else {
-      punti = Math.round(30 * (trovateNellaScena / N));
+      punti = Math.round(60 * (trovatiNellaScena / Math.max(1, N)));
     }
+    punti -= 8 * falseAlarmsSceneRef.current;
     scoreTotaleRef.current += Math.max(0, punti);
     sceneCompleteRef.current += 1;
 
@@ -232,7 +272,7 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
   // ── timeout scena ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!scena || showIntro || showOutro || tempoScaduto || completedRef.current) return;
-    const restanti = scena.creatures.filter(c => !c.found).length;
+    const restanti = scena.creatures.filter(c => c.isTarget && !c.found).length;
     if (restanti === 0) return;
 
     const dueAt = sceneStartTsRef.current + config.tLimSceneMs;
@@ -252,12 +292,19 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
     pointerStartRef.current = { x: e.clientX, y: e.clientY };
   }, []);
 
-  const tryHitCreature = useCallback((clientX: number, clientY: number) => {
+  const flashWrong = useCallback((xVb: number, yVb: number) => {
+    tapErratiRef.current += 1;
+    falseAlarmsSceneRef.current += 1;
+    setWrongFlash({ x: xVb, y: yVb, key: performance.now() });
+    if (wrongFlashTimerRef.current) clearTimeout(wrongFlashTimerRef.current);
+    wrongFlashTimerRef.current = setTimeout(() => setWrongFlash(null), WRONG_FLASH_MS);
+  }, []);
+
+  const tryHit = useCallback((clientX: number, clientY: number) => {
     if (!svgRef.current || !scena) return;
     const rect = svgRef.current.getBoundingClientRect();
     const px = clientX - rect.left;
     const py = clientY - rect.top;
-    // viewBox fisso 0,0,W,H → pixel→viewBox lineare
     const xVb = (px / rect.width) * SCENE_VIEWBOX_W;
     const yVb = (py / rect.height) * SCENE_VIEWBOX_H;
 
@@ -265,7 +312,7 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
     let hit: PlacedCreature | null = null;
     let bestDist = Infinity;
     for (const c of scena.creatures) {
-      if (c.found) continue;
+      if (c.isTarget && c.found) continue;
       const pos = currentCreaturePos(c, now);
       const d = Math.hypot(pos.x - xVb, pos.y - yVb);
       if (d < config.clickRadiusUnits && d < bestDist) {
@@ -274,7 +321,7 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
       }
     }
 
-    if (hit) {
+    if (hit && hit.isTarget) {
       const hitId = hit.id;
       setScena(prev => {
         if (!prev) return prev;
@@ -283,15 +330,16 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
           creatures: prev.creatures.map(c => c.id === hitId ? { ...c, found: true } : c),
         };
       });
-      creatureTrovateRef.current += 1;
-      const restanti = scena.creatures.filter(c => !c.found && c.id !== hitId).length;
+      targetTrovatiRef.current += 1;
+      const restanti = scena.creatures.filter(c => c.isTarget && !c.found && c.id !== hitId).length;
       if (restanti === 0) {
         setTimeout(() => finalizeScene(), 250);
       }
     } else {
-      tapVuotiRef.current += 1;
+      // tocco su un distrattore o sul vuoto → errore
+      flashWrong(xVb, yVb);
     }
-  }, [scena, config.clickRadiusUnits, finalizeScene]);
+  }, [scena, config.clickRadiusUnits, finalizeScene, flashWrong]);
 
   const handlePointerUp = useCallback((e: ReactPointerEvent<SVGSVGElement>) => {
     const start = pointerStartRef.current;
@@ -299,12 +347,11 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
     if (!start) return;
     const dx = e.clientX - start.x;
     const dy = e.clientY - start.y;
-    // ignora se è stato un drag involontario
     if (Math.hypot(dx, dy) > DRAG_TAP_THRESHOLD_PX) return;
     if (!showIntro && !showOutro) {
-      tryHitCreature(e.clientX, e.clientY);
+      tryHit(e.clientX, e.clientY);
     }
-  }, [showIntro, showOutro, tryHitCreature]);
+  }, [showIntro, showOutro, tryHit]);
 
   // ── render scena ─────────────────────────────────────────────────────────
   const renderScene = (k: SceneKind) => {
@@ -323,7 +370,6 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
     }
   };
 
-  // tinta mimetismo coerente con habitat
   const tintForScene = (k: SceneKind | undefined): string => {
     if (!k) return NAT_COLORS.verdeOliva;
     if (k === "fondale-chiaro" || k === "fondale-fitto") return NAT_COLORS.blu;
@@ -351,31 +397,40 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
     }
   };
 
-  const restanti = scena ? scena.creatures.filter(c => !c.found).length : 0;
-  const totalScena = scena ? scena.creatures.length : 0;
+  const targetTrovati = scena ? scena.creatures.filter(c => c.isTarget && c.found).length : 0;
+  const targetTotali = scena ? scena.creatures.filter(c => c.isTarget).length : 0;
 
   return (
     <PaperBackground style={{ minHeight: 540, borderRadius: 12, padding: "0.8rem 0.6rem 1.1rem" }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.55rem" }}>
 
-        {/* Header */}
+        {/* Header: riferimento del bersaglio + contatore */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           width: "100%", maxWidth: 460, padding: "0.25rem 0.5rem",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <LenteIcon size={20} />
-            <span style={{ fontSize: "0.92rem", fontWeight: 800, color: NAT_COLORS.inchiostro }}>
-              Tavola #{sceneIndex + 1}
+            <span style={{ fontSize: "0.82rem", fontWeight: 800, color: NAT_COLORS.inchiostro }}>
+              Trova
             </span>
-            {scena && (
-              <span style={{
-                fontSize: "0.72rem", color: NAT_COLORS.seppia, fontStyle: "italic",
-                fontFamily: "Georgia, 'Times New Roman', serif",
-              }}>
-                · {labelForScene(scena.kind)}
-              </span>
-            )}
+            {/* riferimento del bersaglio (sprite pulito, senza mimetismo) */}
+            <span style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              width: 44, height: 44, borderRadius: 8,
+              background: NAT_COLORS.cartaChiara,
+              border: `1.8px solid ${NAT_COLORS.seppia}`,
+              boxShadow: "0 1px 3px rgba(60,40,20,0.2)",
+            }}>
+              {scena && (
+                <svg viewBox="0 0 100 100" width={38} height={38} style={{ display: "block" }}>
+                  <SceneDefs />
+                  <g transform="translate(50 50)">
+                    <Creature kind={scena.targetKind} />
+                  </g>
+                </svg>
+              )}
+            </span>
           </div>
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
@@ -384,10 +439,10 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
             border: `1.6px solid ${NAT_COLORS.seppia}`,
           }}>
             <span style={{ fontSize: "0.82rem", color: NAT_COLORS.seppia, fontWeight: 700 }}>
-              Trovate
+              Catturati
             </span>
             <span style={{ fontSize: "0.92rem", fontWeight: 900, color: NAT_COLORS.inchiostro }}>
-              {totalScena - restanti}/{totalScena}
+              {targetTrovati}/{targetTotali}
             </span>
           </div>
         </div>
@@ -429,6 +484,16 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
                 tintColor={tintForScene(scena.kind)}
               />
             ))}
+
+            {/* flash su tocco errato */}
+            {wrongFlash && (
+              <g key={wrongFlash.key} transform={`translate(${wrongFlash.x} ${wrongFlash.y})`} pointerEvents="none">
+                <circle r={config.clickRadiusUnits * 0.8} fill="none" stroke="#C0392B" strokeWidth={5} opacity={0.85} />
+                <line x1={-16} y1={-16} x2={16} y2={16} stroke="#C0392B" strokeWidth={6} strokeLinecap="round" />
+                <line x1={16} y1={-16} x2={-16} y2={16} stroke="#C0392B" strokeWidth={6} strokeLinecap="round" />
+              </g>
+            )}
+
             {/* doppia cornice interna stile tavola */}
             <rect x="6" y="6" width={SCENE_VIEWBOX_W - 12} height={SCENE_VIEWBOX_H - 12}
               fill="none" stroke={NAT_COLORS.seppia} strokeWidth="2" opacity="0.5" rx="3"
@@ -447,7 +512,7 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
                   fontSize: "0.95rem", color: NAT_COLORS.inchiostro, margin: "8px 0 0",
                   fontWeight: 700, fontFamily: "Georgia, 'Times New Roman', serif",
                 }}>
-                  {labelForScene(scena.kind)} · cerca {totalScena} creature
+                  {labelForScene(scena.kind)} · scova {targetTotali === 1 ? "il bersaglio" : `i ${targetTotali} bersagli`}
                 </p>
               )}
             </div>
@@ -455,7 +520,7 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
           {showOutro && (
             <div style={overlayStyle()}>
               <span style={overlayBadgeStyle()}>
-                {restanti === 0 ? "Tavola completata!" : "Continua alla prossima..."}
+                {targetTrovati === targetTotali ? "Tavola completata!" : "Continua alla prossima..."}
               </span>
             </div>
           )}
@@ -465,7 +530,7 @@ export function IlNaturalistaSession({ config, tempoScaduto, onReady, onComplete
           fontSize: "0.78rem", color: NAT_COLORS.seppia, margin: 0, textAlign: "center",
           maxWidth: 380, lineHeight: 1.35, fontStyle: "italic",
         }}>
-          Tocca ogni creatura che riesci a scovare. Lavora con calma.
+          Tocca solo le creature uguali a quella mostrata in alto. Lavora con calma.
         </p>
       </div>
     </PaperBackground>
@@ -522,9 +587,9 @@ function CreatureSlot({
 
   return (
     <g transform={`translate(${pos.x} ${pos.y})`}>
-      {creature.found && (
+      {creature.isTarget && creature.found && (
         <>
-          <circle r={size * 0.55} fill="none" stroke="#3A8E45" strokeWidth={3.5 / scale * scale} opacity="0.9"
+          <circle r={size * 0.55} fill="none" stroke="#3A8E45" strokeWidth={3.5} opacity="0.9"
             strokeDasharray="6 5" />
           <circle r={size * 0.42} fill="rgba(58,142,69,0.10)" />
         </>

@@ -19,6 +19,7 @@ import type {
   MicroProgressioneConfig,
 } from "@/lib/exercise-types";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import {
   getUWMTabALevel,
   getUWMTabBLevel,
@@ -123,24 +124,24 @@ export function UpdatingWMTaskEngine({
   // ── Tutorial ───────────────────────────────────────────────────────────────
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
+        accent: CATEGORIA_COLORS.esecutive.text,
+        ctaLabel: "Comincia",
         pagine: isNumeri
           ? [{
               titolo: "Updating WM — Numeri",
-              testo:
-                "All'inizio del trial vedrai la regola di trasformazione " +
-                "(es. «Aggiungi 1 a ogni numero»). Poi appariranno alcuni numeri, uno alla volta. " +
-                "Memorizzali, applica la regola a ciascuno e digita la sequenza trasformata " +
-                "sul tastierino. Premi ✓ per confermare.",
+              righe: [
+                { icona: "📏", testo: "All'inizio compare una regola, ad esempio «Aggiungi 1 a ogni numero»." },
+                { icona: "🔢", testo: "I numeri appaiono uno alla volta: applica la regola a ciascuno." },
+                { icona: "⌨️", testo: "Digita la sequenza trasformata sul tastierino e premi ✓." },
+              ],
             }]
           : [{
-              titolo: "Updating WM — Parole",
-              testo:
-                "All'inizio vedrai la domanda (es. «Quale era il più GRANDE?»). " +
-                "Poi appariranno alcuni oggetti, uno alla volta. " +
-                "Ai primi livelli scegli la risposta tra le opzioni; più avanti la scrivi con la tastiera. " +
-                "Dai livelli più alti gli oggetti arrivano in più gruppi: tra un gruppo e l'altro " +
-                "ti ricorderemo di tenere a mente le parole già viste, perché alla fine dovrai " +
-                "rispondere considerando TUTTI gli oggetti, anche quelli dei gruppi precedenti.",
+              titolo: "Updating WM — Oggetti",
+              righe: [
+                { icona: "❓", testo: "Prima compare una domanda, ad esempio «Qual era il più grande?»." },
+                { icona: "👀", testo: "Poi gli oggetti appaiono uno alla volta: osservali e tienili a mente." },
+                { icona: "👆", testo: "Alla fine scegli (o scrivi) la risposta giusta. Con calma." },
+              ],
             }],
       }
     : null;

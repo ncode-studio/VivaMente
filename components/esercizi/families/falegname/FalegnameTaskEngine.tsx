@@ -22,6 +22,7 @@ import type {
   TutorialConfig,
   MicroProgressioneConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import { getFalegnameLevel, FLOOR_TLIM_FALEGNAME } from "./levels";
 import {
@@ -33,6 +34,22 @@ import {
 } from "./sequence";
 import { FalegnameSession } from "./FalegnameSession";
 import { PezzoLegno } from "./shapes";
+
+const ACCENT = CATEGORIA_COLORS.visuospaziali.text; // Il Falegname = dominio Visuospaziale
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Entra in bottega",
+  pagine: [{
+    titolo: "Il Falegname",
+    demo: <TutorialDemo />,
+    righe: [
+      { icona: "🪵", testo: "Sul banco da lavoro appare un pezzo di legno sagomato." },
+      { icona: "🔄", testo: "Fra le 4 opzioni, lo stesso pezzo è solo ruotato o capovolto." },
+      { icona: "👆", testo: "Tocca quello identico. Con calma, prendi il tuo tempo." },
+    ],
+  }],
+};
 
 export function FalegnameTaskEngine({
   livello,
@@ -119,18 +136,7 @@ export function FalegnameTaskEngine({
     [],
   );
 
-  const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: [{
-          titolo: "Il Falegname",
-          testo:
-            "Sul banco da lavoro appare un pezzo di legno sagomato. Fra le " +
-            "4 opzioni qui sotto, tocca quella che rappresenta lo STESSO " +
-            "pezzo, anche se è ruotato o capovolto.",
-          demo: <TutorialDemo />,
-        }],
-      }
-    : null;
+  const tutorial: TutorialConfig | null = mostraTutorial ? TUTORIAL : null;
 
   return (
     <TrialFlow<StimoloFalegname, RispostaFalegname>

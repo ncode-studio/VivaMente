@@ -162,6 +162,11 @@ const CANVAS_TEXTURE_DEFS = (
       <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves={2} seed={3} />
       <feColorMatrix values="0 0 0 0 0.45  0 0 0 0 0.32  0 0 0 0 0.18  0 0 0 0.18 0" />
     </filter>
+    {/* #13 restyling: ombra morbida coerente su ogni oggetto → profondità
+        "ad olio" uniforme su tutti i soggetti e i dipinti. */}
+    <filter id="vm-paint-shadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="1.3" stdDeviation="1.5" floodColor="#2A1810" floodOpacity="0.38" />
+    </filter>
     <radialGradient id="vignette" cx="50%" cy="50%" r="75%">
       <stop offset="60%" stopColor="#000" stopOpacity={0} />
       <stop offset="100%" stopColor="#000" stopOpacity={0.32} />
@@ -543,16 +548,31 @@ function ElementShape({ s }: { s: ElementState }) {
     case "pear":
       return (
         <g transform={t}>
-          <ellipse cx={0} cy={s.size * 0.2} rx={s.size * 0.55} ry={s.size * 0.7} fill={s.color} />
-          <ellipse cx={0} cy={-s.size * 0.35} rx={s.size * 0.32} ry={s.size * 0.4} fill={s.color} />
-          <ellipse cx={-s.size * 0.18} cy={0} rx={s.size * 0.15} ry={s.size * 0.25} fill={shade(s.color, 0.3)} opacity={0.5} />
+          {/* corpo a goccia */}
+          <ellipse cx={0} cy={s.size * 0.22} rx={s.size * 0.55} ry={s.size * 0.68} fill={s.color} />
+          <ellipse cx={0} cy={-s.size * 0.32} rx={s.size * 0.33} ry={s.size * 0.42} fill={s.color} />
+          {/* lato in ombra */}
+          <ellipse cx={s.size * 0.18} cy={s.size * 0.24} rx={s.size * 0.32} ry={s.size * 0.58} fill={shade(s.color, -0.32)} opacity={0.45} />
+          {/* highlight */}
+          <ellipse cx={-s.size * 0.2} cy={0} rx={s.size * 0.13} ry={s.size * 0.28} fill={shade(s.color, 0.4)} opacity={0.6} />
+          <ellipse cx={-s.size * 0.22} cy={-s.size * 0.05} rx={s.size * 0.05} ry={s.size * 0.12} fill="#FFFFFF" opacity={0.6} />
+          {/* picciolo + foglia */}
+          <path d={`M 0 -${s.size * 0.7} l ${s.size * 0.06} -${s.size * 0.14}`} stroke="#5A3A1F" strokeWidth={1.1} fill="none" strokeLinecap="round" />
+          <path d={`M ${s.size * 0.02} -${s.size * 0.74} q ${s.size * 0.26} -${s.size * 0.12} ${s.size * 0.34} ${s.size * 0.04} q -${s.size * 0.18} ${s.size * 0.05} -${s.size * 0.34} -${s.size * 0.04} Z`} fill="#3F6B2E" />
         </g>
       );
     case "lemon":
       return (
         <g transform={t}>
-          <ellipse cx={0} cy={0} rx={s.size * 0.7} ry={s.size * 0.5} fill={s.color} />
-          <ellipse cx={-s.size * 0.2} cy={-s.size * 0.1} rx={s.size * 0.22} ry={s.size * 0.12} fill={shade(s.color, 0.35)} opacity={0.55} />
+          {/* corpo */}
+          <ellipse cx={0} cy={0} rx={s.size * 0.7} ry={s.size * 0.48} fill={s.color} />
+          {/* punte ai due lati */}
+          <ellipse cx={-s.size * 0.7} cy={0} rx={s.size * 0.1} ry={s.size * 0.075} fill={shade(s.color, -0.15)} />
+          <ellipse cx={s.size * 0.7} cy={0} rx={s.size * 0.1} ry={s.size * 0.075} fill={shade(s.color, -0.15)} />
+          {/* ombra inferiore */}
+          <path d={`M ${s.size * 0.7} 0 A ${s.size * 0.7} ${s.size * 0.48} 0 0 1 -${s.size * 0.7} 0 A ${s.size * 0.6} ${s.size * 0.34} 0 0 0 ${s.size * 0.7} 0 Z`} fill={shade(s.color, -0.3)} opacity={0.38} />
+          {/* highlight */}
+          <ellipse cx={-s.size * 0.22} cy={-s.size * 0.14} rx={s.size * 0.2} ry={s.size * 0.1} fill={shade(s.color, 0.4)} opacity={0.6} />
         </g>
       );
     case "grape": {
@@ -588,8 +608,19 @@ function ElementShape({ s }: { s: ElementState }) {
     case "book":
       return (
         <g transform={t}>
-          <rect x={-s.size * 0.5} y={-s.size * 0.15} width={s.size} height={s.size * 0.3} fill={s.color} stroke={shade(s.color, -0.3)} strokeWidth={0.4} />
-          <line x1={-s.size * 0.45} y1={0} x2={s.size * 0.45} y2={0} stroke={shade(s.color, 0.25)} strokeWidth={0.3} />
+          {/* blocco pagine */}
+          <rect x={-s.size * 0.5} y={-s.size * 0.28} width={s.size} height={s.size * 0.5} rx={s.size * 0.03}
+                fill="#EFE3C6" stroke={shade(s.color, -0.35)} strokeWidth={0.5} />
+          {/* righe delle pagine */}
+          {[-0.16, -0.04, 0.08].map((p, i) => (
+            <line key={i} x1={-s.size * 0.46} y1={p * s.size} x2={s.size * 0.46} y2={p * s.size}
+                  stroke="#C9B68C" strokeWidth={0.4} />
+          ))}
+          {/* copertina rilegata */}
+          <rect x={-s.size * 0.52} y={-s.size * 0.34} width={s.size * 1.04} height={s.size * 0.16} rx={s.size * 0.03}
+                fill={s.color} stroke={shade(s.color, -0.45)} strokeWidth={0.5} />
+          <line x1={-s.size * 0.4} y1={-s.size * 0.26} x2={s.size * 0.4} y2={-s.size * 0.26}
+                stroke={shade(s.color, 0.3)} strokeWidth={0.5} opacity={0.7} />
         </g>
       );
     case "sun":
@@ -915,13 +946,18 @@ export function PaintingView({
       >
         {background}
         {elements.map((el) => (
-          <ElementShape key={`${side}-${el.id}`} s={el.state} />
+          <g key={`${side}-${el.id}`} filter="url(#vm-paint-shadow)">
+            <ElementShape s={el.state} />
+          </g>
         ))}
 
         {/* Markers per differenze trovate */}
         {differences.map((d) => {
           if (!foundOnThisSide.has(d.elementId)) return null;
-          const c = side === "A" ? d.centerA : d.centerB;
+          // #13: per added/removed un lato non ha il centro proprio (l'oggetto
+          // è assente lì): usa il centro dell'altro lato per posizionare il
+          // marker nel punto corrispondente.
+          const c = side === "A" ? (d.centerA ?? d.centerB) : (d.centerB ?? d.centerA);
           if (!c) return null;
           return (
             <g key={`found-${d.elementId}`} pointerEvents="none">
@@ -934,7 +970,7 @@ export function PaintingView({
         {/* Hint flash (errore o suggerimento finale) */}
         {differences.map((d) => {
           if (!hintIds.has(d.elementId)) return null;
-          const c = side === "A" ? d.centerA : d.centerB;
+          const c = side === "A" ? (d.centerA ?? d.centerB) : (d.centerB ?? d.centerA);
           if (!c) return null;
           return (
             <circle

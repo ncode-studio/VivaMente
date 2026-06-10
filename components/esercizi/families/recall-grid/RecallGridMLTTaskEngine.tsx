@@ -27,6 +27,7 @@ import type {
   SessionResult,
   TutorialConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
   getRecallGridMLTLevel,
@@ -222,11 +223,15 @@ export function RecallGridMLTTaskEngine({
 
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
+        accent: CATEGORIA_COLORS.memoria.text,
+        ctaLabel: "Comincia",
         pagine: [{
           titolo: "Memorizza e riposiziona",
-          testo:
-            `Vedrai una griglia con alcune immagini. Memorizza ogni immagine e dove si trova. ` +
-            `Alla fine dovrai riposizionare le immagini nella cella giusta.`,
+          righe: [
+            { icona: "🖼️", testo: "Appare una griglia con alcune immagini, ognuna in una cella precisa." },
+            { icona: "🔴", testo: "Poi c'è una pausa con la pallina che rimbalza: toccala solo quando è rossa, mai quando è di un altro colore." },
+            { icona: "👆", testo: "Quando la griglia torna vuota, rimetti ogni immagine nella sua cella." },
+          ],
         }],
       }
     : null;

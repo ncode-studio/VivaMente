@@ -7,6 +7,7 @@ import type {
   SessionResult,
   TutorialConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
   getMCTOrdineNarrativoLevel,
@@ -135,16 +136,24 @@ export function OrdineNarrativoTaskEngine({
 
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
+        accent: CATEGORIA_COLORS.memoria.text,
+        ctaLabel: "Inizia a leggere",
         pagine: [
           {
             titolo: "Ricostruisci la storia",
-            testo:
-              "Leggi con attenzione il testo. Poi vedrai i pezzi della storia nell'ordine sbagliato — toccane uno per selezionarlo (diventa giallo), poi tocca il numero dove vuoi metterlo.",
+            righe: [
+              { icona: "📖", testo: "Leggi con calma il testo che ti mostriamo." },
+              { icona: "🔀", testo: "Poi vedrai i pezzi della storia in ordine sbagliato." },
+              { icona: "👆", testo: "Tocca un pezzo per sceglierlo (diventa giallo), poi tocca il numero dove metterlo." },
+            ],
           },
           {
             titolo: "Come funziona",
-            testo:
-              "Puoi rimettere un pezzo nel mazzo toccando lo slot. Quando hai riempito tutti gli slot, tocca 'Conferma ordine'. Metti i pezzi nell'ordine in cui sono avvenuti nel testo.",
+            righe: [
+              { icona: "↩️", testo: "Per cambiare idea, tocca uno slot per rimettere il pezzo nel mazzo." },
+              { icona: "🔢", testo: "Metti i pezzi nell'ordine in cui sono avvenuti nel testo." },
+              { icona: "✅", testo: "Riempiti tutti gli slot, tocca 'Conferma ordine'. Non c'è fretta." },
+            ],
           },
         ],
       }

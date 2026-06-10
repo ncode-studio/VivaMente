@@ -217,17 +217,20 @@ export function PostinoBorgoSession({
     }
 
     if (animStep >= trial.path.length - 1) {
-      // animazione conclusa → valuta
-      const punti = scoreTrial(trial);
-      const passi = trial.path.length - 1;
-      const ottimo = trial.map.ottimo;
-      const ok = punti > 0;
-      setEsitoLastTrial({ ok, punti, passi, ottimo });
-      const nuoveAcc = [...accuratezze, punti];
-      setAccuratezze(nuoveAcc);
-      onProgress?.(nuoveAcc.length, POSTINO_BORGO_TRIAL_VALUTATIVI);
-      setFase("feedback");
-      return;
+      // Ultimo blocco: aspetta che lo scorrimento d'arrivo si completi prima
+      // di passare al feedback (prima veniva saltato e l'omino "resettava").
+      const t = setTimeout(() => {
+        const punti = scoreTrial(trial);
+        const passi = trial.path.length - 1;
+        const ottimo = trial.map.ottimo;
+        const ok = punti > 0;
+        setEsitoLastTrial({ ok, punti, passi, ottimo });
+        const nuoveAcc = [...accuratezze, punti];
+        setAccuratezze(nuoveAcc);
+        onProgress?.(nuoveAcc.length, POSTINO_BORGO_TRIAL_VALUTATIVI);
+        setFase("feedback");
+      }, STEP_MS);
+      return () => clearTimeout(t);
     }
 
     // Verifica se il prossimo passo è ancora legale (può essere cambiato dal
@@ -281,10 +284,25 @@ export function PostinoBorgoSession({
   const totaleDestinatari = destinatari.length;
   const passiCorrenti = trial.path.length - 1;
 
-  // Posizione corrente del postino (durante animazione interpoliamo).
-  const postinoNodo = fase === "animazione"
-    ? trial.path[Math.min(animStep, trial.path.length - 1)]
-    : postino;
+  // Posizione corrente del postino. In planning sta alla partenza; in
+  // animazione/feedback/isi sta sul nodo corrente del percorso (così non
+  // "resetta" alla partenza appena finisce l'animazione).
+  const postinoNodo = fase === "planning"
+    ? postino
+    : trial.path[Math.min(animStep, trial.path.length - 1)];
+
+  // Direzione di sguardo: ultimo movimento ORIZZONTALE fino ad animStep.
+  // I tratti verticali mantengono l'ultima direzione (niente flip-flop).
+  let facingLeft = false;
+  {
+    const upto = Math.min(animStep, trial.path.length - 1);
+    for (let i = upto; i > 0; i--) {
+      if (trial.path[i].col !== trial.path[i - 1].col) {
+        facingLeft = trial.path[i].col < trial.path[i - 1].col;
+        break;
+      }
+    }
+  }
 
   // Container scaling: facciamo un viewBox unico e lasciamo che il CSS scali.
   const W = cols * CELL_PX + (cols - 1) * CELL_GAP + 24;
@@ -302,6 +320,15 @@ export function PostinoBorgoSession({
       background: PALETTE.bg, borderRadius: "0.6rem",
       fontFamily: "Georgia, 'Times New Roman', serif",
     }}>
+      {/* #14: animazioni del postino (rimbalzo di camminata). Lo scorrimento
+          fluido tra le caselle è gestito dalla transition CSS su transform. */}
+      <style>{`
+        @keyframes vm-postino-bob {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(-2.4px); }
+        }
+      `}</style>
+
       {/* HUD trial + consegne + passi */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -416,18 +443,35 @@ export function PostinoBorgoSession({
               scalinate (zig-zag). Sovrapposti alla griglia. */}
           {renderEdgeMarkers(edges, cellXY)}
 
-          {/* Postino animato: transform SVG nativo via attribute per garantire
-              che ogni cella del percorso venga effettivamente attraversata.
-              CSS transform su <g> SVG ha supporto incoerente — l'attributo
-              transform è universale. La transizione visiva si ottiene via
-              animation key sul prevNodo. */}
+          {/* Postino animato (#14): scorrimento fluido tra le caselle via
+              proprietà CSS `transform` (non l'attributo SVG — le transition CSS
+              non animano gli attributi di presentazione, per questo prima
+              "saltava"). Tutti i browser moderni supportano transform CSS su
+              elementi SVG. Ombra a terra + leggero rimbalzo di camminata. */}
           <g
-            transform={`translate(${cellXY(postinoNodo).x + CELL_PX/2 - 18},${cellXY(postinoNodo).y + CELL_PX/2 - 18})`}
-            style={{ transition: `transform ${STEP_MS - 40}ms linear` }}
+            style={{
+              transform: `translate(${cellXY(postinoNodo).x + CELL_PX / 2}px, ${cellXY(postinoNodo).y + CELL_PX / 2}px)`,
+              transition: fase === "animazione" ? `transform ${STEP_MS - 40}ms ease-in-out` : "none",
+            }}
           >
-            <PostinoSprite size={36} flip={animStep > 0 &&
-              animStep < trial.path.length &&
-              trial.path[animStep].col < trial.path[animStep - 1]?.col} />
+            {/* ombra morbida sotto i piedi */}
+            <ellipse cx={0} cy={20} rx={14} ry={4} fill="#000" opacity={0.18} />
+            <g
+              style={{
+                animation: fase === "animazione"
+                  ? "vm-postino-bob 280ms ease-in-out infinite"
+                  : "none",
+              }}
+            >
+              {/* Flip "in posizione": lo specchiamento è attorno al centro
+                  cella (x=0), dove lo sprite è simmetrico, quindi non salta
+                  più lateralmente a ogni cambio di direzione. */}
+              <g transform={`scale(${facingLeft ? -1 : 1}, 1)`}>
+                <g transform="translate(-18,-22)">
+                  <PostinoSprite size={36} />
+                </g>
+              </g>
+            </g>
           </g>
         </svg>
       </div>

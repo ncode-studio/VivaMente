@@ -42,6 +42,7 @@ import type {
   TutorialConfig,
   SessionResult,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
   getGoNogoLevel,
@@ -58,6 +59,10 @@ import {
 } from "./sequence";
 import { GoNogoStimulus, type GoNogoRisposta } from "./GoNogoStimulus";
 import { getIsiMs, GO_NOGO_FEEDBACK_TYPE } from "./_deroghe";
+
+// ── Accento dominio ──────────────────────────────────────────────────────────
+
+const ACCENT = CATEGORIA_COLORS.esecutive.text; // Go/No-Go = dominio Funzioni Esecutive
 
 // ── Tutti i colori disponibili ───────────────────────────────────────────────
 
@@ -168,9 +173,11 @@ export function GoNogoTaskEngine({
   const streamStateRef = useRef<GoNogoStreamState>(creaStreamState());
 
   // ── Tutorial (prima sessione) ───────────────────────────────────────────
-  // Pagina nogo differenziata in base a nDistrattori:
-  //   n=1 (lv 1-2): testo binario classico (nogo specifico per coppia).
-  //   n≥2 (lv 3+): testo multi-distrattore ("ignora altri colori").
+  // Struttura canonica "Osservatorio": occhiello → titolo → demo → 3 righe
+  //   (stato base → segnale/target → azione) → CTA.
+  // Differenziato in base a nDistrattori:
+  //   n=1 (lv 1-2): nogo specifico per coppia ("non toccare i {nogo}").
+  //   n≥2 (lv 3+):  multi-distrattore ("ignora tutti gli altri colori").
 
   const coppia = coppiaAttivaRef.current!;
 
@@ -179,34 +186,48 @@ export function GoNogoTaskEngine({
     ? goColoriAttivi[0]
     : goColoriAttivi.slice(0, -1).join(", ") + " o " + goColoriAttivi[goColoriAttivi.length - 1];
 
-  const paginaGoTitolo = goColoriAttivi.length === 1
-    ? `Tocca i cerchi ${goColoriLabel}`
-    : `Tocca i cerchi ${goColoriLabel}`;
+  // Pagina 1 — il colore (o i colori) da toccare.
+  const paginaGoTitolo = `Tocca i cerchi ${goColoriLabel}`;
 
-  const paginaGoTesto = goColoriAttivi.length === 1
-    ? `Appariranno cerchi colorati in punti diversi dello schermo. Quando vedi un cerchio ${goColoriLabel}, toccalo subito.`
-    : `Appariranno cerchi colorati in punti diversi dello schermo. Tocca subito ogni cerchio ${goColoriLabel}.`;
+  const rigaGoSegnale = goColoriAttivi.length === 1
+    ? { icona: "🎯", testo: `Quando vedi un cerchio ${goColoriLabel}, è quello giusto.` }
+    : { icona: "🎯", testo: `I cerchi ${goColoriLabel} sono quelli giusti da toccare.` };
 
+  // Pagina 2 — i colori da NON toccare.
   const paginaNogoTitolo = nDistrattori === 1
     ? `NON toccare i cerchi ${coppia.nogo}`
-    : `NON toccare gli altri colori`;
+    : `Ignora gli altri colori`;
 
-  const paginaNogoTesto = nDistrattori === 1
-    ? `Quando vedi un cerchio ${coppia.nogo}, NON toccare. Aspetta il prossimo.`
-    : `Compaiono cerchi di colori diversi. Tocca SOLO i cerchi ${goColoriLabel}, ignora tutti gli altri colori.`;
+  const rigaNogoSegnale = nDistrattori === 1
+    ? { icona: "🚫", testo: `Il cerchio ${coppia.nogo} è una trappola: non va toccato.` }
+    : { icona: "🚫", testo: `Tutti gli altri colori sono trappole: non vanno toccati.` };
+
+  const rigaNogoAzione = nDistrattori === 1
+    ? { icona: "✋", testo: `Quando appare un cerchio ${coppia.nogo}, fermati e aspetta il prossimo.` }
+    : { icona: "✋", testo: `Tocca solo i cerchi ${goColoriLabel}; per gli altri fermati e aspetta.` };
 
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
+        accent:   ACCENT,
+        ctaLabel: "Comincia",
         pagine: [
           {
             titolo: paginaGoTitolo,
-            testo:  paginaGoTesto,
             demo:   <GoNogoDemo tipo="go" coppia={coppia} />,
+            righe: [
+              { icona: "🔵", testo: "Appaiono cerchi colorati in punti diversi dello schermo." },
+              rigaGoSegnale,
+              { icona: "👆", testo: "Toccalo subito, senza fretta. Poi arriva il prossimo." },
+            ],
           },
           {
             titolo: paginaNogoTitolo,
-            testo:  paginaNogoTesto,
             demo:   <GoNogoDemo tipo="nogo" coppia={coppia} />,
+            righe: [
+              { icona: "🎨", testo: "Non tutti i cerchi vanno toccati: dipende dal colore." },
+              rigaNogoSegnale,
+              rigaNogoAzione,
+            ],
           },
         ],
       }

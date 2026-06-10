@@ -8,12 +8,16 @@
  */
 
 import { useState } from "react";
-import type { GameEngineProps, SessionResult } from "@/lib/exercise-types";
+import type { GameEngineProps, SessionResult, TutorialConfig } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
+import { TutorialOverlay } from "@/components/esercizi/shared/TutorialOverlay";
 import {
   getCasalingaLevel, getCasalingaMechanicWarning,
 } from "./levels";
 import { CasalingaSession } from "./CasalingaSession";
 import { ObjectSprite, KITCHEN_PALETTE, SurfaceFrame } from "./kitchen";
+
+const ACCENT = CATEGORIA_COLORS.visuospaziali.text; // La Casalinga = dominio Visuospaziali
 
 /**
  * Mini-demo PRIMA/DOPO per il tutorial: mostra una mensola con 3 oggetti,
@@ -132,6 +136,20 @@ function MiniEsempio() {
   );
 }
 
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Inizia",
+  pagine: [{
+    titolo: "La Casalinga",
+    demo: <MiniEsempio />,
+    righe: [
+      { icona: "🔍", testo: "Osserva la cucina e ricorda dove si trova ogni oggetto. Niente fretta." },
+      { icona: "🔀", testo: "La scena cambia: qualcosa si sposta, si scambia o si capovolge." },
+      { icona: "👆", testo: "Tocca solo gli oggetti che sono cambiati, poi premi Conferma." },
+    ],
+  }],
+};
+
 type Fase = "tutorial" | "warning" | "sessione";
 
 export function CasalingaTaskEngine({
@@ -149,95 +167,10 @@ export function CasalingaTaskEngine({
 
   if (fase === "tutorial") {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.7rem",
-          padding: "0.85rem 0.85rem 0.95rem 0.85rem",
-          background: KITCHEN_PALETTE.bg,
-          borderRadius: "0.6rem",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <p style={{
-            margin: 0,
-            fontSize: "0.62rem",
-            fontWeight: 600,
-            color: KITCHEN_PALETTE.inkSoft,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-          }}>
-            Come si gioca
-          </p>
-          <h2 style={{
-            margin: "0.2rem 0 0 0",
-            fontSize: "1.4rem",
-            fontWeight: 700,
-            color: KITCHEN_PALETTE.ink,
-          }}>
-            La Casalinga
-          </h2>
-        </div>
-
-        <p style={{
-          margin: 0,
-          fontSize: "0.9rem",
-          color: "#3A2A18",
-          lineHeight: 1.45,
-          textAlign: "center",
-        }}>
-          Memorizza la cucina, poi tocca <strong>solo gli oggetti
-          che si sono spostati o cambiati</strong>.
-        </p>
-
-        {/* Esempio illustrato */}
-        <div style={{
-          padding: "0.55rem 0.6rem 0.7rem 0.6rem",
-          borderRadius: "0.45rem",
-          background: "#FBF4E8",
-          border: `1px solid rgba(76,52,28,0.18)`,
-        }}>
-          <MiniEsempio />
-          <p style={{
-            margin: "0.55rem 0 0 0",
-            fontSize: "0.8rem",
-            color: "#3A2A18",
-            textAlign: "center",
-            lineHeight: 1.35,
-          }}>
-            La <strong>moka</strong> si è spostata: toccheresti
-            <span style={{ color: KITCHEN_PALETTE.err, fontWeight: 700 }}> solo la moka</span>.
-          </p>
-        </div>
-
-        <p style={{
-          margin: 0,
-          fontSize: "0.78rem",
-          color: KITCHEN_PALETTE.inkSoft,
-          lineHeight: 1.4,
-          textAlign: "center",
-        }}>
-          5 osservazioni, niente cronometro generale.
-        </p>
-
-        <button
-          onClick={() => setFase(warning ? "warning" : "sessione")}
-          style={{
-            width: "100%",
-            padding: "0.75rem",
-            borderRadius: "0.4rem",
-            border: "none",
-            background: KITCHEN_PALETTE.ink,
-            color: "#FBF4E8",
-            fontSize: "0.95rem",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Ho capito — Inizia
-        </button>
-      </div>
+      <TutorialOverlay
+        config={TUTORIAL}
+        onComplete={() => setFase(warning ? "warning" : "sessione")}
+      />
     );
   }
 

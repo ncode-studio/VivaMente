@@ -48,6 +48,7 @@ import type {
   MicroProgressioneConfig,
   TutorialConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import { ODD_ONE_OUT_TLIM_DEFAULT_MS, SOGLIA_GATING_NUMERI_LETTERE } from "./_deroghe";
 import {
@@ -64,6 +65,9 @@ import {
 import { pescaTrialNumeriLettere } from "./stimuli/numeri-lettere";
 import { pescaTrialImmagini } from "./stimuli/immagini";
 import { OddOneOutStimulus } from "./OddOneOutStimulus";
+
+// Odd One Out = dominio Attenzione (ricerca visiva / attenzione selettiva).
+const ACCENT = CATEGORIA_COLORS.attenzione.text;
 
 // ── Lookup esercizioId → stimulusType ─────────────────────────────────────────
 
@@ -337,14 +341,24 @@ function OddOneOutTaskEngineInner({
 
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
+        accent: ACCENT,
+        ctaLabel: "Comincia",
         pagine: [{
           titolo: stimulusType === "numeri_lettere"
             ? "Trova l'elemento diverso"
             : "Trova l'immagine diversa",
-          testo: stimulusType === "numeri_lettere"
-            ? "Vedrai numeri e lettere sullo schermo. Uno solo è diverso dagli altri. Trovalo e toccalo."
-            : "Vedrai delle immagini sullo schermo. Una sola non c'entra con le altre. Trovala e toccala.",
           demo: <OddOneOutDemo stimulusType={stimulusType} />,
+          righe: stimulusType === "numeri_lettere"
+            ? [
+                { icona: "🔤", testo: "Vedrai alcuni numeri e lettere sullo schermo." },
+                { icona: "🔎", testo: "Uno solo è diverso dagli altri: cercalo con calma." },
+                { icona: "👆", testo: "Toccalo. Non c'è fretta, prenditi il tuo tempo." },
+              ]
+            : [
+                { icona: "🖼️", testo: "Vedrai alcune immagini sullo schermo." },
+                { icona: "🔎", testo: "Una sola non c'entra con le altre: cercala con calma." },
+                { icona: "👆", testo: "Toccala. Non c'è fretta, prenditi il tuo tempo." },
+              ],
         }],
       }
     : null;

@@ -1,19 +1,19 @@
 /**
  * Livelli per "Il Naturalista".
  *
- * Dominio: Visuospaziale — ricerca visiva figura/sfondo. Il giocatore
- * trova tutte le creature nascoste nella scena e le tocca per "catturarle"
- * sul taccuino del naturalista. Niente zoom: le creature restano sempre
- * leggibili; la difficoltà è data da mimetismo, densità sfondo, numero
- * creature, movimento.
+ * Dominio: Visuospaziale — RICERCA VISIVA DEL BERSAGLIO (#15). La scena è
+ * affollata di tanti oggetti/creature (distrattori); il giocatore deve
+ * scovare e toccare le istanze del BERSAGLIO mostrato come riferimento.
+ * Toccare un distrattore è un errore. Niente zoom: gli sprite restano
+ * sempre leggibili; la difficoltà è data da quantità di distrattori,
+ * mimetismo, somiglianza target/distrattori, densità sfondo, movimento.
  *
- * Modello A — timer sessione 90s, scene a catena.
+ * Modello A — timer sessione 60s, scene a catena.
  *
  * Progressione (10 livelli):
- *   - lv 1–2 : 3 creature grandi, scene semplici, no camouflage
- *   - lv 3–5 : 4–5 creature, scene più ricche, lieve mimetismo
- *   - lv 6–7 : 6 creature, scene dense, 1–2 si muovono lentamente
- *   - lv 8–10: 7–8 creature mimetizzate, scene densissime, fino a 3 si muovono
+ *   - lv 1–3 : 1 bersaglio tra 8–12 distrattori, sprite grandi, poco mimetismo
+ *   - lv 4–7 : 2 bersagli tra 12–18 distrattori, scene più dense e mimetiche
+ *   - lv 8–10: 3 bersagli tra 18–24 distrattori, scene affollatissime e mimetiche
  */
 
 export const NATURALISTA_SESSION_TIMER_MS = 60_000;
@@ -34,8 +34,10 @@ export type SceneKind =
 
 export interface NaturalistaLevelConfig {
   livello: number;
-  /** Numero di creature da nascondere. */
-  numCreature: number;
+  /** Numero di istanze del BERSAGLIO da trovare nella scena. */
+  numTarget: number;
+  /** Numero di distrattori (altre creature) che affollano la scena. */
+  numDistrattori: number;
   /** Lato sprite creatura in unità SVG (viewBox 1000×700). */
   creaturaSizeUnits: number;
   /** Raggio area di click generoso intorno al centro sprite (unità SVG). */
@@ -59,19 +61,19 @@ export interface NaturalistaLevelConfig {
 }
 
 export const NATURALISTA_LEVELS: readonly NaturalistaLevelConfig[] = [
-  // Sprite grandi all'inizio (~130u su 1000), scendono fino a ~62u al lv10:
-  // restano sempre leggibili senza zoom. La difficoltà sale via mimetismo,
-  // numero, scene dense e movimento.
-  { livello:  1, numCreature: 4, creaturaSizeUnits: 100, clickRadiusUnits: 78, scenePool: ["prato"],                                                  mimetismo: 0.10, numMobili: 0, tLimSceneMs: 18_000, densitaSfondo: 0.40, probOcclusione: 0.10 },
-  { livello:  2, numCreature: 4, creaturaSizeUnits:  92, clickRadiusUnits: 74, scenePool: ["prato", "prato-fiorito"],                                 mimetismo: 0.20, numMobili: 0, tLimSceneMs: 20_000, densitaSfondo: 0.50, probOcclusione: 0.20 },
-  { livello:  3, numCreature: 4, creaturaSizeUnits: 108, clickRadiusUnits: 82, scenePool: ["prato-fiorito", "stagno-ninfee", "bosco-rado"],           mimetismo: 0.20, numMobili: 0, tLimSceneMs: 32_000, densitaSfondo: 0.35, probOcclusione: 0.15 },
-  { livello:  4, numCreature: 5, creaturaSizeUnits:  98, clickRadiusUnits: 76, scenePool: ["bosco-rado", "stagno-ninfee", "fondale-chiaro"],          mimetismo: 0.30, numMobili: 0, tLimSceneMs: 36_000, densitaSfondo: 0.45, probOcclusione: 0.25 },
-  { livello:  5, numCreature: 5, creaturaSizeUnits:  90, clickRadiusUnits: 72, scenePool: ["bosco", "sottobosco-autunnale", "fondale-chiaro", "scogliera-marina"], mimetismo: 0.42, numMobili: 0, tLimSceneMs: 40_000, densitaSfondo: 0.55, probOcclusione: 0.35 },
-  { livello:  6, numCreature: 6, creaturaSizeUnits:  82, clickRadiusUnits: 66, scenePool: ["bosco", "sottobosco-autunnale", "fondale-fitto", "prato-alpino"], mimetismo: 0.52, numMobili: 1, tLimSceneMs: 46_000, densitaSfondo: 0.65, probOcclusione: 0.45 },
-  { livello:  7, numCreature: 6, creaturaSizeUnits:  76, clickRadiusUnits: 62, scenePool: ["bosco-fitto", "sottobosco-autunnale", "fondale-fitto", "scogliera-marina"], mimetismo: 0.62, numMobili: 2, tLimSceneMs: 50_000, densitaSfondo: 0.75, probOcclusione: 0.55 },
-  { livello:  8, numCreature: 7, creaturaSizeUnits:  72, clickRadiusUnits: 58, scenePool: ["bosco-fitto", "sottobosco-autunnale", "fondale-fitto", "prato-alpino", "scogliera-marina"], mimetismo: 0.72, numMobili: 2, tLimSceneMs: 56_000, densitaSfondo: 0.82, probOcclusione: 0.65 },
-  { livello:  9, numCreature: 7, creaturaSizeUnits:  68, clickRadiusUnits: 56, scenePool: ["bosco-fitto", "sottobosco-autunnale", "fondale-fitto", "scogliera-marina"], mimetismo: 0.82, numMobili: 3, tLimSceneMs: 62_000, densitaSfondo: 0.90, probOcclusione: 0.75 },
-  { livello: 10, numCreature: 8, creaturaSizeUnits:  62, clickRadiusUnits: 52, scenePool: ["bosco-fitto", "sottobosco-autunnale", "fondale-fitto", "scogliera-marina"], mimetismo: 0.90, numMobili: 3, tLimSceneMs: 70_000, densitaSfondo: 1.00, probOcclusione: 0.80 },
+  // Ricerca del bersaglio: la scena si riempie di distrattori. La difficoltà
+  // sale con numero di distrattori, mimetismo, scene dense e movimento.
+  // clickRadius < distanza minima tra sprite per isolare il tap su un oggetto.
+  { livello:  1, numTarget: 1, numDistrattori:  8, creaturaSizeUnits: 92, clickRadiusUnits: 56, scenePool: ["prato"],                                                  mimetismo: 0.10, numMobili: 0, tLimSceneMs: 18_000, densitaSfondo: 0.40, probOcclusione: 0.00 },
+  { livello:  2, numTarget: 1, numDistrattori: 10, creaturaSizeUnits: 88, clickRadiusUnits: 54, scenePool: ["prato", "prato-fiorito"],                                 mimetismo: 0.18, numMobili: 0, tLimSceneMs: 20_000, densitaSfondo: 0.50, probOcclusione: 0.05 },
+  { livello:  3, numTarget: 1, numDistrattori: 12, creaturaSizeUnits: 84, clickRadiusUnits: 52, scenePool: ["prato-fiorito", "stagno-ninfee", "bosco-rado"],           mimetismo: 0.24, numMobili: 0, tLimSceneMs: 32_000, densitaSfondo: 0.40, probOcclusione: 0.10 },
+  { livello:  4, numTarget: 2, numDistrattori: 12, creaturaSizeUnits: 82, clickRadiusUnits: 50, scenePool: ["bosco-rado", "stagno-ninfee", "fondale-chiaro"],          mimetismo: 0.32, numMobili: 0, tLimSceneMs: 36_000, densitaSfondo: 0.50, probOcclusione: 0.15 },
+  { livello:  5, numTarget: 2, numDistrattori: 14, creaturaSizeUnits: 78, clickRadiusUnits: 48, scenePool: ["bosco", "sottobosco-autunnale", "fondale-chiaro", "scogliera-marina"], mimetismo: 0.42, numMobili: 0, tLimSceneMs: 40_000, densitaSfondo: 0.58, probOcclusione: 0.20 },
+  { livello:  6, numTarget: 2, numDistrattori: 16, creaturaSizeUnits: 74, clickRadiusUnits: 46, scenePool: ["bosco", "sottobosco-autunnale", "fondale-fitto", "prato-alpino"], mimetismo: 0.52, numMobili: 1, tLimSceneMs: 46_000, densitaSfondo: 0.66, probOcclusione: 0.25 },
+  { livello:  7, numTarget: 2, numDistrattori: 18, creaturaSizeUnits: 72, clickRadiusUnits: 45, scenePool: ["bosco-fitto", "sottobosco-autunnale", "fondale-fitto", "scogliera-marina"], mimetismo: 0.62, numMobili: 2, tLimSceneMs: 50_000, densitaSfondo: 0.74, probOcclusione: 0.30 },
+  { livello:  8, numTarget: 3, numDistrattori: 18, creaturaSizeUnits: 70, clickRadiusUnits: 44, scenePool: ["bosco-fitto", "sottobosco-autunnale", "fondale-fitto", "prato-alpino", "scogliera-marina"], mimetismo: 0.72, numMobili: 2, tLimSceneMs: 56_000, densitaSfondo: 0.82, probOcclusione: 0.35 },
+  { livello:  9, numTarget: 3, numDistrattori: 20, creaturaSizeUnits: 66, clickRadiusUnits: 42, scenePool: ["bosco-fitto", "sottobosco-autunnale", "fondale-fitto", "scogliera-marina"], mimetismo: 0.82, numMobili: 3, tLimSceneMs: 62_000, densitaSfondo: 0.90, probOcclusione: 0.40 },
+  { livello: 10, numTarget: 3, numDistrattori: 24, creaturaSizeUnits: 62, clickRadiusUnits: 40, scenePool: ["bosco-fitto", "sottobosco-autunnale", "fondale-fitto", "scogliera-marina"], mimetismo: 0.90, numMobili: 3, tLimSceneMs: 70_000, densitaSfondo: 1.00, probOcclusione: 0.45 },
 ] as const;
 
 export function getNaturalistaLevel(livello: number): NaturalistaLevelConfig {

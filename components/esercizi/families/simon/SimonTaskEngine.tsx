@@ -21,11 +21,11 @@ import type {
   TutorialConfig,
   SessionResult,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
   getSimonLevel,
   getSimonMechanicWarning,
-  SIMBOLO_DIREZIONE,
 } from "./levels";
 import {
   creaSimonStreamState,
@@ -34,6 +34,33 @@ import {
   type SimonStreamState,
 } from "./sequence";
 import { SimonStimulus, type SimonRisposta } from "./SimonStimulus";
+
+// ── Tutorial ─────────────────────────────────────────────────────────────────
+
+const ACCENT = CATEGORIA_COLORS.esecutive.text; // Simon Spaziale = dominio Funzioni Esecutive
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Comincia",
+  pagine: [
+    {
+      titolo: "Segui la direzione della freccia",
+      righe: [
+        { icona: "➡️", testo: "Compare una freccia in un punto dello schermo." },
+        { icona: "👆", testo: "Tocca il pulsante che indica la stessa direzione della freccia." },
+        { icona: "✅", testo: "Conta solo dove punta la freccia, non dove appare." },
+      ],
+    },
+    {
+      titolo: "Attenzione alla posizione",
+      righe: [
+        { icona: "🔀", testo: "A volte la freccia appare dal lato opposto a dove punta." },
+        { icona: "🧭", testo: "Non lasciarti ingannare dalla sua posizione." },
+        { icona: "👉", testo: "Tocca sempre il pulsante della direzione, con calma." },
+      ],
+    },
+  ],
+};
 
 // ── Engine ─────────────────────────────────────────────────────────────────────
 
@@ -140,28 +167,7 @@ export function SimonTaskEngine({
   );
 
   // ── Tutorial ───────────────────────────────────────────────────────────────
-  const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: [
-          {
-            titolo: "Tocca la direzione della freccia",
-            testo:
-              "Apparirà una freccia in un punto dello schermo. " +
-              "Tocca il pulsante che corrisponde alla direzione che indica la freccia. " +
-              "Esempio: se la freccia è " + SIMBOLO_DIREZIONE.dx + ", tocca il pulsante " + SIMBOLO_DIREZIONE.dx + ", " +
-              "indipendentemente da dove appare la freccia.",
-          },
-          {
-            titolo: "Attenzione alla posizione!",
-            testo:
-              "La freccia può apparire dalla parte OPPOSTA alla direzione che indica " +
-              "(es. una freccia " + SIMBOLO_DIREZIONE.dx + " sulla sinistra dello schermo). " +
-              "Non farti ingannare: tocca sempre il pulsante della DIREZIONE della freccia, " +
-              "non della sua posizione.",
-          },
-        ],
-      }
-    : null;
+  const tutorial: TutorialConfig | null = mostraTutorial ? TUTORIAL : null;
 
   // ── Warning cambio meccanica ────────────────────────────────────────────────
   const warning = getSimonMechanicWarning(livelloPrec, livello);

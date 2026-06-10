@@ -40,9 +40,10 @@ VALUES
    'Recall Grid', 'Griglia di Parole — Breve Termine',
    'memoria', 'mbt', 'timer', 90, NULL, 1),
 
+  -- #4 "Dov'era quell'immagine": Modello A timer 60s (no contatore trial)
   ('recall_grid_immagini_mbt',
    'Recall Grid', 'Griglia di Immagini — Breve Termine',
-   'memoria', 'mbt', 'timer', 90, NULL, 2),
+   'memoria', 'mbt', 'timer', 60, NULL, 2),
 
   -- MLT: delay lungo + task distrattore → sessione a completamento trial
   ('recall_grid_immagini_mlt',

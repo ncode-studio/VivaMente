@@ -18,11 +18,27 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GameEngineProps, TutorialConfig } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TutorialOverlay } from "@/components/esercizi/shared/TutorialOverlay";
 import { getPLLevel, getPLMechanicWarning } from "./levels";
 import { PasatSession, type PasatSessionMetriche } from "./PasatSession";
 
 type Phase = "tutorial" | "warning" | "session";
+
+const ACCENT = CATEGORIA_COLORS.esecutive.text; // Pasat Light = dominio Esecutive
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Comincia il calcolo",
+  pagine: [{
+    titolo: "Calcolo a Catena",
+    righe: [
+      { icona: "🔵", testo: "Appare un numero in azzurro: tienilo a mente, è il tuo punto di partenza." },
+      { icona: "➕", testo: "Poi appare un'operazione, ad esempio +3 o −2: applicala al numero che hai in mente." },
+      { icona: "✓", testo: "Scrivi il nuovo risultato sul tastierino e premi ✓. Continua con calma, un passo alla volta." },
+    ],
+  }],
+};
 
 // ── Engine ─────────────────────────────────────────────────────────────────────
 
@@ -40,21 +56,6 @@ export function PasatLightTaskEngine({
   const [phase, setPhase] = useState<Phase>(
     mostraTutorial ? "tutorial" : warning ? "warning" : "session",
   );
-
-  const tutorial: TutorialConfig = useMemo(() => ({
-    pagine: [{
-      titolo: "PASAT",
-      testo:
-        "Vedrai dei numeri apparire uno alla volta. " +
-        "Memorizza il primo numero (in azzurro): sarà il tuo risultato iniziale. " +
-        "Per ogni cifra successiva (es. +3, −2, ×4, ÷2) applica l'operazione " +
-        "tra il risultato che hai in mente e la nuova cifra, " +
-        "poi digita il nuovo risultato sul tastierino e premi ✓. " +
-        "Esempio: 4 … +3 → 7 … −2 → 5 … ×3 → 15. " +
-        "Se sbagli o non rispondi in tempo, la somma riparte con un nuovo numero da memorizzare. " +
-        "Continua più a lungo possibile entro il tempo della sessione.",
-    }],
-  }), []);
 
   // ── Avanzamento fasi e onReady ─────────────────────────────────────────────
   const passaAFase = useCallback((next: Phase) => setPhase(next), []);
@@ -82,7 +83,7 @@ export function PasatLightTaskEngine({
   if (phase === "tutorial") {
     return (
       <TutorialOverlay
-        config={tutorial}
+        config={TUTORIAL}
         onComplete={() => passaAFase(warning ? "warning" : "session")}
       />
     );

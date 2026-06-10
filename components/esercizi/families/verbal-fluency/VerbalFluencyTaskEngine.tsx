@@ -7,6 +7,7 @@ import type {
   SessionResult,
   TutorialConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
   getVFLevel,
@@ -22,6 +23,9 @@ import {
   type VFVariante,
 } from "./sequence";
 import { VerbalFluencySession } from "./VerbalFluencySession";
+
+// Verbal Fluency = dominio Linguaggio.
+const ACCENT = CATEGORIA_COLORS.linguaggio.text;
 
 export function VerbalFluencyTaskEngine({
   livello,
@@ -136,17 +140,44 @@ export function VerbalFluencyTaskEngine({
   // ── Tutorial ──────────────────────────────────────────────────────────────
 
   const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: variante === "semantica"
-          ? [{
-              titolo: "Quante ne riesci a trovare?",
-              testo:  "Ti verrà mostrata una categoria (es. \"animali\"). Hai un po' di tempo per scrivere quante più parole di quella categoria riesci a trovare. Scrivi una parola e tocca \"Aggiungi\", poi subito un'altra. Vai il più veloce possibile!",
-            }]
-          : [{
-              titolo: "Parole dalla stessa lettera",
-              testo:  "Ti verrà mostrata una lettera (es. \"S\"). Hai un po' di tempo per scrivere quante più parole che iniziano con quella lettera riesci a trovare. Niente nomi propri. Scrivi e tocca \"Aggiungi\"!",
+    ? variante === "semantica"
+      ? {
+          accent: ACCENT,
+          ctaLabel: "Comincia",
+          pagine: [{
+            titolo: "Quante ne riesci a trovare?",
+            righe: [
+              { icona: "🗂️", testo: "Compare una categoria, per esempio \"animali\". Leggila con calma." },
+              { icona: "✏️", testo: "Scrivi una parola che appartiene a quella categoria e tocca \"Aggiungi\"." },
+              { icona: "⏱️", testo: "Continua finché c'è tempo: trovane quante più riesci, senza ripeterle." },
+            ],
+          }],
+        }
+      : variante === "alternata"
+        ? {
+            accent: ACCENT,
+            ctaLabel: "Comincia",
+            pagine: [{
+              titolo: "Due categorie, a turno",
+              righe: [
+                { icona: "🔀", testo: "Compaiono due categorie, per esempio \"frutti\" e \"animali\"." },
+                { icona: "✏️", testo: "Scrivi una parola per la prima, poi una per la seconda, alternando." },
+                { icona: "⏱️", testo: "Vai avanti così finché c'è tempo, senza ripetere le parole." },
+              ],
             }],
-      }
+          }
+        : {
+            accent: ACCENT,
+            ctaLabel: "Comincia",
+            pagine: [{
+              titolo: "Parole dalla stessa lettera",
+              righe: [
+                { icona: "🔤", testo: "Compare una lettera, per esempio \"S\". Leggila con calma." },
+                { icona: "✏️", testo: "Scrivi una parola che inizia con quella lettera e tocca \"Aggiungi\"." },
+                { icona: "⏱️", testo: "Trovane quante più riesci, senza ripetere parole né usare nomi propri." },
+              ],
+            }],
+          }
     : null;
 
   // ── Render (Modello B — 1 trial, timer gestito in session) ───────────────

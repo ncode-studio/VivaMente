@@ -4,6 +4,7 @@ import { useCallback, useRef } from "react";
 import type {
   GameEngineProps, SessionResult, TutorialConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import { getSpesaLevel } from "./levels";
 import {
@@ -11,6 +12,21 @@ import {
   type StimoloSpesa, type RispostaSpesa,
 } from "./sequence";
 import { SpesaSession } from "./SpesaSession";
+
+const ACCENT = CATEGORIA_COLORS.memoria.text; // Spesa = dominio Memoria
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Inizia la spesa",
+  pagine: [{
+    titolo: "Spesa al supermercato",
+    righe: [
+      { icona: "📝", testo: "Ti mostriamo una piccola lista della spesa. Memorizzala con calma." },
+      { icona: "🛒", testo: "Poi entri nel supermercato: tanti alimenti sugli scaffali, solo alcuni erano nella lista." },
+      { icona: "👆", testo: "Tocca soltanto gli alimenti della tua lista. Lascia stare gli altri." },
+    ],
+  }],
+};
 
 export function SpesaTaskEngine({
   livello,
@@ -100,15 +116,7 @@ export function SpesaTaskEngine({
   );
 
   const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: [{
-          titolo: "Spesa al supermercato",
-          testo:
-            "Ti mostriamo una piccola lista della spesa. Memorizzala con calma. " +
-            "Poi entrerai nel supermercato e dovrai trovare esattamente quegli " +
-            "alimenti tra molti altri — senza prendere quelli che non erano in lista.",
-        }],
-      }
+    ? TUTORIAL
     : null;
 
   return (

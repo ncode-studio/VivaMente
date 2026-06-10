@@ -16,6 +16,7 @@ import type {
   TutorialConfig,
   MicroProgressioneConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import { getWCLevel, getWCMechanicWarning, WC_TARGET_FLOOR_MS } from "./levels";
 import {
@@ -26,6 +27,21 @@ import {
   type WCPoolRef,
 } from "./sequence";
 import { WordChainSession } from "./WordChainSession";
+
+const ACCENT = CATEGORIA_COLORS.esecutive.text; // Word Chain = dominio Esecutive
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Comincia",
+  pagine: [{
+    titolo: "Word Chain",
+    righe: [
+      { icona: "🔤", testo: "Vedrai alcune parole sparse sullo schermo." },
+      { icona: "🅰️", testo: "Toccale in ordine alfabetico: prima la A, poi la B, poi la C…" },
+      { icona: "⏱️", testo: "Tocca solo la parola giusta: un tocco sbagliato lampeggia di rosso e ti fa perdere tempo. Completa la catena con calma, ma cerca di essere rapido." },
+    ],
+  }],
+};
 
 // ── Engine ─────────────────────────────────────────────────────────────────────
 
@@ -80,17 +96,7 @@ export function WordChainTaskEngine({
   );
 
   // ── Tutorial ───────────────────────────────────────────────────────────────
-  const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: [{
-          titolo: "Word Chain",
-          testo:
-            "Vedrai una griglia di parole in ordine sparso. " +
-            "Toccale in ordine alfabetico: prima quella che inizia per A, poi per B, poi per C, e così via. " +
-            "Un tocco sbagliato non ha effetto. Completa la sequenza il più velocemente possibile!",
-        }],
-      }
-    : null;
+  const tutorial: TutorialConfig | null = mostraTutorial ? TUTORIAL : null;
 
   // ── Warning ────────────────────────────────────────────────────────────────
   const warning = useMemo(

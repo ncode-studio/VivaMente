@@ -8,10 +8,12 @@
  */
 
 import { useState } from "react";
-import type { GameEngineProps, SessionResult } from "@/lib/exercise-types";
+import type { GameEngineProps, SessionResult, TutorialConfig } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
+import { TutorialOverlay } from "@/components/esercizi/shared/TutorialOverlay";
 import {
   getRestauratoreLevel, getRestauratoreMechanicWarning,
-  RESTAURATORE_PALETTE as PAL, RESTAURATORE_TRIAL_VALUTATIVI,
+  RESTAURATORE_PALETTE as PAL,
 } from "./levels";
 import { RestauratoreSession } from "./RestauratoreSession";
 import { PaintingView, generaTrialScene } from "./paintings";
@@ -19,6 +21,8 @@ import { PaintingView, generaTrialScene } from "./paintings";
 type Fase = "tutorial" | "warning" | "sessione";
 
 export const RESTAURATORE_SESSION_TIMER_MS = null;
+
+const ACCENT = CATEGORIA_COLORS.visuospaziali.text; // Il Restauratore = dominio Visuospaziali
 
 export function RestauratoreTaskEngine({
   livello, livelloPrec, tempoScaduto, mostraTutorial,
@@ -42,113 +46,61 @@ export function RestauratoreTaskEngine({
   );
 
   if (fase === "tutorial") {
-    return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.7rem",
-          padding: "0.9rem 0.9rem 1rem 0.9rem",
-          background: PAL.bg,
-          borderRadius: "0.6rem",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <p style={{
-            margin: 0,
-            fontSize: "0.6rem",
-            fontWeight: 600,
-            color: PAL.inkSoft,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-          }}>
-            Come si gioca
-          </p>
-          <h2 style={{
-            margin: "0.15rem 0 0 0",
-            fontSize: "1.25rem",
-            fontWeight: 700,
-            color: PAL.ink,
-          }}>
-            Il Restauratore
-          </h2>
-        </div>
-
-        <p style={{
-          margin: 0,
-          fontSize: "0.88rem",
-          color: "#3A2A18",
-          lineHeight: 1.45,
-          textAlign: "center",
-        }}>
-          Due versioni dello stesso dipinto. <strong>Tocca le differenze</strong> su
-          un lato qualsiasi: quando le hai trovate tutte, il dipinto si illumina.
-        </p>
-
-        {/* Demo compatta: dipinti side-by-side e larghezza contenuta */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 6,
-          padding: "0.4rem",
-          background: PAL.bgDeep,
-          borderRadius: "0.4rem",
-          border: `1px solid rgba(76,52,28,0.18)`,
-          maxWidth: 320,
-          margin: "0 auto",
-          width: "100%",
-        }}>
-          <PaintingView
-            background={demoScene.background}
-            elements={demoScene.elementsA}
-            differences={demoScene.differences}
-            foundOnThisSide={new Set()}
-            hintIds={new Set(demoScene.differences.map((d) => d.elementId))}
-            side="A"
-            restaurato={false}
-            onClickPoint={() => {}}
-            ariaLabel="Esempio originale"
-          />
-          <PaintingView
-            background={demoScene.background}
-            elements={demoScene.elementsB}
-            differences={demoScene.differences}
-            foundOnThisSide={new Set()}
-            hintIds={new Set(demoScene.differences.map((d) => d.elementId))}
-            side="B"
-            restaurato={false}
-            onClickPoint={() => {}}
-            ariaLabel="Esempio da restaurare"
-          />
-        </div>
-
-        <p style={{
-          margin: 0,
-          fontSize: "0.78rem",
-          color: PAL.inkSoft,
-          lineHeight: 1.4,
-          textAlign: "center",
-        }}>
-          {RESTAURATORE_TRIAL_VALUTATIVI} dipinti per sessione — niente cronometro.
-        </p>
-
-        <button
-          onClick={() => setFase(warning ? "warning" : "sessione")}
-          style={{
-            width: "100%",
-            padding: "0.85rem",
+    const tutorial: TutorialConfig = {
+      accent: ACCENT,
+      ctaLabel: "Inizia il restauro",
+      pagine: [{
+        titolo: "Il Restauratore",
+        demo: (
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 6,
+            padding: "0.4rem",
+            background: PAL.bgDeep,
             borderRadius: "0.4rem",
-            border: "none",
-            background: PAL.ink,
-            color: "#FBF4E8",
-            fontSize: "0.98rem",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Ho capito — Inizia
-        </button>
-      </div>
+            border: `1px solid rgba(76,52,28,0.18)`,
+            maxWidth: 320,
+            margin: "0 auto",
+            width: "100%",
+          }}>
+            <PaintingView
+              background={demoScene.background}
+              elements={demoScene.elementsA}
+              differences={demoScene.differences}
+              foundOnThisSide={new Set()}
+              hintIds={new Set(demoScene.differences.map((d) => d.elementId))}
+              side="A"
+              restaurato={false}
+              onClickPoint={() => {}}
+              ariaLabel="Esempio originale"
+            />
+            <PaintingView
+              background={demoScene.background}
+              elements={demoScene.elementsB}
+              differences={demoScene.differences}
+              foundOnThisSide={new Set()}
+              hintIds={new Set(demoScene.differences.map((d) => d.elementId))}
+              side="B"
+              restaurato={false}
+              onClickPoint={() => {}}
+              ariaLabel="Esempio da restaurare"
+            />
+          </div>
+        ),
+        righe: [
+          { icona: "🖼️", testo: "Vedi due versioni dello stesso dipinto, una accanto all'altra." },
+          { icona: "🔍", testo: "Qualcosa è cambiato: un oggetto ha un colore diverso, oppure un oggetto c'è in un dipinto e manca nell'altro." },
+          { icona: "👆", testo: "Tocca ogni differenza sul dipinto da restaurare. Quando le trovi tutte, il dipinto si illumina." },
+        ],
+      }],
+    };
+
+    return (
+      <TutorialOverlay
+        config={tutorial}
+        onComplete={() => setFase(warning ? "warning" : "sessione")}
+      />
     );
   }
 

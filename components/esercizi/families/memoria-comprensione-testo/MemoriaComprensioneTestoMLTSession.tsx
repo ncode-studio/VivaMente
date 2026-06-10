@@ -131,7 +131,7 @@ export function MemoriaComprensioneTestoMLTSession({
       <div className="flex flex-col items-center gap-4 px-4 py-4">
         <p style={{ fontSize: "0.75rem", color: "#6B7280", textAlign: "center",
           fontWeight: 600 }}>
-          Segui la pallina — poi risponderai alle domande sul testo
+          Tocca la pallina solo quando è rossa — poi risponderai alle domande sul testo
         </p>
         {delayComponent({ onCompleto: handleDelayCompleto })}
       </div>
