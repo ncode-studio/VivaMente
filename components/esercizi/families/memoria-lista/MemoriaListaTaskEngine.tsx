@@ -7,10 +7,12 @@ import type {
   SessionResult,
   TutorialConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
   getMLLevel,
   getMLMechanicWarning,
+  getMLNFoilImmaginiRievocazione,
   ML_MICRO_DELTA,
   ML_MICRO_MAX_OVER,
 } from "./levels";
@@ -24,6 +26,8 @@ import {
 import { MemoriaListaSession } from "./MemoriaListaSession";
 import { MemoriaListaRievocazioneParoleSession } from "./MemoriaListaRievocazioneParoleSession";
 import { BouncingBall } from "@/components/esercizi/shared/distrattore-palla/BouncingBall";
+
+const ACCENT = CATEGORIA_COLORS.memoria.text; // Memoria Lista = dominio Memoria
 
 export function MemoriaListaTaskEngine({
   livello,
@@ -67,11 +71,12 @@ export function MemoriaListaTaskEngine({
         ? Math.max(config.nItems, ctx.valoreCorrente)
         : config.nItems;
 
-      // rievocazione immagini: griglia più affollata; rievocazione parole: nessun foil
+      // rievocazione immagini: foil dalla tabella #5 (6,9,13,17,21 a coppie di
+      // livello, meno affollata di prima); rievocazione parole: nessun foil
       const nFoil = isRievocazioneParole
         ? 0
         : isRievocazioneImmagini
-          ? Math.min(nItems * 3, 24)
+          ? getMLNFoilImmaginiRievocazione(config.livello)
           : config.nFoil;
 
       // Timer recall: 20s per riconoscimento parole/immagini, 40s per la
@@ -209,20 +214,57 @@ export function MemoriaListaTaskEngine({
   // ── Tutorial ──────────────────────────────────────────────────────────────
 
   const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: [{
-          titolo: isRievocazioneParole
-            ? "Memorizza le parole"
-            : variante === "immagini" ? "Memorizza le immagini" : "Memorizza le parole",
-          testo: isRievocazioneParole
-            ? "Leggi le parole che appaiono una alla volta. Dopo una breve pausa farai una piccola attività, poi dovrai scrivere tutte le parole che ricordi. Puoi inserirle in qualsiasi ordine."
-            : isRievocazioneImmagini
-              ? "Guarda le immagini che appaiono una alla volta. Dopo una breve pausa vedrai una griglia con molte immagini: tocca solo quelle che hai visto prima, poi premi Conferma."
-              : variante === "immagini"
-                ? "Guarda le immagini che appaiono una alla volta. Dopo una breve pausa vedrai una griglia: tocca tutte le immagini che hai visto prima, poi premi Conferma."
-                : "Leggi le parole che appaiono una alla volta. Dopo una breve pausa vedrai una griglia: tocca tutte le parole che hai visto prima, poi premi Conferma.",
-        }],
-      }
+    ? isRievocazioneParole
+      ? {
+          accent: ACCENT,
+          ctaLabel: "Comincia",
+          pagine: [{
+            titolo: "Memorizza le parole",
+            righe: [
+              { icona: "📖", testo: "Le parole appaiono una alla volta. Leggile con calma e cerca di ricordarle." },
+              { icona: "🔴", testo: "Poi una breve pausa con la pallina: toccala solo quando è rossa, mai quando è di un altro colore." },
+              { icona: "✏️", testo: "Infine scrivi tutte le parole che ricordi, in qualsiasi ordine." },
+            ],
+          }],
+        }
+      : isRievocazioneImmagini
+        ? {
+            accent: ACCENT,
+            ctaLabel: "Comincia",
+            pagine: [{
+              titolo: "Memorizza le immagini",
+              righe: [
+                { icona: "🖼️", testo: "Le immagini appaiono una alla volta. Guardale con attenzione e ricorda l'ordine." },
+                { icona: "🔴", testo: "Poi una breve pausa con la pallina: toccala solo quando è rossa, mai quando è di un altro colore." },
+                { icona: "👆", testo: "Infine tocca solo le immagini che hai visto, nello stesso ordine, e premi Conferma." },
+              ],
+            }],
+          }
+        : variante === "immagini"
+          ? {
+              accent: ACCENT,
+              ctaLabel: "Comincia",
+              pagine: [{
+                titolo: "Memorizza le immagini",
+                righe: [
+                  { icona: "🖼️", testo: "Le immagini appaiono una alla volta. Guardale con attenzione e cerca di ricordarle." },
+                  { icona: "🔴", testo: "Poi una breve pausa con la pallina: toccala solo quando è rossa, mai quando è di un altro colore." },
+                  { icona: "👆", testo: "Infine tocca tutte le immagini che hai visto e premi Conferma." },
+                ],
+              }],
+            }
+          : {
+              accent: ACCENT,
+              ctaLabel: "Comincia",
+              pagine: [{
+                titolo: "Memorizza le parole",
+                righe: [
+                  { icona: "📖", testo: "Le parole appaiono una alla volta. Leggile con calma e cerca di ricordarle." },
+                  { icona: "🔴", testo: "Poi una breve pausa con la pallina: toccala solo quando è rossa, mai quando è di un altro colore." },
+                  { icona: "👆", testo: "Infine tocca tutte le parole che hai visto e premi Conferma." },
+                ],
+              }],
+            }
     : null;
 
   // ── Warning cambio meccanica ──────────────────────────────────────────────

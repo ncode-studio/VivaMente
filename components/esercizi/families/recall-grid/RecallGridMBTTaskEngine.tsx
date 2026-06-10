@@ -39,6 +39,7 @@ import type {
   SessionResult,
   TutorialConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
   getRecallGridMBTLevel,
@@ -278,18 +279,31 @@ export function RecallGridMBTTaskEngine({
   // ── Tutorial ──────────────────────────────────────────────────────────────
 
   const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: [{
-          titolo: stimulusType === "parole"
-            ? "Memorizza parole e posizioni"
-            : "Memorizza immagini e posizioni",
-          testo: stimulusType === "parole"
-            ? `Vedrai una griglia con alcune parole. Memorizza ogni parola e dove si ` +
-              `trova. Quando la griglia scomparirà, riposiziona ogni parola nella cella giusta.`
-            : `Vedrai una griglia con alcune immagini. Memorizza ogni immagine e dove si ` +
-              `trova. Quando la griglia scomparirà, riposiziona ogni immagine nella cella giusta.`,
-        }],
-      }
+    ? stimulusType === "parole"
+      ? {
+          accent: CATEGORIA_COLORS.memoria.text,
+          ctaLabel: "Comincia",
+          pagine: [{
+            titolo: "Memorizza parole e posizioni",
+            righe: [
+              { icona: "🔤", testo: "Appare una griglia con alcune parole, ognuna in una cella precisa." },
+              { icona: "👀", testo: "Guardale con calma: memorizza ogni parola e dove si trova." },
+              { icona: "👆", testo: "Quando la griglia si svuota, rimetti ogni parola nella sua cella." },
+            ],
+          }],
+        }
+      : {
+          accent: CATEGORIA_COLORS.memoria.text,
+          ctaLabel: "Comincia",
+          pagine: [{
+            titolo: "Memorizza immagini e posizioni",
+            righe: [
+              { icona: "🖼️", testo: "Appare una griglia con alcune immagini, ognuna in una cella precisa." },
+              { icona: "👀", testo: "Guardale con calma: memorizza ogni immagine e dove si trova." },
+              { icona: "👆", testo: "Quando la griglia si svuota, rimetti ogni immagine nella sua cella." },
+            ],
+          }],
+        }
     : null;
 
   // ── Warning cambio meccanica ─────────────────────────────────────────────
@@ -304,7 +318,10 @@ export function RecallGridMBTTaskEngine({
   return (
     <TrialFlow<TrialRecallGrid, RispostaRecallGrid>
       tLimMs={null}
-      trialValutativi={config.trialsPerSession}
+      // #4: variante immagini ("Dov'era quell'immagine") = Modello A timer 60s
+      // (trialValutativi=null → termina solo a tempoScaduto della pagina).
+      // Variante parole = Modello B a completamento (contatore trial).
+      trialValutativi={stimulusType === "immagini" ? null : config.trialsPerSession}
       microProgressione={microProgressione}
       generaStimolo={generaStimolo}
       renderStimolo={renderStimolo}

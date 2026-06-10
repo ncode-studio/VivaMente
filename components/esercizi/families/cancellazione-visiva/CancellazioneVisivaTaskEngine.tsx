@@ -6,6 +6,7 @@ import type {
   SessionResult,
   TutorialConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import { getCancellazioneVisivaLevel } from "./levels";
 import {
@@ -112,16 +113,16 @@ export function CancellazioneVisivaTaskEngine({
 
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
+        accent: CATEGORIA_COLORS.attenzione.text,
+        ctaLabel: "Comincia la ricerca",
         pagine: [
           {
-            titolo: "Trova la lettera",
-            testo:
-              "In alto vedrai una lettera da cercare. Nella griglia ci sono tante lettere mescolate: tocca tutte le copie della lettera target, una per una.",
-          },
-          {
-            titolo: "Poi tocca Fatto",
-            testo:
-              "Quando pensi di averle trovate tutte, tocca 'Fatto'. Attenzione: toccare la lettera sbagliata penalizza il punteggio — meglio essere sicuri prima di toccare.",
+            titolo: "Trova le figure uguali",
+            righe: [
+              { icona: "👀", testo: "All'inizio appare una figura: guardala bene e tienila a mente." },
+              { icona: "👆", testo: "Poi nella griglia tocca tutte le figure uguali a quella, una per una." },
+              { icona: "✅", testo: "Quando le hai trovate tutte tocca «Fatto». Vai con calma e tocca solo quelle giuste." },
+            ],
           },
         ],
       }

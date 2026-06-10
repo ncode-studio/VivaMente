@@ -406,7 +406,11 @@ export default function EsercizioPage() {
         {(stato === "running" || stato === "time-up") && sessionDurationMs === null && progressoTrial !== null && progressoTrial.current < progressoTrial.total && (
           <div className="px-3 py-1 rounded-full text-sm font-bold tabular-nums flex-shrink-0"
             style={{ backgroundColor: COLORS.primaryLight, color: COLORS.primary }}>
-            {progressoTrial.current}/{progressoTrial.total}
+            {/* Trial in corso, 1-based: current = trial completati, quindi quello
+                attualmente in gioco è current + 1. Durante il primo trial mostra
+                1/N invece di 0/N. La condizione current < total lo nasconde
+                dopo il completamento dell'ultimo trial. */}
+            {progressoTrial.current + 1}/{progressoTrial.total}
           </div>
         )}
       </div>

@@ -7,6 +7,7 @@ import type {
   SessionResult,
   TutorialConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
   getMCTLevel,
@@ -177,13 +178,23 @@ export function MemoriaComprensioneTestoTaskEngine({
 
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
+        accent: CATEGORIA_COLORS.memoria.text,
+        ctaLabel: "Inizia a leggere",
         pagine: [{
           titolo: variante === "fattuale"
             ? "Leggi e ricorda"
             : "Leggi e ragiona",
-          testo: variante === "fattuale"
-            ? "Leggi con attenzione il testo che ti viene mostrato. Poi ti faremo alcune domande su quello che hai letto. Le risposte si trovano direttamente nel testo."
-            : "Leggi con attenzione il testo che ti viene mostrato. Poi ti faremo alcune domande. Le risposte non sono scritte esplicitamente, ma si possono capire ragionando su ciò che hai letto.",
+          righe: variante === "fattuale"
+            ? [
+                { icona: "📖", testo: "Leggi con calma il breve testo che ti mostriamo." },
+                { icona: "❓", testo: "Poi rispondi ad alcune domande su ciò che hai letto." },
+                { icona: "👆", testo: "Tocca la risposta giusta: la trovi direttamente nel testo." },
+              ]
+            : [
+                { icona: "📖", testo: "Leggi con calma il breve testo che ti mostriamo." },
+                { icona: "💭", testo: "Poi rispondi ad alcune domande sul testo." },
+                { icona: "👆", testo: "La risposta non è scritta: ricavala ragionando su ciò che hai letto." },
+              ],
         }],
       }
     : null;

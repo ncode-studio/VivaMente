@@ -6,6 +6,7 @@ import type {
   TutorialConfig,
   MicroProgressioneConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
   getSynonymAntonymLevel,
@@ -20,6 +21,21 @@ import {
 } from "./sequence";
 import type { SARelazione } from "./word-pools";
 import { SynonymAntonymSession } from "./SynonymAntonymSession";
+
+const ACCENT = CATEGORIA_COLORS.linguaggio.text; // dominio Linguaggio
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Inizia",
+  pagine: [{
+    titolo: "Sinonimo o contrario?",
+    righe: [
+      { icona: "📖", testo: "Vedrai due parole, una sopra e una sotto." },
+      { icona: "🔗", testo: "Guarda se la seconda ha lo stesso significato, il significato opposto, oppure nessun legame." },
+      { icona: "👆", testo: "Tocca «Sinonimo», «Contrario» o «Non correlato». Con calma, hai tutto il tempo." },
+    ],
+  }],
+};
 
 export function LinguaggioDenominazioneTaskEngine({
   livello,
@@ -68,16 +84,7 @@ export function LinguaggioDenominazioneTaskEngine({
     [],
   );
 
-  const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: [{
-          titolo: "Sinonimo o contrario?",
-          testo:
-            "Vedrai due parole. Scegli se la seconda è un sinonimo (stesso significato), " +
-            "un contrario (significato opposto) o non correlata alla prima.",
-        }],
-      }
-    : null;
+  const tutorial: TutorialConfig | null = mostraTutorial ? TUTORIAL : null;
 
   return (
     <TrialFlow<StimoloSA, RispostaLD>

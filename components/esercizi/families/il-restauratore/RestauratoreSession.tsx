@@ -132,7 +132,9 @@ export function RestauratoreSession({
     let bestDist = HIT_RADIUS;
     for (const d of s.differences) {
       if (foundRef.current.has(d.elementId)) continue;
-      const c = d.centerB;
+      // #13: per le differenze "removed" l'oggetto manca su B (centerB null):
+      // si tocca il punto dove DOVREBBE essere, cioè la posizione di A.
+      const c = d.centerB ?? d.centerA;
       if (!c) continue;
       const dx = c.x - xVB;
       const dy = c.y - yVB;

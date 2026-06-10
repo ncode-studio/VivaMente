@@ -116,7 +116,9 @@ export const ENGINE_REGISTRY: Record<ImplementedExerciseId, FamilyEntry> = {
   },
   recall_grid_immagini_mbt: {
     Engine: RecallGridImmaginiMBTEngine,
-    getSessionDurationMs: () => null,  // Modello B — timer non usato
+    // #4 "Dov'era quell'immagine": Modello A — timer 60s al posto del contatore
+    // trial. La variante parole resta Modello B (trial-based).
+    getSessionDurationMs: () => 60_000,
   },
   recall_grid_immagini_mlt: {
     Engine: RecallGridMLTTaskEngine,

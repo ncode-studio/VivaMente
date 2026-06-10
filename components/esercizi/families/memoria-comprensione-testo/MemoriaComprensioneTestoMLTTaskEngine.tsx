@@ -7,6 +7,7 @@ import type {
   SessionResult,
   TutorialConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import { BouncingBall } from "@/components/esercizi/shared/distrattore-palla/BouncingBall";
 import {
@@ -152,9 +153,15 @@ export function MemoriaComprensioneTestoMLTTaskEngine({
 
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
+        accent: CATEGORIA_COLORS.memoria.text,
+        ctaLabel: "Inizia a leggere",
         pagine: [{
           titolo: "Leggi, poi ricorda",
-          testo:  "Leggi con attenzione il testo che ti viene mostrato. Dopo ti faremo alcune domande su quello che hai letto — le risposte si trovano nel testo.",
+          righe: [
+            { icona: "📖", testo: "Leggi con calma il testo: dopo ti faremo alcune domande." },
+            { icona: "🔴", testo: "Prima delle domande c'è una breve pausa con una pallina: toccala solo quando è rossa, mai quando è di un altro colore." },
+            { icona: "👆", testo: "Poi tocca la risposta giusta su ciò che hai letto. Le risposte sono nel testo." },
+          ],
         }],
       }
     : null;

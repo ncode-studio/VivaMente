@@ -19,8 +19,10 @@ import { useCallback, useMemo, useRef } from "react";
 import type {
   GameEngineProps,
   TutorialConfig,
+  TutorialRiga,
   MicroProgressioneConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
   getSTStreamLevel,
@@ -155,7 +157,11 @@ export function SequenceTapTaskEngine({
 
   // ── Tutorial ───────────────────────────────────────────────────────────────
   const tutorial: TutorialConfig | null = mostraTutorial
-    ? { pagine: [{ titolo: TUTORIAL_TITOLO[mode], testo: TUTORIAL_TESTO[mode] }] }
+    ? {
+        accent: ACCENT,
+        ctaLabel: TUTORIAL_CTA[mode],
+        pagine: [{ titolo: TUTORIAL_TITOLO[mode], righe: TUTORIAL_RIGHE[mode] }],
+      }
     : null;
 
   // ── Warning cambio meccanica ───────────────────────────────────────────────
@@ -189,7 +195,11 @@ export function SequenceTapTaskEngine({
   );
 }
 
-// ── Testi tutorial ────────────────────────────────────────────────────────────
+// ── Tutorial ──────────────────────────────────────────────────────────────────
+// Dominio Memoria. Struttura canonica (occhiello → titolo → 3 righe → CTA):
+// ogni mode segue l'ordine "stato base → segnale/cosa osservare → azione".
+
+const ACCENT = CATEGORIA_COLORS.memoria.text; // Sequence Tap = dominio Memoria
 
 const TUTORIAL_TITOLO: Record<STMode, string> = {
   numeri_forward:  "Sequenza Numeri — Ordine Diretto",
@@ -198,17 +208,32 @@ const TUTORIAL_TITOLO: Record<STMode, string> = {
   parole_backward: "Parola al Contrario",
 };
 
-const TUTORIAL_TESTO: Record<STMode, string> = {
-  numeri_forward:
-    "Guarda i numeri uno alla volta e memorizzali nell'ordine in cui appaiono. " +
-    "Quando finiscono, toccali nella stessa sequenza.",
-  numeri_backward:
-    "Guarda i numeri uno alla volta. Quando finiscono, toccali in ordine inverso, " +
-    "partendo dall'ultimo numero visto.",
-  parole_forward:
-    "Guarda le parole una alla volta e memorizzale nell'ordine in cui appaiono. " +
-    "Quando finiscono, toccale nella stessa sequenza.",
-  parole_backward:
-    "Guarda la parola sullo schermo e memorizzala. Quando scompare, " +
-    "tocca le sue lettere in ordine inverso, dalla fine verso l'inizio.",
+const TUTORIAL_CTA: Record<STMode, string> = {
+  numeri_forward:  "Inizia",
+  numeri_backward: "Inizia",
+  parole_forward:  "Inizia",
+  parole_backward: "Inizia",
+};
+
+const TUTORIAL_RIGHE: Record<STMode, TutorialRiga[]> = {
+  numeri_forward: [
+    { icona: "🔢", testo: "I numeri appaiono uno alla volta sullo schermo." },
+    { icona: "🧠", testo: "Memorizzali nell'ordine in cui li vedi." },
+    { icona: "👆", testo: "Quando finiscono, toccali nella stessa sequenza." },
+  ],
+  numeri_backward: [
+    { icona: "🔢", testo: "I numeri appaiono uno alla volta sullo schermo." },
+    { icona: "🔁", testo: "Memorizzali: dovrai ripeterli al contrario." },
+    { icona: "👆", testo: "Toccali in ordine inverso, dall'ultimo al primo." },
+  ],
+  parole_forward: [
+    { icona: "📖", testo: "Le parole appaiono una alla volta sullo schermo." },
+    { icona: "🧠", testo: "Memorizzale nell'ordine in cui le vedi." },
+    { icona: "👆", testo: "Quando finiscono, toccale nella stessa sequenza." },
+  ],
+  parole_backward: [
+    { icona: "📖", testo: "Una parola appare per qualche istante, poi scompare." },
+    { icona: "🔁", testo: "Ricorda le sue lettere: ti serviranno al contrario." },
+    { icona: "👆", testo: "Tocca le lettere in ordine inverso, dall'ultima alla prima." },
+  ],
 };

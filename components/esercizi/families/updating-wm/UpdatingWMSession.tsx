@@ -120,10 +120,21 @@ export function UpdatingWMSession({ stimolo, onRisposta }: Props) {
     setFeedback(null);
     setMcSelected(null);
 
+    // #12: se la regola NON va mostrata (numeri, regola invariata) saltiamo il
+    // cue con delay 0, così il primo numero parte subito col timing normale.
+    // Prima il cue veniva "saltato" in fase di render impostando fase=sequenza
+    // immediatamente, ma avviaRound (che avvia la sequenza temporizzata) partiva
+    // comunque dopo CUE_MS: il primo numero restava a schermo ~2s + speedMs,
+    // gli altri solo speedMs. Ora tutti gli stimoli durano speedMs.
+    const cueDelay =
+      stimolo.variante === "numeri" && stimolo.mostraRegola === false
+        ? 0
+        : CUE_MS;
+
     const t = setTimeout(() => {
       if (cancelledRef.current) return;
       avviaRound(0);
-    }, CUE_MS);
+    }, cueDelay);
 
     return () => {
       cancelledRef.current = true;
@@ -199,14 +210,13 @@ export function UpdatingWMSession({ stimolo, onRisposta }: Props) {
   // ── Render: CUE ────────────────────────────────────────────────────────────
   // Per la variante numeri, la regola viene mostrata SOLO all'inizio
   // dell'esercizio o quando cambia (mostraRegola viene settato dall'engine).
-  // Se mostraRegola è false e siamo in cue, saltiamo direttamente.
+  // Se mostraRegola è false non mostriamo nulla durante il cue: la sequenza
+  // viene avviata dall'effect con delay 0 (#12), niente side-effect in render.
   if (
     fase === "cue" &&
     stimolo.variante === "numeri" &&
     stimolo.mostraRegola === false
   ) {
-    // Avanza subito a sequenza
-    setTimeout(() => setFase("sequenza"), 0);
     return null;
   }
   if (fase === "cue") {

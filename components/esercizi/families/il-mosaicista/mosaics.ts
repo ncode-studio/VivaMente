@@ -448,15 +448,6 @@ const PROC_PALETTES: ReadonlyArray<readonly [string, string]> = [
   [C.ocra, C.bluChiaro],
 ];
 
-/** Palette a 4 colori per pattern policromi (lv 1-2). */
-const PROC_PALETTES_QUAD: ReadonlyArray<readonly [string, string, string, string]> = [
-  [C.terracotta, C.giallo, C.blu, C.oliva],
-  [C.ocra, C.bluScuro, C.terracottaCh, C.olivaChiaro],
-  [C.blu, C.giallo, C.terracotta, C.bianco],
-  [C.oliva, C.terracotta, C.ocra, C.bluChiaro],
-  [C.pietra, C.terracotta, C.oliva, C.bluScuro],
-];
-
 /** Pattern: croce centrale 2×2 con bordi pietra (4 frammenti se 2×2, 9 se 3×3). */
 function procCroce(size: 2 | 3, palette: readonly [string, string]): MosaicDef {
   const [primario, secondario] = palette;
@@ -493,74 +484,6 @@ function procCornice(palette: readonly [string, string]): MosaicDef {
     }
   }
   return { id: `proc-cornice-${bordo}`, nome: "Cornice", cols: 3, rows: 3, cells };
-}
-
-/** Pattern: diagonale — alterna colori sulle diagonali (4 celle 2×2). */
-function procDiagonale(palette: readonly [string, string]): MosaicDef {
-  const [a, b] = palette;
-  return {
-    id: `proc-diag-${a}`,
-    nome: "Diagonale",
-    cols: 2, rows: 2,
-    cells: [
-      solid(0,0, a), solid(1,0, b),
-      solid(0,1, b), solid(1,1, a),
-    ],
-  };
-}
-
-/** Pattern: due strisce orizzontali — alto A, basso B (2×2). */
-function procStriscaOrizz(palette: readonly [string, string]): MosaicDef {
-  const [a, b] = palette;
-  return {
-    id: `proc-striscia-h-${a}`,
-    nome: "Strisce",
-    cols: 2, rows: 2,
-    cells: [
-      solid(0,0, a), solid(1,0, a),
-      solid(0,1, b), solid(1,1, b),
-    ],
-  };
-}
-
-/** Pattern: due strisce verticali — sinistra A, destra B (2×2). */
-function procStriscaVert(palette: readonly [string, string]): MosaicDef {
-  const [a, b] = palette;
-  return {
-    id: `proc-striscia-v-${a}`,
-    nome: "Colonne",
-    cols: 2, rows: 2,
-    cells: [
-      solid(0,0, a), solid(1,0, b),
-      solid(0,1, a), solid(1,1, b),
-    ],
-  };
-}
-
-/** Pattern: 3 celle colore A + 1 angolo B (4 varianti per quadrante, 2×2). */
-function procAngoloUnico(palette: readonly [string, string], angolo: 0|1|2|3): MosaicDef {
-  const [a, b] = palette;
-  const cells: MosaicCell[] = [
-    solid(0,0, angolo === 0 ? b : a),
-    solid(1,0, angolo === 1 ? b : a),
-    solid(0,1, angolo === 2 ? b : a),
-    solid(1,1, angolo === 3 ? b : a),
-  ];
-  return { id: `proc-angolo-${angolo}-${a}`, nome: "Angolo", cols: 2, rows: 2, cells };
-}
-
-/** Pattern: 4 colori distinti uno per cella (2×2 policromo). */
-function procQuattroColori(palette: readonly [string, string, string, string]): MosaicDef {
-  const [a, b, c, d] = palette;
-  return {
-    id: `proc-quattro-${a}`,
-    nome: "Quattro",
-    cols: 2, rows: 2,
-    cells: [
-      solid(0,0, a), solid(1,0, b),
-      solid(0,1, c), solid(1,1, d),
-    ],
-  };
 }
 
 /** Pattern: tre colonne verticali ABA (3×2 = 6 frammenti). */
@@ -805,36 +728,24 @@ function procAngoli(palette: readonly [string, string]): MosaicDef {
 /** Sceglie un mosaico procedurale per il livello richiesto. */
 export function generateProceduralMosaic(livello: number): MosaicDef {
   const palette = PROC_PALETTES[Math.floor(Math.random() * PROC_PALETTES.length)];
-  const quadPalette = PROC_PALETTES_QUAD[Math.floor(Math.random() * PROC_PALETTES_QUAD.length)];
 
   if (livello === 1) {
-    // 4 frammenti — pattern 2×2 semplici (9 pattern × varie palette)
+    // #2: minimo 6 frammenti (griglia 3×2). Su 4 tessere (2×2) un singolo
+    // scambio sposiziona 2 celle su 4 = 50% di accuratezza; con 6 tessere
+    // diventa 2/6 ≈ 67%. Pattern semplici, leggibili a colpo d'occhio.
     const generators = [
-      () => procDiagonale(palette),
-      () => procStriscaOrizz(palette),
-      () => procStriscaVert(palette),
-      () => procAngoloUnico(palette, 0),
-      () => procAngoloUnico(palette, 1),
-      () => procAngoloUnico(palette, 2),
-      () => procAngoloUnico(palette, 3),
-      () => procQuattroColori(quadPalette),
+      () => procStriscaOrizz_3x2(palette),
+      () => procColonne(palette),
+      () => procTreColonne(palette),
+      () => procScacchiera(3, 2, palette),
     ];
     return generators[Math.floor(Math.random() * generators.length)]();
   }
 
   if (livello === 2) {
-    // 4-6 frammenti — 2×2 e 3×2
+    // 6 frammenti (3×2) — set completo, più una forma a 9 frammenti (3×3)
+    // per un gradino di difficoltà sopra il livello 1.
     const generators = [
-      // 2×2 base
-      () => procDiagonale(palette),
-      () => procStriscaOrizz(palette),
-      () => procStriscaVert(palette),
-      () => procAngoloUnico(palette, 0),
-      () => procAngoloUnico(palette, 1),
-      () => procAngoloUnico(palette, 2),
-      () => procAngoloUnico(palette, 3),
-      () => procQuattroColori(quadPalette),
-      // 3×2 = 6 frammenti
       () => procScacchiera(3, 2, palette),
       () => procColonne(palette),
       () => procTreColonne(palette),
@@ -843,7 +754,7 @@ export function generateProceduralMosaic(livello: number): MosaicDef {
       () => procT_3x2(palette),
       () => procFreccia_3x2(palette),
       () => procV_3x2(palette),
-      () => procCroce(2, palette),
+      () => procCroce(3, palette),
     ];
     return generators[Math.floor(Math.random() * generators.length)]();
   }

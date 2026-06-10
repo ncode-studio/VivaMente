@@ -27,7 +27,8 @@ export interface StimoloWC {
   targetTimeMs: number;
 }
 
-export type RispostaWC = { tempoMs: number } | null; // null = timeout
+// errori = numero di parole sbagliate toccate durante il trial (#10).
+export type RispostaWC = { tempoMs: number; errori: number } | null; // null = timeout
 
 // ── Utility ────────────────────────────────────────────────────────────────────
 

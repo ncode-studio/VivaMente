@@ -16,13 +16,18 @@
 import { useCallback, useMemo, useRef } from "react";
 import type {
   GameEngineProps,
+  MicroProgressioneConfig,
   TutorialConfig,
   SessionResult,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
   getRilevamentoLevel,
   getRilevamentoMechanicWarning,
+  RILEVAMENTO_MICRO_DELTA,
+  RILEVAMENTO_MICRO_MAX_OVER,
+  RILEVAMENTO_MICRO_LIMITE,
 } from "./levels";
 import {
   generaStimoloRilevamento,
@@ -30,6 +35,23 @@ import {
   type RispostaRilevamento,
 } from "./sequence";
 import { RilevamentoStimulus } from "./RilevamentoStimulus";
+
+const ACCENT = CATEGORIA_COLORS.attenzione.text; // Rilevamento = dominio Attenzione
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Comincia",
+  pagine: [
+    {
+      titolo: "Rilevamento del Cambiamento",
+      righe: [
+        { icona: "🖼️", testo: "Vedrai una griglia di immagini che lampeggia avanti e indietro." },
+        { icona: "🔄", testo: "A ogni lampeggio, una sola immagine cambia. Guarda con attenzione." },
+        { icona: "👆", testo: "Tocca l'immagine che cambia. Se sbagli, riprova con calma." },
+      ],
+    },
+  ],
+};
 
 export function RilevamentoCambiamentoTaskEngine({
   livello,
@@ -43,8 +65,23 @@ export function RilevamentoCambiamentoTaskEngine({
   const level = useMemo(() => getRilevamentoLevel(livello), [livello]);
   const rng   = useRef(Math.random);
 
+  // #8 — Micro-progressione su nItem (più immagini nei trial bonus).
+  const microProgressione: MicroProgressioneConfig = useMemo(
+    () => ({
+      valoreBase: level.nItem,
+      delta:      RILEVAMENTO_MICRO_DELTA,
+      maxDelta:   RILEVAMENTO_MICRO_MAX_OVER,
+      limite:     RILEVAMENTO_MICRO_LIMITE,
+    }),
+    [level.nItem],
+  );
+
   const generaStimolo = useCallback(
-    () => generaStimoloRilevamento(level, rng.current),
+    (ctx: { valoreCorrente: number; isBonus: boolean }) =>
+      generaStimoloRilevamento(
+        ctx.valoreCorrente > 0 ? { ...level, nItem: ctx.valoreCorrente } : level,
+        rng.current,
+      ),
     [level],
   );
 
@@ -71,11 +108,11 @@ export function RilevamentoCambiamentoTaskEngine({
 
   const onCompleteWrapped = useCallback(
     (risultato: SessionResult) => {
-      const m       = risultato.metriche;
-      const totale  = m.totale  ?? 0;
-      const trovati = m.trovati ?? 0;
-      const acc = totale > 0 ? trovati / totale : 0;
-      onComplete({ ...risultato, accuratezzaValutativa: acc, scoreGrezzo: Math.round(acc * 100) });
+      // #8: con i trial bonus attivi l'accuratezza valutativa la calcola
+      // TrialFlow ESCLUDENDO i bonus (GDD: i bonus non contano per
+      // l'accuratezza inter-livello). Le metriche totale/trovati/tempo
+      // restano in risultato.metriche per analytics.
+      onComplete(risultato);
     },
     [onComplete],
   );
@@ -87,20 +124,7 @@ export function RilevamentoCambiamentoTaskEngine({
     [],
   );
 
-  const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: [
-          {
-            titolo: "Rilevamento del Cambiamento",
-            testo:
-              "Vedrai una griglia di immagini che lampeggia avanti e indietro. " +
-              "Ogni volta che lampeggia, UNA immagine cambia. " +
-              "Tocca l'immagine che cambia! " +
-              "Se tocchi sbagliato, la griglia continua a lampeggiare — riprova.",
-          },
-        ],
-      }
-    : null;
+  const tutorial: TutorialConfig | null = mostraTutorial ? TUTORIAL : null;
 
   const warning = useMemo(
     () => getRilevamentoMechanicWarning(livelloPrec, livello),

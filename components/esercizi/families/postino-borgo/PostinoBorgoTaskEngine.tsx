@@ -9,7 +9,9 @@
  */
 
 import { useState } from "react";
-import type { GameEngineProps, SessionResult } from "@/lib/exercise-types";
+import type { GameEngineProps, SessionResult, TutorialConfig } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
+import { TutorialOverlay } from "@/components/esercizi/shared/TutorialOverlay";
 import {
   getPostinoBorgoLevel, getPostinoBorgoMechanicWarning,
 } from "./levels";
@@ -17,6 +19,38 @@ import { PostinoBorgoSession } from "./PostinoBorgoSession";
 import { PALETTE, PostinoSprite, Decor, DestinatarioPin } from "./village";
 
 type Fase = "tutorial" | "warning" | "sessione";
+
+const ACCENT = CATEGORIA_COLORS.visuospaziali.text; // Postino del Borgo = dominio Visuospaziali
+
+// Anteprima: il postino e i destinatari del borgo da raggiungere.
+function BorgoDemo() {
+  return (
+    <div style={{
+      display: "flex", justifyContent: "center", alignItems: "center", gap: "1rem",
+      width: "100%", padding: "0.7rem", borderRadius: "0.5rem",
+      background: "#FBF5E5", border: `1.4px solid ${PALETTE.streetEdge}`,
+    }}>
+      <PostinoSprite size={48} />
+      <DestinatarioPin idx={1} consegnato={false} size={28} />
+      <DestinatarioPin idx={2} consegnato={false} size={28} />
+      <Decor kind="fontana" size={56} />
+    </div>
+  );
+}
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Parti con le consegne",
+  pagine: [{
+    titolo: "Il Postino del Borgo",
+    demo: <BorgoDemo />,
+    righe: [
+      { icona: "✉️", testo: "Il postino deve consegnare le lettere a tutti i destinatari del borgo." },
+      { icona: "🗺️", testo: "Tocca le case vicine per tracciare il percorso più corto che le raggiunge tutte." },
+      { icona: "🚶", testo: "Premi Conferma e il postino partirà. Sbagliato un passo? Annulla e riprova con calma." },
+    ],
+  }],
+};
 
 export function PostinoBorgoTaskEngine({
   livello, livelloPrec, tempoScaduto, mostraTutorial,
@@ -33,73 +67,10 @@ export function PostinoBorgoTaskEngine({
 
   if (fase === "tutorial") {
     return (
-      <div style={{
-        display: "flex", flexDirection: "column", gap: "0.9rem",
-        padding: "1.1rem 1rem",
-        background: PALETTE.bg, borderRadius: "0.6rem",
-        fontFamily: "Georgia, serif",
-      }}>
-        <div style={{ textAlign: "center" }}>
-          <p style={{
-            margin: 0, fontSize: "0.62rem", fontWeight: 600,
-            color: PALETTE.inkSoft, letterSpacing: "0.14em",
-            textTransform: "uppercase",
-          }}>
-            Come si gioca
-          </p>
-          <h2 style={{
-            margin: "0.2rem 0 0 0",
-            fontSize: "1.4rem", fontWeight: 700, color: PALETTE.ink,
-          }}>
-            Il Postino del Borgo
-          </h2>
-        </div>
-
-        <p style={{
-          margin: 0, fontSize: "0.95rem", color: "#3A2A18",
-          lineHeight: 1.5, textAlign: "center",
-        }}>
-          Il postino deve consegnare le lettere a tutti i destinatari del borgo.
-          <strong> Tocca le case vicine</strong> per tracciare il percorso,
-          quindi premi <em>Conferma</em>: il postino partirà animato lungo la
-          strada che hai disegnato.
-        </p>
-
-        <div style={{
-          padding: "0.7rem", borderRadius: "0.4rem",
-          background: "#FBF5E5",
-          border: `1.4px solid ${PALETTE.streetEdge}`,
-          display: "flex", justifyContent: "center", alignItems: "center", gap: "1rem",
-        }}>
-          <PostinoSprite size={48} />
-          <DestinatarioPin idx={1} consegnato={false} size={28} />
-          <DestinatarioPin idx={2} consegnato={false} size={28} />
-          <Decor kind="fontana" size={56} />
-        </div>
-
-        <ul style={{
-          margin: 0, paddingLeft: "1.1rem",
-          fontSize: "0.86rem", color: PALETTE.ink, lineHeight: 1.55,
-        }}>
-          <li>Trova il percorso <strong>più corto</strong> che tocca tutte le pin.</li>
-          <li>Sbagliato un passo? Premi <strong>Annulla passo</strong> e ricomincia da lì.</li>
-          <li>Più la sessione avanza, più trovi <strong>vicoli chiusi, scalinate e sensi unici</strong> da rispettare.</li>
-        </ul>
-
-        <button
-          onClick={() => setFase(warning ? "warning" : "sessione")}
-          style={{
-            width: "100%", padding: "0.9rem",
-            borderRadius: "0.4rem", border: "none",
-            background: PALETTE.ink, color: "#FBF5E5",
-            fontSize: "1rem", fontWeight: 700,
-            cursor: "pointer",
-            boxShadow: "0 2px 0 #2A1B0C",
-          }}
-        >
-          Ho capito — Inizia
-        </button>
-      </div>
+      <TutorialOverlay
+        config={TUTORIAL}
+        onComplete={() => setFase(warning ? "warning" : "sessione")}
+      />
     );
   }
 

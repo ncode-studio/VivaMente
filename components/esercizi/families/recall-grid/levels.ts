@@ -291,8 +291,8 @@ export function getRecallGridMLTMechanicWarning(
     return {
       titolo: "Il tempo di pausa diventa più lungo",
       testo:
-        "Da questo livello tra una griglia e l'altra dovrai seguire la pallina " +
-        "più a lungo (1 minuto invece di 30 secondi).",
+        "Da questo livello tra una griglia e l'altra la pausa con la pallina " +
+        "(toccala solo quando è rossa) dura più a lungo: 1 minuto invece di 30 secondi.",
     };
   }
   if (livelloPrec >= 5 && livelloPrec <= 12 && livelloCorrente <= 4) {

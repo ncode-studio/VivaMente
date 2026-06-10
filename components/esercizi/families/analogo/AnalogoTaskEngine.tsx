@@ -16,6 +16,7 @@ import type {
   TutorialConfig,
   MicroProgressioneConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import { getAnalogoLevel, FLOOR_TLIM_ANALOGO } from "./levels";
 import {
@@ -26,6 +27,21 @@ import {
   type RispostaAnalogo,
 } from "./sequence";
 import { AnalogoSession } from "./AnalogoSession";
+
+const ACCENT = CATEGORIA_COLORS.linguaggio.text; // L'Analogo = dominio Linguaggio
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Comincia",
+  pagine: [{
+    titolo: "L'Analogo",
+    righe: [
+      { icona: "🔗", testo: "Vedrai una coppia di parole legate fra loro, ad esempio CALDO sta a FREDDO." },
+      { icona: "❓", testo: "Poi una seconda coppia con una parola mancante, segnata da un punto interrogativo." },
+      { icona: "👆", testo: "Tocca, fra le quattro opzioni, quella legata allo stesso modo. Con calma, hai tempo." },
+    ],
+  }],
+};
 
 export function AnalogoTaskEngine({
   livello,
@@ -98,17 +114,7 @@ export function AnalogoTaskEngine({
     [],
   );
 
-  const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: [{
-          titolo: "L'Analogo",
-          testo:
-            "Vedrai una coppia di parole illustrate, ad esempio CALDO sta a FREDDO. " +
-            "Poi una seconda coppia con una parola mancante: scegli fra le 4 opzioni " +
-            "quella che completa l'analogia con la stessa relazione della prima coppia.",
-        }],
-      }
-    : null;
+  const tutorial: TutorialConfig | null = mostraTutorial ? TUTORIAL : null;
 
   return (
     <TrialFlow<StimoloAnalogo, RispostaAnalogo>

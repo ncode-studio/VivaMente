@@ -24,6 +24,7 @@ import type {
   SessionResult,
   TutorialConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import { getMPHybridLevel, getMPMechanicWarning } from "./levels";
 import {
@@ -32,6 +33,23 @@ import {
   type RispostaMP,
 } from "./sequence";
 import { MemoriaProspetticaSession } from "./MemoriaProspetticaSession";
+
+// ── Tutorial ──────────────────────────────────────────────────────────────────
+
+const ACCENT = CATEGORIA_COLORS.memoria.text; // Memoria Prospettica = dominio Memoria
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Comincia",
+  pagine: [{
+    titolo: "Memoria Prospettica",
+    righe: [
+      { icona: "📖", testo: "Le parole scorrono una alla volta. Tocca il pulsante della categoria quando la parola appartiene al gruppo indicato." },
+      { icona: "⏰", testo: "L'orologio in alto scorre. Ricordati di toccare 'Ricordami' a intervalli regolari, aiutandoti con il tempo." },
+      { icona: "👆", testo: "Porta avanti i due compiti insieme, con calma. Non c'è fretta, prenditi il tuo tempo." },
+    ],
+  }],
+};
 
 // ── MemoriaProspetticaTaskEngine ──────────────────────────────────────────────
 
@@ -123,8 +141,12 @@ export function MemoriaProspetticaTaskEngine({
 
       const hits   = finestreOk + distrOk;
       const totali = finestreTot + distrTot;
-      // Penalty model: ogni false alarm costa mezzo hit. Clamp [0,1].
-      const rawAcc = totali > 0 ? (hits - 0.5 * falseAlarms) / totali : 0;
+      // Penalty model: ogni false alarm costa un hit pieno (peso 1.0). Clamp [0,1].
+      // #6: prima il peso era 0.5 → lo scoring restava alto anche con molti
+      // errori di commissione (tap categoria su parole sbagliate, "Ricordami"
+      // fuori finestra). Con peso 1.0 ogni tap errato annulla una risposta
+      // corretta, così l'accuratezza scende davvero quando si sbaglia molto.
+      const rawAcc = totali > 0 ? (hits - falseAlarms) / totali : 0;
       const acc    = Math.max(0, Math.min(1, rawAcc));
 
       onComplete({
@@ -138,18 +160,7 @@ export function MemoriaProspetticaTaskEngine({
 
   // ── Tutorial ───────────────────────────────────────────────────────────────
 
-  const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: [{
-          titolo: "Memoria Prospettica — Due compiti insieme",
-          testo:
-            "Vedrai delle parole scorrere sullo schermo. " +
-            "Tocca il pulsante della categoria ogni volta che la parola appartiene al gruppo indicato. " +
-            "Allo stesso tempo, ricordati di toccare 'Ricordami' a intervalli regolari — " +
-            "l'orologio in alto ti aiuterà a tenere il ritmo.",
-        }],
-      }
-    : null;
+  const tutorial: TutorialConfig | null = mostraTutorial ? TUTORIAL : null;
 
   // ── Warning cambio meccanica ───────────────────────────────────────────────
 

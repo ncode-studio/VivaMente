@@ -7,6 +7,7 @@ import type {
   SessionResult,
   TutorialConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
   getAMLevel,
@@ -29,6 +30,21 @@ const VARIANTI: AMVariante[] = [
   "immagine_immagine",
   "parola_parola",
 ];
+
+const ACCENT = CATEGORIA_COLORS.memoria.text; // Associative Memory = dominio Memoria
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Comincia",
+  pagine: [{
+    titolo: "Memorizza le coppie",
+    righe: [
+      { icona: "🃏", testo: "Ti mostriamo alcune coppie, una alla volta. Osservale con calma e prova a ricordarle." },
+      { icona: "🔴", testo: "Poi una breve pausa con una pallina che rimbalza: toccala solo quando è rossa, mai quando è di un altro colore." },
+      { icona: "👆", testo: "Infine ti mostriamo un elemento: tocca quello che era abbinato a lui." },
+    ],
+  }],
+};
 
 export function AssociativeMemoryTaskEngine({
   livello,
@@ -160,16 +176,7 @@ export function AssociativeMemoryTaskEngine({
 
   // ── Tutorial ──────────────────────────────────────────────────────────────
 
-  const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: [{
-          titolo: "Memorizza le coppie",
-          testo:
-            "Vedrai delle coppie di parole o immagini una alla volta. " +
-            "Memorizza ogni coppia. Poi ti chiederemo qual era abbinata a ciascun elemento.",
-        }],
-      }
-    : null;
+  const tutorial: TutorialConfig | null = mostraTutorial ? TUTORIAL : null;
 
   // ── Warning cambio meccanica ──────────────────────────────────────────────
 

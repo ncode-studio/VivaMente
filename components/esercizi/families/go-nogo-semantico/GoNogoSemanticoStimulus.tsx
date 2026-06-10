@@ -23,7 +23,6 @@ interface GoNogoSemanticoStimulusProps {
   stimolo:      StimoloSemantico;
   onRisposta:   (r: GoNogoSemanticoRisposta) => void;
   disabilitato: boolean;
-  etichetta:    string;
 }
 
 const TAP_PULSE_DURATION_MS = 80;
@@ -32,7 +31,6 @@ export function GoNogoSemanticoStimulus({
   stimolo,
   onRisposta,
   disabilitato,
-  etichetta,
 }: GoNogoSemanticoStimulusProps) {
   const startRef     = useRef(performance.now());
   const [tapPulse, setTapPulse] = useState(false);
@@ -70,18 +68,20 @@ export function GoNogoSemanticoStimulus({
         </span>
       </div>
 
-      {/* Bottone tap — etichetta dinamica per rinforzare la categoria target */}
+      {/* Bottone tap — #11: NIENTE categoria target a schermo. L'etichetta
+          va tenuta in memoria di lavoro (annunciata solo nel tutorial),
+          altrimenti la condizione "Go" sarebbe banalizzata. Label neutra. */}
       <button
         onClick={onTap}
         disabled={disabilitato}
-        aria-label={`Appartiene a ${etichetta}`}
+        aria-label="Tocca se appartiene al gruppo di oggi"
         style={{
           transform:  tapPulse ? "scale(1.05)" : "scale(1)",
           transition: "transform 40ms ease-out",
         }}
         className="w-full max-w-md min-h-[80px] rounded-2xl bg-blue-600 text-white text-xl font-bold active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
       >
-        ✓ {etichetta}
+        ✓ Tocca
       </button>
     </div>
   );

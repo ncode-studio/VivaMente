@@ -15,7 +15,9 @@
  */
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import type { GameEngineProps } from "@/lib/exercise-types";
+import type { GameEngineProps, TutorialConfig } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
+import { TutorialOverlay } from "@/components/esercizi/shared/TutorialOverlay";
 import { MapView } from "./MapView";
 import { getMap } from "./maps";
 import { LEVELS, MAX_LIVELLO } from "./levels";
@@ -34,6 +36,21 @@ import {
 const TRIAL_VALUTATIVI = 3;
 const FEEDBACK_MS = 1400;
 const ISI_MS = 500;
+
+const ACCENT = CATEGORIA_COLORS.visuospaziali.text; // Il Cartografo = dominio Visuospaziale
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Inizia il viaggio",
+  pagine: [{
+    titolo: "Il Cartografo",
+    righe: [
+      { icona: "🗺️", testo: "Guarda la mappa: il punto rosso è dove sei e la freccia indica dove guardi." },
+      { icona: "🧭", testo: "Leggi le indicazioni del percorso e seguile con la mente, un passo alla volta." },
+      { icona: "📍", testo: "Alla fine indica dove sei arrivato. Prenditi tutto il tempo che ti serve." },
+    ],
+  }],
+};
 
 type Fase = "tutorial" | "presentazione" | "domanda" | "feedback" | "isi";
 
@@ -162,42 +179,10 @@ export function CartografoTaskEngine({
   // ── TUTORIAL ───────────────────────────────────────────────────────────────
   if (fase === "tutorial") {
     return (
-      <div className="w-full max-w-3xl mx-auto px-4 py-6">
-        <div className="bg-amber-50 border-4 border-amber-200 rounded-3xl p-6 shadow-lg">
-          <div className="text-center mb-3">
-            <p className="text-xs font-semibold text-amber-700 tracking-widest uppercase">
-              Come si gioca
-            </p>
-            <h2 className="text-2xl md:text-3xl font-bold text-stone-800 mt-1">
-              Il Cartografo
-            </h2>
-          </div>
-          <div className="text-stone-700 text-base md:text-lg leading-relaxed space-y-3">
-            <p>
-              Osserverai una mappa del paese con il punto di partenza segnato in rosso
-              e la direzione verso cui stai guardando.
-            </p>
-            <p>
-              Leggi le indicazioni del percorso (es. <em>vai dritto, gira a destra</em>),
-              segui mentalmente la strada, poi indica
-              {richiedePosizione && richiedeDirezione
-                ? " dove sei arrivato e verso dove guardi."
-                : richiedePosizione
-                  ? " in quale punto della mappa sei arrivato."
-                  : " in quale direzione stai guardando."}
-            </p>
-            <p className="text-sm text-stone-600">
-              La sessione dura {TRIAL_VALUTATIVI} percorsi. Prenditi tutto il tempo che ti serve.
-            </p>
-          </div>
-          <button
-            onClick={() => setFase("presentazione")}
-            className="mt-5 w-full bg-amber-600 hover:bg-amber-700 text-white text-lg font-bold py-3 rounded-2xl shadow-md transition"
-          >
-            Ho capito — Inizia
-          </button>
-        </div>
-      </div>
+      <TutorialOverlay
+        config={TUTORIAL}
+        onComplete={() => setFase("presentazione")}
+      />
     );
   }
 

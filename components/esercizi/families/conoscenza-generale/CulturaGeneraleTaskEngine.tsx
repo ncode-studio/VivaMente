@@ -18,6 +18,7 @@ import type {
   TutorialConfig,
   MicroProgressioneConfig,
 } from "@/lib/exercise-types";
+import { CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import { getCGLevel, RARITÀ_INDEX } from "./levels";
 import {
@@ -28,6 +29,24 @@ import {
   type CGPoolRef,
 } from "./sequence";
 import { CulturaGeneraleSession } from "./CulturaGeneraleSession";
+
+// ── Tutorial ─────────────────────────────────────────────────────────────────
+// Dominio: memoria. Struttura Osservatorio: occhiello → titolo → 3 righe → CTA.
+
+const ACCENT = CATEGORIA_COLORS.memoria.text;
+
+const TUTORIAL: TutorialConfig = {
+  accent: ACCENT,
+  ctaLabel: "Comincia",
+  pagine: [{
+    titolo: "Cultura Generale",
+    righe: [
+      { icona: "❓", testo: "Compare una domanda con quattro possibili risposte." },
+      { icona: "💡", testo: "Una sola risposta è quella giusta: pensa con calma." },
+      { icona: "👆", testo: "Tocca la risposta corretta prima che scada la barra del tempo in alto." },
+    ],
+  }],
+};
 
 // ── Engine ─────────────────────────────────────────────────────────────────────
 
@@ -72,17 +91,7 @@ export function CulturaGeneraleTaskEngine({
   );
 
   // ── Tutorial ──────────────────────────────────────────────────────────────────
-  const tutorial: TutorialConfig | null = mostraTutorial
-    ? {
-        pagine: [{
-          titolo: "Cultura Generale",
-          testo:
-            "Leggi la domanda e scegli la risposta giusta tra le quattro opzioni. " +
-            "Tocca il pulsante con la risposta che ritieni corretta. " +
-            "Rispondi entro il tempo indicato dalla barra in cima.",
-        }],
-      }
-    : null;
+  const tutorial = mostraTutorial ? TUTORIAL : null;
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (

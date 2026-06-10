@@ -36,6 +36,19 @@ export const ML_LEVELS: readonly MLLevelConfig[] = [
 export const ML_MICRO_DELTA    = 1;
 export const ML_MICRO_MAX_OVER = 2;
 
+/**
+ * #5 — Foil per la variante IMMAGINI RIEVOCAZIONE ("Ricorda le immagini").
+ * Sostituisce il vecchio calcolo `min(nItems*3, 24)` (9-24 foil), che rendeva
+ * la griglia di pool troppo affollata. Progressione richiesta a coppie di
+ * livello: 6, 9, 13, 17, 21.
+ */
+export const ML_NFOIL_IMMAGINI_RIEVOCAZIONE: readonly number[] =
+  [6, 6, 9, 9, 13, 13, 17, 17, 21, 21];
+
+export function getMLNFoilImmaginiRievocazione(livello: number): number {
+  return ML_NFOIL_IMMAGINI_RIEVOCAZIONE[Math.min(10, Math.max(1, livello)) - 1];
+}
+
 export function getMLLevel(livello: number): MLLevelConfig {
   return ML_LEVELS[Math.min(10, Math.max(1, livello)) - 1];
 }

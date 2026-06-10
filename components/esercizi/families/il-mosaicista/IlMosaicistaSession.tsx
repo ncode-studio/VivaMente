@@ -218,9 +218,12 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
     completedRef.current = true;
 
     // Includi anche il mosaico in corso (non ancora completato) come parziale.
+    // Conta SOLO le celle effettivamente posate dall'utente: a timer scaduto
+    // le tessere ancora nel pool non devono pesare come errori (penalizzava
+    // ingiustamente chi veniva interrotto a metà ricostruzione).
     const curSlots = slotsRef.current;
     const corrCorrenti = curSlots.filter(s => s.corretto).length;
-    const totCorrenti  = curSlots.length;
+    const totCorrenti  = curSlots.filter(s => s.occupatoDa !== null).length;
 
     const slotsCorretti = slotsCorrettiTotRef.current + corrCorrenti;
     const slotsTotali   = slotsTotaliTotRef.current   + totCorrenti;
@@ -436,12 +439,9 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
             MEMORIZZA IL MODELLO
           </div>
 
-          <h2 style={{
-            fontSize: "1.25rem", fontWeight: 900, color: "#3A2614",
-            margin: 0, textAlign: "center",
-          }}>
-            {currentMosaic.nome}
-          </h2>
+          {/* Nessuna etichetta verbale (nome del mosaico): il compito deve
+              restare puramente visuospaziale, senza permettere la codifica
+              verbale del modello ("è una casa"). */}
 
           <div style={{
             padding: 14,
@@ -533,7 +533,7 @@ export function IlMosaicistaSession({ config, tempoScaduto, onReady, onComplete 
             }}>
               RICOSTRUISCI A MEMORIA
             </span>
-            <span style={{ fontWeight: 700, fontSize: "1rem" }}>{currentMosaic.nome}</span>
+            {/* Nome del mosaico rimosso: nessuna etichetta verbale del modello. */}
             {config.rotazioneAttiva && (
               <span style={{
                 marginTop: 4, padding: "2px 8px",

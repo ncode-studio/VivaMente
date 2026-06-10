@@ -6,7 +6,9 @@
  * L'utente vede una griglia di parole in ordine casuale.
  * Deve tapparle in sequenza alfabetica (per lettera iniziale).
  *   • Tap corretto: parola si colora di verde e mostra numero d'ordine.
- *   • Tap sbagliato: nessun effetto visivo.
+ *   • Tap sbagliato: la parola lampeggia di rosso e l'errore viene contato
+ *     (#10). Il tempo perso nel tap sbagliato è la penalità naturale, dato
+ *     che la promozione è a tempo.
  *
  * Gestisce internamente il countdown (tLimMs).
  * Chiama onRisposta({ tempoMs }) al completamento o onRisposta(null) a timeout.
@@ -26,10 +28,13 @@ type Props = {
 export function WordChainSession({ stimolo, onRisposta }: Props) {
   const [ordine,   setOrdine]   = useState<Partial<Record<LetteraIT, number>>>({});
   const [dispPct,  setDispPct]  = useState(100);
+  const [flashErrato, setFlashErrato] = useState<LetteraIT | null>(null);
 
   const completedRef  = useRef(false);
   const pointerRef    = useRef(0);
   const ordineRef     = useRef<Partial<Record<LetteraIT, number>>>({});
+  const erroriRef     = useRef(0);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTimeRef  = useRef(0);
   const stimoloRef    = useRef(stimolo);
   const onRispostaRef = useRef(onRisposta);
@@ -42,9 +47,11 @@ export function WordChainSession({ stimolo, onRisposta }: Props) {
     completedRef.current = false;
     pointerRef.current   = 0;
     ordineRef.current    = {};
+    erroriRef.current    = 0;
     startTimeRef.current = Date.now();
     setOrdine({});
     setDispPct(100);
+    setFlashErrato(null);
 
     const t0     = Date.now();
     const tLimMs = stimolo.tLimMs;
@@ -61,7 +68,10 @@ export function WordChainSession({ stimolo, onRisposta }: Props) {
       }
     }, 50);
 
-    return () => { clearInterval(interval); };
+    return () => {
+      clearInterval(interval);
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stimolo]);
 
@@ -70,7 +80,16 @@ export function WordChainSession({ stimolo, onRisposta }: Props) {
     if (completedRef.current) return;
     const s = stimoloRef.current;
     const expected = s.sequenza[pointerRef.current];
-    if (lettera !== expected) return; // tap sbagliato: ignora
+    if (lettera !== expected) {
+      // #10: tap sbagliato cliccabile → lampeggio rosso + conteggio errore.
+      // Il tempo speso è la penalità (la promozione è a tempo).
+      if (ordineRef.current[lettera] !== undefined) return; // già completata: ignora
+      erroriRef.current++;
+      setFlashErrato(lettera);
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+      flashTimerRef.current = setTimeout(() => setFlashErrato(null), 350);
+      return;
+    }
 
     const newOrdine = { ...ordineRef.current, [lettera]: pointerRef.current + 1 };
     ordineRef.current = newOrdine;
@@ -80,7 +99,7 @@ export function WordChainSession({ stimolo, onRisposta }: Props) {
     if (pointerRef.current >= s.sequenza.length) {
       completedRef.current = true;
       const tempoMs = Date.now() - startTimeRef.current;
-      onRispostaRef.current({ tempoMs });
+      onRispostaRef.current({ tempoMs, errori: erroriRef.current });
     }
   }, []);
 
@@ -111,6 +130,7 @@ export function WordChainSession({ stimolo, onRisposta }: Props) {
         {stimolo.parole.map((p) => {
           const tapped = ordine[p.lettera] !== undefined;
           const num    = ordine[p.lettera];
+          const errato = flashErrato === p.lettera;
           return (
             <button
               key={p.lettera}
@@ -123,9 +143,9 @@ export function WordChainSession({ stimolo, onRisposta }: Props) {
                 borderRadius: "0.85rem",
                 fontSize: "1.1rem",
                 fontWeight: 700,
-                border: `2px solid ${tapped ? "#22C55E" : "#D1D5DB"}`,
-                backgroundColor: tapped ? "#DCFCE7" : "#FFFFFF",
-                color: tapped ? "#15803D" : "#111827",
+                border: `2px solid ${tapped ? "#22C55E" : errato ? "#EF4444" : "#D1D5DB"}`,
+                backgroundColor: tapped ? "#DCFCE7" : errato ? "#FEE2E2" : "#FFFFFF",
+                color: tapped ? "#15803D" : errato ? "#B91C1C" : "#111827",
                 cursor: tapped ? "default" : "pointer",
                 transition: "background-color 150ms, border-color 150ms",
                 textAlign: "center",
