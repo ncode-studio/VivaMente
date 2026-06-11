@@ -38,8 +38,11 @@ export default function UserInit() {
   useEffect(() => {
     if (isGuest) return;
 
+    const supabase = createClient();
+    let cancelled = false;
+    let channels: ReturnType<typeof supabase.channel>[] = [];
+
     async function init() {
-      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         // Nessuna sessione: se è presente il cookie ospite ripristina la
@@ -84,9 +87,34 @@ export default function UserInit() {
       } else {
         setUser({ initialized: true });
       }
+
+      // ── Sincronizzazione live (Supabase Realtime) ───────────────────────
+      // Aggiorna messaggi e familiari in tempo reale: quando un familiare
+      // invia un messaggio o si collega, lo store si aggiorna senza ricaricare.
+      // Su ogni evento rifacciamo il fetch completo (mantiene join nome/relazione
+      // dei messaggi e l'ordinamento). RLS limita gli eventi alle proprie righe.
+      // NB: richiede che le tabelle siano nella publication `supabase_realtime`.
+      if (cancelled) return;
+      const refetchMessaggi = () => fetchMessaggi(user.id).then((m) => { if (!cancelled) setUser({ messaggi: m }); });
+      const refetchFamiliari = () => fetchFamiliari(user.id).then((f) => { if (!cancelled) setUser({ familiari: f }); });
+      channels = [
+        supabase
+          .channel(`rt-messaggi-${user.id}`)
+          .on("postgres_changes", { event: "*", schema: "public", table: "messaggi", filter: `destinatario_id=eq.${user.id}` }, refetchMessaggi)
+          .subscribe(),
+        supabase
+          .channel(`rt-familiari-${user.id}`)
+          .on("postgres_changes", { event: "*", schema: "public", table: "familiari", filter: `user_id=eq.${user.id}` }, refetchFamiliari)
+          .subscribe(),
+      ];
     }
 
     init();
+
+    return () => {
+      cancelled = true;
+      channels.forEach((c) => { supabase.removeChannel(c); });
+    };
   }, [isGuest, setUser, setGuest]);
 
   return null;
