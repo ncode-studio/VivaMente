@@ -749,6 +749,11 @@ function AttivitaTab({ filtro: filtroExt, setFiltro: setFiltroExt, hidePills, sc
         periodo
       ).map((d) => ({ label: d.label, livello: d.livello ?? undefined }));
 
+  // True se il grafico ha almeno un valore non nullo; altrimenti placeholder.
+  const chartHasData = chartData.some((pt) =>
+    Object.entries(pt).some(([k, v]) => k !== "label" && v != null)
+  );
+
   // Stats
   const livelloMedio       = filteredCats.length > 0 ? Math.round(filteredCats.reduce((s, c) => s + c.livello, 0) / filteredCats.length) : 0;
   const dominiInCrescita   = filteredCats.filter((c) => c.trend === "crescita").length;
@@ -774,6 +779,7 @@ function AttivitaTab({ filtro: filtroExt, setFiltro: setFiltroExt, hidePills, sc
         </div>
 
         <ChartBox height={160}>
+          {chartHasData ? (
           <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -819,6 +825,12 @@ function AttivitaTab({ filtro: filtroExt, setFiltro: setFiltroExt, hidePills, sc
               }
             </LineChart>
           </ResponsiveContainer>
+          ) : (
+            <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 4, padding: "0 1rem" }}>
+              <p className="text-sm font-semibold" style={{ color: COLORS.inkMuted }}>Nessun dato ancora</p>
+              <p className="text-xs" style={{ color: COLORS.inkMuted }}>Completa qualche esercizio per vedere qui i tuoi progressi.</p>
+            </div>
+          )}
         </ChartBox>
       </div>
 
