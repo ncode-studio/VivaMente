@@ -234,19 +234,19 @@ const PARENTELE = [
 
 // ─── Sezione Famiglia ─────────────────────────────────────────────────────────
 function SezioneFamiglia() {
-  const { familiari, rimuoviFamiliare, isGuest, setUser } = useUserStore();
+  const { familiari, rimuoviFamiliare, isGuest, setUser, userId } = useUserStore();
 
   // Ricarica i familiari all'apertura: lo store è popolato solo al login, quindi
   // un familiare che si collega dopo l'accesso (apre il link) non comparirebbe
   // senza un nuovo login. Qui riallineiamo allo stato corrente del DB.
+  // userId è tra le dipendenze: se non è ancora pronto al mount il fetch
+  // riparte appena viene impostato (prima veniva saltato e basta).
   useEffect(() => {
-    if (isGuest) return;
-    const { userId } = useUserStore.getState();
-    if (!userId) return;
+    if (isGuest || !userId) return;
     let annullato = false;
     fetchFamiliari(userId).then((f) => { if (!annullato) setUser({ familiari: f }); });
     return () => { annullato = true; };
-  }, [isGuest, setUser]);
+  }, [isGuest, userId, setUser]);
 
   const [showInvita, setShowInvita] = useState(false);
   const [inviatoOk, setInviatoOk] = useState(false);
