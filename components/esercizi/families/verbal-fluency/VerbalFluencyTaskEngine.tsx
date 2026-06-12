@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type {
   GameEngineProps,
   MicroProgressioneConfig,
@@ -23,6 +23,7 @@ import {
   type VFVariante,
 } from "./sequence";
 import { VerbalFluencySession } from "./VerbalFluencySession";
+import { caricaDizionario } from "./dizionario";
 
 // Verbal Fluency = dominio Linguaggio.
 const ACCENT = CATEGORIA_COLORS.linguaggio.text;
@@ -45,6 +46,10 @@ export function VerbalFluencyTaskEngine({
   const config  = getVFLevel(livello);
   const rngRef  = useRef<() => number>(Math.random);
   const poolRef = useRef(creaVFPoolRef(rngRef.current));
+
+  // Scalda il dizionario il prima possibile (mentre l'utente legge intro/tutorial),
+  // così a inizio trial è già in memoria e il loader è quasi istantaneo.
+  useEffect(() => { caricaDizionario().catch(() => {}); }, []);
 
   // ── Micro-progressione su tLimMs (negativa) ───────────────────────────────
 

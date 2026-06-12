@@ -4,10 +4,15 @@
  * VerbalFluencySession — finestra temporale per produzione lessicale.
  *
  * Flusso:
+ *   - Carica il dizionario italiano (una volta, in memoria) mostrando un loader
+ *     discreto "Preparazione esercizio…"; il countdown parte solo a dizionario pronto.
  *   - Mostra categoria/lettera + countdown visivo (da tLimMs a 0).
- *   - L'utente digita parole una alla volta e preme "Aggiungi" o Invio.
- *   - Parole accettate appaiono in lista; duplicate/invalide mostrano errore.
- *   - Allo scadere del countdown chiama onRisposta({ parole, score }).
+ *   - L'utente digita parole e preme "Aggiungi" o Invio. validateWord() restituisce
+ *     uno dei 4 esiti.
+ *   - Nessun feedback rosso: parola valida → verde con animazione + contatore;
+ *     parola non valida/duplicata/fuori regola → grigio barrata, non conta.
+ *   - L'input si svuota dopo ogni inserimento (valido o no).
+ *   - Allo scadere del countdown chiama onRisposta({ parole, errori, score }).
  */
 
 import {
@@ -18,7 +23,9 @@ import {
   useState,
 } from "react";
 import type { StimoloVF, RispostaVF } from "./sequence";
-import { hasWordlist, isInWordlist } from "./wordlists";
+import { caricaDizionario, normalizzaParola } from "./dizionario";
+import { validateWord, type ExerciseConfig } from "./validateWord";
+import { getWordlist } from "./wordlists.generated";
 
 type Props = {
   stimolo:      StimoloVF;
@@ -26,27 +33,21 @@ type Props = {
   tempoScaduto: boolean;
 };
 
-type EsitoInput =
-  | "ok"
-  | "duplicata"
-  | "lettera_errata"
-  | "troppo_corta"
-  | "non_riconosciuta"
-  | "non_valida"
-  | null;
+/** Voce mostrata nella lista: parola digitata + se è stata contata (valida). */
+type Voce = { parola: string; valida: boolean };
 
 export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Props) {
+  const [dizionario, setDizionario] = useState<Set<string> | null>(null);
   const [input,      setInput]      = useState("");
-  const [parole,     setParole]     = useState<string[]>([]);
+  const [voci,       setVoci]       = useState<Voce[]>([]);
   const [msRimasti,  setMsRimasti]  = useState(stimolo.tLimMs);
-  const [esito,      setEsito]      = useState<EsitoInput>(null);
   // Per fluenza alternata: indice categoria corrente (0 = cat1, 1 = cat2).
   const [catTurno,   setCatTurno]   = useState(0);
 
   const completatoRef  = useRef(false);
-  const startTimeRef   = useRef(Date.now());
-  const paroleRef      = useRef<string[]>([]);
-  const usateRef       = useRef<Set<string>>(new Set());
+  const startTimeRef   = useRef<number | null>(null);
+  const valideRef      = useRef<string[]>([]);   // parole valide (per RispostaVF)
+  const usateRef       = useRef<Set<string>>(new Set()); // normalizzate, per dedup
   const erroriRef      = useRef(0);
   const stimoloRef     = useRef(stimolo);
   const onRispostaRef  = useRef(onRisposta);
@@ -55,115 +56,102 @@ export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Prop
   useLayoutEffect(() => { stimoloRef.current    = stimolo;    });
   useLayoutEffect(() => { onRispostaRef.current = onRisposta; });
 
+  // ── Caricamento dizionario (una sola volta, cache di modulo) ────────────────
+  useEffect(() => {
+    let vivo = true;
+    caricaDizionario()
+      .then((set) => { if (vivo) setDizionario(set); })
+      .catch(() => { if (vivo) setDizionario(new Set()); }); // fallback: solo regole
+    return () => { vivo = false; };
+  }, []);
+
   // ── Reset su cambio stimolo ────────────────────────────────────────────────
   useEffect(() => {
     completatoRef.current = false;
-    startTimeRef.current  = Date.now();
-    paroleRef.current     = [];
+    startTimeRef.current  = null;
+    valideRef.current     = [];
     usateRef.current      = new Set();
     erroriRef.current     = 0;
     setInput("");
-    setParole([]);
+    setVoci([]);
+    setCatTurno(0);
     setMsRimasti(stimolo.tLimMs);
-    setEsito(null);
-    setTimeout(() => inputRef.current?.focus(), 50);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stimolo]);
 
-  // ── Countdown ─────────────────────────────────────────────────────────────
+  // ── Countdown — parte solo quando il dizionario è pronto ───────────────────
   useEffect(() => {
-    if (completatoRef.current) return;
+    if (!dizionario) return;
+    startTimeRef.current = Date.now();
+    setTimeout(() => inputRef.current?.focus(), 50);
     const id = setInterval(() => {
-      const elapsed = Date.now() - startTimeRef.current;
-      const rimasti = Math.max(0, stimoloRef.current.tLimMs - elapsed);
+      const start = startTimeRef.current ?? Date.now();
+      const rimasti = Math.max(0, stimoloRef.current.tLimMs - (Date.now() - start));
       setMsRimasti(rimasti);
       if (rimasti === 0) {
         clearInterval(id);
-        if (!completatoRef.current) {
-          completatoRef.current = true;
-          const p = paroleRef.current;
-          onRispostaRef.current({ parole: p, errori: erroriRef.current, score: p.length });
-        }
+        concludi();
       }
     }, 200);
     return () => clearInterval(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stimolo]);
+  }, [dizionario, stimolo]);
 
   // ── tempoScaduto (sessione globale) ───────────────────────────────────────
   useEffect(() => {
-    if (!tempoScaduto || completatoRef.current) return;
-    completatoRef.current = true;
-    const p = paroleRef.current;
-    onRispostaRef.current({ parole: p, errori: erroriRef.current, score: p.length });
+    if (!tempoScaduto) return;
+    concludi();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tempoScaduto]);
+
+  const concludi = useCallback(() => {
+    if (completatoRef.current) return;
+    completatoRef.current = true;
+    const p = valideRef.current;
+    onRispostaRef.current({ parole: p, errori: erroriRef.current, score: p.length });
+  }, []);
+
+  // ── Costruzione config di validazione per il turno corrente ─────────────────
+  function configCorrente(s: StimoloVF, dict: Set<string>): ExerciseConfig {
+    if (s.variante === "fonemica") {
+      return { tipo: "fonemica", letter: s.categoria, dizionario: dict, sessionWords: usateRef.current };
+    }
+    // semantica o alternata → categoriale
+    const catId = s.variante === "alternata" && catTurno === 1
+      ? (s.categoria2Id ?? s.categoriaId)
+      : s.categoriaId;
+    return {
+      tipo: "categoriale",
+      categoryWordlist: getWordlist(catId),
+      dizionario: dict,
+      sessionWords: usateRef.current,
+    };
+  }
 
   // ── Aggiungi parola ───────────────────────────────────────────────────────
   const handleAggiungi = useCallback(() => {
-    if (completatoRef.current) return;
+    if (completatoRef.current || !dizionario) return;
     const s = stimoloRef.current;
-    const parola = input.trim();
-    if (!parola) return;
+    const grezza = input.trim();
+    setInput(""); // si svuota sempre, valida o no
+    if (!grezza) return;
 
-    if (parola.length < 3) {
-      // troppo corta: non conta come errore, è solo un nudge UX
-      setEsito("troppo_corta"); setInput(""); return;
-    }
+    const esito = validateWord(grezza, configCorrente(s, dizionario));
+    const valida = esito === "VALIDA";
 
-    const norm = parola.toLowerCase()
-      .replace(/[àáâãäå]/g, "a").replace(/[èéêë]/g, "e")
-      .replace(/[ìíîï]/g, "i").replace(/[òóôõö]/g, "o")
-      .replace(/[ùúûü]/g, "u");
-
-    // Sanity filter: solo lettere (a-z), almeno una vocale, non tutte
-    // uguali — blocca "zzzzz", "qwerty", "123" senza richiedere wordlist.
-    const soloLettere = /^[a-z]+$/.test(norm);
-    const haVocale    = /[aeiou]/.test(norm);
-    const tutteUguali = norm.length > 0 && norm.split("").every(c => c === norm[0]);
-    if (!soloLettere || !haVocale || tutteUguali) {
+    if (valida) {
+      const norm = normalizzaParola(grezza);
+      usateRef.current.add(norm);
+      valideRef.current = [...valideRef.current, grezza];
+      if (s.variante === "alternata") setCatTurno((t) => (t + 1) % 2);
+    } else {
       erroriRef.current++;
-      setEsito("non_valida"); setInput(""); return;
     }
 
-    if (usateRef.current.has(norm)) {
-      setEsito("duplicata"); setInput(""); return;
-    }
-
-    if (s.variante === "fonemica") {
-      const letteraNorm = s.categoria.toLowerCase()
-        .replace(/[àáâãäå]/g, "a").replace(/[èéêë]/g, "e")
-        .replace(/[ìíîï]/g, "i").replace(/[òóôõö]/g, "o")
-        .replace(/[ùúûü]/g, "u");
-      if (!norm.startsWith(letteraNorm)) {
-        erroriRef.current++;
-        setEsito("lettera_errata"); setInput(""); return;
-      }
-    } else if (s.variante === "semantica" && hasWordlist(s.categoriaId)) {
-      if (!isInWordlist(s.categoriaId, norm)) {
-        erroriRef.current++;
-        setEsito("non_riconosciuta"); setInput(""); return;
-      }
-    } else if (s.variante === "alternata") {
-      // Categoria attesa per questo turno.
-      const catIdAttesa = catTurno === 0 ? s.categoriaId : (s.categoria2Id ?? s.categoriaId);
-      if (hasWordlist(catIdAttesa) && !isInWordlist(catIdAttesa, norm)) {
-        erroriRef.current++;
-        setEsito("non_riconosciuta"); setInput(""); return;
-      }
-    }
-
-    // Accettata
-    usateRef.current.add(norm);
-    const newParole = [...paroleRef.current, parola];
-    paroleRef.current = newParole;
-    setParole(newParole);
-    setEsito("ok");
-    setInput("");
-    if (s.variante === "alternata") {
-      setCatTurno((t) => (t + 1) % 2);
-    }
+    setVoci((v) => [...v, { parola: grezza, valida }]);
     setTimeout(() => inputRef.current?.focus(), 20);
-  }, [input, catTurno]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input, dizionario, catTurno]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -172,30 +160,34 @@ export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Prop
     [handleAggiungi],
   );
 
-  // Azzera esito dopo 1.2s
-  useEffect(() => {
-    if (!esito) return;
-    const t = setTimeout(() => setEsito(null), 1200);
-    return () => clearTimeout(t);
-  }, [esito]);
+  // ── Loader dizionario ──────────────────────────────────────────────────────
+  if (!dizionario) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 px-4 py-12">
+        <div
+          className="animate-spin"
+          style={{
+            width: "2rem", height: "2rem", borderRadius: "9999px",
+            border: "3px solid #E2E8F0", borderTopColor: "#1E3A5F",
+          }}
+        />
+        <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "#64748B" }}>
+          Preparazione esercizio…
+        </p>
+      </div>
+    );
+  }
 
+  // ── Derivati di rendering ──────────────────────────────────────────────────
   const pct       = msRimasti / stimolo.tLimMs;
   const secsLeft  = Math.ceil(msRimasti / 1000);
   const barColor  = pct > 0.5 ? "#22C55E" : pct > 0.25 ? "#F59E0B" : "#EF4444";
   const isSemantica = stimolo.variante === "semantica";
   const isAlternata = stimolo.variante === "alternata";
+  const validCount  = voci.filter((v) => v.valida).length;
   const categoriaAttuale = isAlternata && catTurno === 1 && stimolo.categoria2
     ? stimolo.categoria2
     : stimolo.categoria;
-
-  const esitoMsg: Record<NonNullable<EsitoInput>, string> = {
-    ok:               "✓ Aggiunta!",
-    duplicata:        "Già inserita",
-    lettera_errata:   `Deve iniziare con ${stimolo.categoria}`,
-    troppo_corta:     "Parola troppo corta",
-    non_riconosciuta: "Non riconosciuta in questa categoria",
-    non_valida:       "Parola non valida",
-  };
 
   return (
     <div className="flex flex-col items-start gap-3 px-4 py-4">
@@ -314,43 +306,50 @@ export function VerbalFluencySession({ stimolo, onRisposta, tempoScaduto }: Prop
         </button>
       </div>
 
-      {/* Feedback input */}
-      {esito && (
-        <p style={{
-          fontSize: "0.8rem", fontWeight: 600,
-          color: esito === "ok" ? "#16A34A" : "#DC2626",
-        }}>
-          {esitoMsg[esito]}
-        </p>
-      )}
-
-      {/* Contatore + lista */}
+      {/* Contatore */}
       <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <p style={{ fontSize: "0.75rem", color: "#64748B", fontWeight: 600 }}>
-          Parole inserite
+          Parole trovate
         </p>
-        <span style={{
-          fontSize: "1.1rem", fontWeight: 800, color: "#1E3A5F",
-        }}>
-          {parole.length}
+        <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#16A34A" }}>
+          {validCount}
         </span>
       </div>
 
-      {parole.length > 0 && (
+      {/* Lista: valide in verde (animate), non valide in grigio barrato */}
+      {voci.length > 0 && (
         <div style={{
-          width: "100%", maxHeight: "140px", overflowY: "auto",
+          width: "100%", maxHeight: "150px", overflowY: "auto",
           borderRadius: "0.75rem", border: "1px solid #E2E8F0",
           backgroundColor: "#F8FAFC", padding: "0.5rem 0.75rem",
           display: "flex", flexWrap: "wrap", gap: "0.4rem",
         }}>
-          {[...parole].reverse().map((p, i) => (
-            <span key={i} style={{
-              fontSize: "0.85rem", fontWeight: 600,
-              color: "#1E3A5F", backgroundColor: "#DBEAFE",
-              borderRadius: "0.5rem", padding: "0.2rem 0.5rem",
-            }}>
-              {p}
-            </span>
+          {[...voci].reverse().map((v, i) => (
+            v.valida ? (
+              <span
+                key={voci.length - i}
+                className="animate-in fade-in zoom-in-95 duration-300"
+                style={{
+                  fontSize: "0.85rem", fontWeight: 700,
+                  color: "#166534", backgroundColor: "#DCFCE7",
+                  borderRadius: "0.5rem", padding: "0.2rem 0.55rem",
+                }}
+              >
+                {v.parola}
+              </span>
+            ) : (
+              <span
+                key={voci.length - i}
+                style={{
+                  fontSize: "0.85rem", fontWeight: 600,
+                  color: "#94A3B8", backgroundColor: "#F1F5F9",
+                  textDecoration: "line-through",
+                  borderRadius: "0.5rem", padding: "0.2rem 0.55rem",
+                }}
+              >
+                {v.parola}
+              </span>
+            )
           ))}
         </div>
       )}

@@ -13,6 +13,7 @@ import {
   type MCTOrdineTestoEntry,
   type EventoNarrativo,
 } from "./testi-ordine";
+import { selezionaERegistra } from "./seenTexts";
 
 export type { EventoNarrativo };
 
@@ -29,7 +30,7 @@ export type RispostaOrdineNarrativo = {
   slotIds: string[];  // ids degli eventi nell'ordine scelto dall'utente
 } | null;
 
-// ── Pool senza ripetizione per band ──────────────────────────────────────────
+// ── Pool per band ─────────────────────────────────────────────────────────────
 
 type Band = 3 | 4 | 5 | 6;
 
@@ -39,10 +40,6 @@ const BAND_POOL: Record<Band, readonly MCTOrdineTestoEntry[]> = {
   5: MCTON_TESTI_5,
   6: MCTON_TESTI_6,
 };
-
-export interface MCTONPoolRef {
-  bands: Record<number, { shuffled: MCTOrdineTestoEntry[]; idx: number }>;
-}
 
 function shuffle<T>(arr: T[], rng: () => number): T[] {
   const a = [...arr];
@@ -57,15 +54,6 @@ function pickRandom<T>(arr: T[], n: number, rng: () => number): T[] {
   return shuffle(arr, rng).slice(0, n);
 }
 
-export function creaMCTONPoolRef(rng: () => number): MCTONPoolRef {
-  const bands: MCTONPoolRef["bands"] = {};
-  for (const band of [3, 4, 5, 6] as const) {
-    const pool = [...BAND_POOL[band]];
-    bands[band] = { shuffled: shuffle(pool, rng), idx: 0 };
-  }
-  return { bands };
-}
-
 // ── Funzione di mapping nEventi → band ───────────────────────────────────────
 
 function bandFromEventi(nEventi: number): number {
@@ -77,19 +65,26 @@ function bandFromEventi(nEventi: number): number {
 
 // ── Generatore principale ─────────────────────────────────────────────────────
 
+export interface PescaStimoloOrdineOpts {
+  nEventi:      number;
+  nDistractors: number;
+  /** Chiave di partizione anti-ripetizione (per ordine narrativo: "ordine"). */
+  tipo:         string;
+  userId:       string | null;
+  now:          number;
+  rng:          () => number;
+}
+
 export function generaStimoloOrdineNarrativo(
-  nEventi:       number,
-  nDistractors:  number,
-  poolRef:       MCTONPoolRef,
-  rng:           () => number,
+  opts: PescaStimoloOrdineOpts,
 ): StimoloOrdineNarrativo {
-  const band  = bandFromEventi(nEventi);
-  const entry = poolRef.bands[band];
-  const testo = entry.shuffled[entry.idx];
-  entry.idx   = (entry.idx + 1) % entry.shuffled.length;
-  if (entry.idx === 0) {
-    entry.shuffled = shuffle([...BAND_POOL[band as Band]], rng);
-  }
+  const { nEventi, nDistractors, tipo, userId, now, rng } = opts;
+
+  const band      = bandFromEventi(nEventi) as Band;
+  const candidati = BAND_POOL[band];
+  // Selezione persistente anti-ripetizione (cross-sessione e intra-sessione).
+  const testo =
+    selezionaERegistra(candidati, tipo, userId, now, rng) ?? candidati[0];
 
   const useN         = Math.min(nEventi, testo.eventi.length);
   const correctEvts  = testo.eventi.slice(0, useN);

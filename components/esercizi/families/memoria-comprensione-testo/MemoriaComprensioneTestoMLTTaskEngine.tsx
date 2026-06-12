@@ -18,10 +18,10 @@ import {
 } from "./levels";
 import {
   generaStimoloMCT,
-  creaMCTPoolRef,
   type StimoloMCT,
   type RispostaMCT,
 } from "./sequence";
+import { useUserStore } from "@/lib/store";
 import { MemoriaComprensioneTestoMLTSession } from "./MemoriaComprensioneTestoMLTSession";
 
 // StimoloMCT esteso con delayMs (valoreCorrente della micro-progressione)
@@ -41,7 +41,8 @@ export function MemoriaComprensioneTestoMLTTaskEngine({
 
   const config  = getMCTMLTLevel(livello);
   const rngRef  = useRef<() => number>(Math.random);
-  const poolRef = useRef(creaMCTPoolRef(rngRef.current));
+  // userId per la persistenza anti-ripetizione cross-sessione (per utente).
+  const userId  = useUserStore((s) => s.userId);
 
   // ── Micro-progressione su delayMs (+15s per bonus, max +30s) ─────────────
 
@@ -58,17 +59,21 @@ export function MemoriaComprensioneTestoMLTTaskEngine({
 
   const generaStimolo = useCallback(
     (ctx: { valoreCorrente: number }): StimoloMCTMLT => {
-      const base = generaStimoloMCT(
-        config.nFrasi,
-        config.nDomande,
-        config.nOpzioni,
-        "fattuale",
-        poolRef.current,
-        rngRef.current,
-      );
+      // Pool intero (poolVariante undefined): l'MLT non condivide lo split
+      // pari/dispari delle varianti MBT e ha la propria storia anti-ripetizione.
+      const base = generaStimoloMCT({
+        nFrasi:    config.nFrasi,
+        nDomande:  config.nDomande,
+        nOpzioni:  config.nOpzioni,
+        variante:  "fattuale",
+        tipo:      "mlt",
+        userId,
+        now:       Date.now(),
+        rng:       rngRef.current,
+      });
       return { ...base, delayMs: ctx.valoreCorrente };
     },
-    [config],
+    [config, userId],
   );
 
   // ── valutaRisposta (strict: tutte le domande corrette) ────────────────────

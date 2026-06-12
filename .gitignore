@@ -47,3 +47,7 @@ db_backup*.sql
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# sorgenti dizionario (dev-only, riscaricabili) — vedi scripts/build-italian-wordset.mjs
+# l'artefatto generato public/dictionaries/it/parole-it.txt E versionato
+scripts/dict-src/

@@ -16,10 +16,10 @@ import {
 } from "./levels";
 import {
   generaStimoloOrdineNarrativo,
-  creaMCTONPoolRef,
   type StimoloOrdineNarrativo,
   type RispostaOrdineNarrativo,
 } from "./sequence-ordine";
+import { useUserStore } from "@/lib/store";
 import { OrdineNarrativoSession } from "./OrdineNarrativoSession";
 
 export function OrdineNarrativoTaskEngine({
@@ -32,7 +32,8 @@ export function OrdineNarrativoTaskEngine({
 }: GameEngineProps) {
   const config  = getMCTOrdineNarrativoLevel(livello);
   const rngRef  = useRef<() => number>(Math.random);
-  const poolRef = useRef(creaMCTONPoolRef(rngRef.current));
+  // userId per la persistenza anti-ripetizione cross-sessione (per utente).
+  const userId  = useUserStore((s) => s.userId);
 
   // ── Micro-progressione su nEventi (+1 per trial bonus, max +2) ───────────
 
@@ -49,13 +50,15 @@ export function OrdineNarrativoTaskEngine({
 
   const generaStimolo = useCallback(
     (ctx: { valoreCorrente: number }): StimoloOrdineNarrativo =>
-      generaStimoloOrdineNarrativo(
-        ctx.valoreCorrente,
-        config.nDistractors,
-        poolRef.current,
-        rngRef.current,
-      ),
-    [config.nDistractors],
+      generaStimoloOrdineNarrativo({
+        nEventi:      ctx.valoreCorrente,
+        nDistractors: config.nDistractors,
+        tipo:         "ordine",
+        userId,
+        now:          Date.now(),
+        rng:          rngRef.current,
+      }),
+    [config.nDistractors, userId],
   );
 
   // ── valutaRisposta (strict: tutte le posizioni corrette) ─────────────────

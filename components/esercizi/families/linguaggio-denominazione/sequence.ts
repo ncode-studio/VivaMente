@@ -18,23 +18,39 @@ export type StimoloLD = StimoloSA;
 
 export type RispostaLD = SARelazione | null;
 
-// ── Stato pool senza ripetizione ───────────────────────────────────────────────
+// ── Stato pool: rotazione ciclica senza ripetizioni ─────────────────────────────
+//
+// Ogni segmento (relazione × difficoltà) è una coda da cui si estrae con pop().
+// Garanzie (entro la sessione):
+//   1. ogni coppia vista esattamente una volta prima che qualsiasi coppia si
+//      ripeta (rotazione su coda shufflata);
+//   2. all'esaurimento della coda si rifà lo shuffle dell'intero pool → il ciclo
+//      successivo ha un ordine diverso;
+//   3. la prima coppia del nuovo ciclo è sempre diversa dall'ultima del vecchio
+//      (nessuna coppia due volte di fila al reset).
+// Lo stato vive in memoria per la durata della sessione: nessuna persistenza.
 
-export interface LDPoolRef {
-  sin_b: SAItem[]; idxSinB: number;
-  con_b: SAItem[]; idxConB: number;
-  nc_b:  SAItem[]; idxNcB:  number;
-  sin_m: SAItem[]; idxSinM: number;
-  con_m: SAItem[]; idxConM: number;
-  nc_m:  SAItem[]; idxNcM:  number;
-  rng: () => number;
-  saQueue: SARelazione[];
-  /** Coppie già viste nella sessione (chiave = `${target}|${probe}`).
-   *  Garantisce che la stessa coppia non si ripeta. */
-  visti: Set<string>;
+interface SegmentoCoda {
+  /** Pool completo del segmento (immutabile). */
+  pool: readonly SAItem[];
+  /** Coda corrente; l'estrazione avviene con pop() (ultimo elemento). */
+  coda: SAItem[];
+  /** Ultima coppia estratta, per la guardia "mai due volte di fila" al reset. */
+  ultimo: SAItem | null;
 }
 
-function shuffle<T>(arr: T[], rng: () => number): T[] {
+export interface LDPoolRef {
+  sin_b: SegmentoCoda;
+  con_b: SegmentoCoda;
+  nc_b:  SegmentoCoda;
+  sin_m: SegmentoCoda;
+  con_m: SegmentoCoda;
+  nc_m:  SegmentoCoda;
+  rng: () => number;
+  saQueue: SARelazione[];
+}
+
+function shuffle<T>(arr: readonly T[], rng: () => number): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
@@ -43,24 +59,65 @@ function shuffle<T>(arr: T[], rng: () => number): T[] {
   return a;
 }
 
-export function creaPoolRef(rng: () => number): LDPoolRef {
-  const byRel = (pool: SAItem[], rel: SARelazione) =>
-    shuffle(pool.filter((x) => x.relazione === rel), rng);
+function creaSegmento(
+  pool: readonly SAItem[],
+  rel: SARelazione,
+  rng: () => number,
+): SegmentoCoda {
+  const filtrato = pool.filter((x) => x.relazione === rel);
+  return { pool: filtrato, coda: shuffle(filtrato, rng), ultimo: null };
+}
 
+/**
+ * Estrae la prossima coppia dal segmento. Quando la coda si svuota, rifà lo
+ * shuffle dell'intero pool del segmento e assicura che la prossima estrazione
+ * (l'ultimo elemento dell'array, ovvero il primo pop) sia diversa dall'ultima
+ * coppia già vista.
+ */
+function estrai(seg: SegmentoCoda, rng: () => number): SAItem {
+  if (seg.coda.length === 0) {
+    const nuova = shuffle(seg.pool, rng);
+    // Evita che la stessa coppia appaia due volte di fila al reset.
+    if (seg.pool.length > 1 && seg.ultimo &&
+        nuova[nuova.length - 1].id === seg.ultimo.id) {
+      [nuova[nuova.length - 1], nuova[0]] = [nuova[0], nuova[nuova.length - 1]];
+    }
+    seg.coda = nuova;
+  }
+  const item = seg.coda.pop()!;
+  seg.ultimo = item;
+  return item;
+}
+
+export function creaPoolRef(rng: () => number): LDPoolRef {
   return {
-    sin_b: byRel(POOL_SA_BASSA as SAItem[], "sinonimo"),      idxSinB: 0,
-    con_b: byRel(POOL_SA_BASSA as SAItem[], "contrario"),     idxConB: 0,
-    nc_b:  byRel(POOL_SA_BASSA as SAItem[], "non_correlato"), idxNcB:  0,
-    sin_m: byRel(POOL_SA_MEDIA as SAItem[], "sinonimo"),      idxSinM: 0,
-    con_m: byRel(POOL_SA_MEDIA as SAItem[], "contrario"),     idxConM: 0,
-    nc_m:  byRel(POOL_SA_MEDIA as SAItem[], "non_correlato"), idxNcM:  0,
+    sin_b: creaSegmento(POOL_SA_BASSA, "sinonimo",      rng),
+    con_b: creaSegmento(POOL_SA_BASSA, "contrario",     rng),
+    nc_b:  creaSegmento(POOL_SA_BASSA, "non_correlato", rng),
+    sin_m: creaSegmento(POOL_SA_MEDIA, "sinonimo",      rng),
+    con_m: creaSegmento(POOL_SA_MEDIA, "contrario",     rng),
+    nc_m:  creaSegmento(POOL_SA_MEDIA, "non_correlato", rng),
     rng,
     saQueue: [],
-    visti: new Set(),
   };
 }
 
 const RELAZIONI_BASE: SARelazione[] = ["sinonimo", "contrario", "non_correlato"];
+
+function segmentoPer(
+  poolRef: LDPoolRef,
+  difficoltà: LDDifficoltà,
+  relazione: SARelazione,
+): SegmentoCoda {
+  if (difficoltà === "bassa") {
+    if (relazione === "sinonimo")  return poolRef.sin_b;
+    if (relazione === "contrario") return poolRef.con_b;
+    return poolRef.nc_b;
+  }
+  if (relazione === "sinonimo")  return poolRef.sin_m;
+  if (relazione === "contrario") return poolRef.con_m;
+  return poolRef.nc_m;
+}
 
 export function generaSynonymAntonym(
   difficoltà: LDDifficoltà,
@@ -72,38 +129,7 @@ export function generaSynonymAntonym(
   }
   const relazione = poolRef.saQueue.shift()!;
 
-  const pick = (): SAItem => {
-    if (difficoltà === "bassa") {
-      if (relazione === "sinonimo")  return poolRef.sin_b[poolRef.idxSinB++ % poolRef.sin_b.length];
-      if (relazione === "contrario") return poolRef.con_b[poolRef.idxConB++ % poolRef.con_b.length];
-      return poolRef.nc_b[poolRef.idxNcB++ % poolRef.nc_b.length];
-    }
-    if (relazione === "sinonimo")  return poolRef.sin_m[poolRef.idxSinM++ % poolRef.sin_m.length];
-    if (relazione === "contrario") return poolRef.con_m[poolRef.idxConM++ % poolRef.con_m.length];
-    return poolRef.nc_m[poolRef.idxNcM++ % poolRef.nc_m.length];
-  };
-
-  // Dedup: scarta coppie già viste nella sessione. Limite di tentativi =
-  // dimensione del segmento corrente (oltre quel limite il pool è
-  // esaurito e si accetta la ripetizione).
-  const segLen = (() => {
-    if (difficoltà === "bassa") {
-      if (relazione === "sinonimo")  return poolRef.sin_b.length;
-      if (relazione === "contrario") return poolRef.con_b.length;
-      return poolRef.nc_b.length;
-    }
-    if (relazione === "sinonimo")  return poolRef.sin_m.length;
-    if (relazione === "contrario") return poolRef.con_m.length;
-    return poolRef.nc_m.length;
-  })();
-
-  let item = pick();
-  let safety = 0;
-  while (poolRef.visti.has(`${item.target}|${item.probe}`) && safety < segLen) {
-    item = pick();
-    safety++;
-  }
-  poolRef.visti.add(`${item.target}|${item.probe}`);
+  const item = estrai(segmentoPer(poolRef, difficoltà, relazione), poolRef.rng);
 
   return {
     modo: "synonym_antonym",

@@ -17,11 +17,11 @@ import {
 } from "./levels";
 import {
   generaStimoloMCT,
-  creaMCTPoolRef,
   type StimoloMCT,
   type RispostaMCT,
   type MCTVariante,
 } from "./sequence";
+import { useUserStore } from "@/lib/store";
 import { MemoriaComprensioneTestoSession } from "./MemoriaComprensioneTestoSession";
 
 export function MemoriaComprensioneTestoTaskEngine({
@@ -40,18 +40,8 @@ export function MemoriaComprensioneTestoTaskEngine({
 
   const config  = getMCTLevel(livello);
   const rngRef  = useRef<() => number>(Math.random);
-  // Lazy init: il pool viene creato UNA sola volta al primo render e poi
-  // sopravvive ai re-render (useRef pattern, ma senza ricostruire l'oggetto
-  // ad ogni render — l'invocazione precedente con argomento diretto creava
-  // un nuovo pool ad ogni render, scartato da useRef ma comunque allocato).
-  const poolRef = useRef<ReturnType<typeof creaMCTPoolRef> | null>(null);
-  if (poolRef.current === null) {
-    poolRef.current = creaMCTPoolRef(rngRef.current, variante);
-  }
-  // Anti-duplicazione esplicita: tiene traccia dei testi già usati in questa
-  // sessione (chiave = testo). Se generaStimoloMCT restituisce un duplicato
-  // (es. dopo un re-mount inatteso), forziamo un secondo pescaggio.
-  const seenTestiRef = useRef<Set<string>>(new Set());
+  // userId per la persistenza anti-ripetizione cross-sessione (per utente).
+  const userId  = useUserStore((s) => s.userId);
 
   // ── Micro-progressione su nDomande ────────────────────────────────────────
 
@@ -72,35 +62,23 @@ export function MemoriaComprensioneTestoTaskEngine({
         ? Math.max(config.nDomande, ctx.valoreCorrente)
         : config.nDomande;
 
-      // Pesca fino a un testo non ancora visto in questa sessione.
-      // Limite di tentativi = dimensione banda per evitare loop infiniti
-      // se il pool è esaurito.
-      const pool = poolRef.current!;
-      const bandSize = pool.bands[config.nFrasi]?.shuffled.length ?? 1;
-      let stim = generaStimoloMCT(
-        config.nFrasi,
+      // La selezione persistente (seenTexts) evita le ripetizioni sia tra
+      // sessioni (finestra 21/7 giorni) sia all'interno della sessione corrente
+      // (la registrazione immediata fa rientrare il testo appena mostrato nella
+      // finestra dei 21 giorni).
+      return generaStimoloMCT({
+        nFrasi:       config.nFrasi,
         nDomande,
-        config.nOpzioni,
+        nOpzioni:     config.nOpzioni,
         variante,
-        pool,
-        rngRef.current,
-      );
-      let tentativi = 0;
-      while (seenTestiRef.current.has(stim.testo) && tentativi < bandSize) {
-        stim = generaStimoloMCT(
-          config.nFrasi,
-          nDomande,
-          config.nOpzioni,
-          variante,
-          pool,
-          rngRef.current,
-        );
-        tentativi++;
-      }
-      seenTestiRef.current.add(stim.testo);
-      return stim;
+        poolVariante: variante,
+        tipo:         variante, // "fattuale" | "inferenziale"
+        userId,
+        now:          Date.now(),
+        rng:          rngRef.current,
+      });
     },
-    [config, variante],
+    [config, variante, userId],
   );
 
   // ── valutaRisposta (strict: tutte le domande corrette) ────────────────────
